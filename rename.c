@@ -83,8 +83,8 @@ static int match_regexpr(RENOP *opt, char *fname, int flen);
 static int match_forward(RENOP *opt, char *fname, int flen);
 static int match_backward(RENOP *opt, char *fname, int flen);
 static int match_suffix(RENOP *opt, char *fname, int flen);
-static int match_lowercase(char *s);
-static int match_uppercase(char *s);
+static int match_lowercase(unsigned char *s);
+static int match_uppercase(unsigned char *s);
 static int inject(char *rec, int rlen, int del, int room, char *in, int ilen);
 static int report(char *dest, char *sour, int state, int flag);
 
@@ -183,7 +183,7 @@ static int rename_recursive(RENOP *opt, char *path)
 static int rename_action(RENOP *opt, char *oldname)
 {
 	char	*fname;
-	int	rc = RNM_ERR_NONE, flen;
+	int	rc = RNM_ERR_NONE, flen, renamed = 0;
 
 	if (safe_copy(opt->buffer, oldname, FNBUF) < 0) {
 		return RNM_ERR_OVERFLOW;
@@ -224,16 +224,31 @@ static int rename_action(RENOP *opt, char *oldname)
 	}
 	
 	if ((opt->oflags & RNM_OFLAG_MASKCASE) == RNM_OFLAG_LOWERCASE) {
-		match_lowercase(fname);
+		match_lowercase((unsigned char *) fname);
 	} else if ((opt->oflags & RNM_OFLAG_MASKCASE) == RNM_OFLAG_UPPERCASE) {
-		match_uppercase(fname);
+		match_uppercase((unsigned char *) fname);
 	}
 
 	if (strcmp(opt->buffer, oldname)) {
 		rc = rename_executing(opt, opt->buffer, oldname);
+		if (rc == RNM_ERR_SKIP) {
+			rc = RNM_ERR_NONE;
+		} else if (rc == RNM_ERR_NONE) {
+			renamed++;
+		} else {
+			return rc;
+		}
 	}
 	if (opt->oflags & RNM_OFLAG_OWNER) {
 		rc = rename_chown(opt, opt->buffer);
+		if (rc == RNM_ERR_SKIP) {
+			rc = RNM_ERR_NONE;
+		} else if (rc == RNM_ERR_NONE) {
+			renamed++;
+		}
+	}
+	if (renamed) {
+		opt->rpcnt++;
 	}
 	return rc;
 }
@@ -255,20 +270,20 @@ static int rename_executing(RENOP *opt, char *dest, char *sour)
 		switch (opt->cflags & RNM_CFLAG_PROMPT_MASK) {
 		case RNM_CFLAG_NEVER:
 			report(dest, sour, RNM_REP_SKIP, opt->cflags);
-			return RNM_ERR_NONE;
+			return RNM_ERR_SKIP;
 		case RNM_CFLAG_ALWAYS:
 			break;
 		default:
 			if (rename_prompt(opt, dest) == 0) {
 				report(dest, sour, RNM_REP_SKIP, opt->cflags);
-				return RNM_ERR_NONE;
+				return RNM_ERR_SKIP;
 			}
 			break;
 		}
 	}
 	if (opt->cflags & RNM_CFLAG_TEST) {
 		report(dest, sour, RNM_REP_TEST, opt->cflags);
-		return RNM_ERR_NONE;
+		return RNM_ERR_SKIP;
 	}
 	if (rename(sour, dest) < 0) {
 		report(dest, sour, RNM_REP_FAILED, opt->cflags);
@@ -283,14 +298,14 @@ static int rename_chown(RENOP *opt, char *fname)
 	struct	stat	fs;
 
 	if (stat(fname, &fs)) {
-		return RNM_ERR_NONE;	//FIXME: file not exist
+		return RNM_ERR_SKIP;	//FIXME: file not exist
 	}
 	if ((fs.st_uid == opt->pw_uid) && (fs.st_gid == opt->pw_gid)) {
-		return RNM_ERR_NONE;
+		return RNM_ERR_SKIP;
 	}
 	if (opt->cflags & RNM_CFLAG_TEST) {
 		report(fname, fname, RNM_REP_TEST, opt->cflags);
-		return RNM_ERR_NONE;
+		return RNM_ERR_SKIP;
 	}
 	if (chown(fname, opt->pw_uid, opt->pw_gid) < 0) {
 		report(fname, fname, RNM_REP_FAILED, opt->cflags);
@@ -446,19 +461,19 @@ static int match_suffix(RENOP *opt, char *fname, int flen)
 	return 0;
 }
 
-static int match_lowercase(char *s)
+static int match_lowercase(unsigned char *s)
 {
 	while (*s) {
-		*s = tolower(*s);
+		*s = tolower((int) *s);
 		s++;
 	}
 	return 0;
 }
 
-static int match_uppercase(char *s)
+static int match_uppercase(unsigned char *s)
 {
 	while (*s) {
-		*s = toupper(*s);
+		*s = toupper((int) *s);
 		s++;
 	}
 	return 0;
@@ -547,7 +562,7 @@ int safe_cat(char *dest, const char *src, size_t n)
 
 char *skip_space(char *sour)
 {
-	while (*sour && isspace(*sour)) {
+	while (*sour && isspace((int) *sour)) {
 		sour++;
 	}
 	return sour;

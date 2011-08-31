@@ -73,9 +73,11 @@ OPTIONS:\n\
                           [e] PATTERN is extended regular expression\n\
                           [g] replace all occurrences in the filename\n\
                           [1-9] replace specified occurrences in the filename\n\
-  -R, --recursive         Operate on files and directories recursively\n\
-  -o, --owner OWNER       Change file's ownership (superuser only)\n\
-  -v, --verbose           Display verbose information\n\
+  -R, --recursive         Operate on files and directories recursively\n"
+#ifdef	CFG_UNIX_API
+"  -o, --owner OWNER       Change file's ownership (superuser only)\n"
+#endif
+"  -v, --verbose           Display verbose information\n\
   -t, --test              Test only mode. Do not change any thing\n\
   -h, --help              Display this help and exit\n\
   -V, --version           Output version information and exit\n\
@@ -91,10 +93,13 @@ License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n";
 
-
+#ifdef	CFG_UNIX_API
 static int cli_set_owner(RENOP *opt, char *optarg);
+#endif
 static int cli_set_pattern(RENOP *opt, char *optarg);
+#ifdef	DEBUG
 static int cli_dump(RENOP *opt, char *filename);
+#endif
 static void siegfried (int signum);
 
 int main(int argc, char **argv)
@@ -125,19 +130,21 @@ int main(int argc, char **argv)
 		} else if (!strcmp_list(*argv, "-v", "--verbose")) {
 			sysopt.cflags |= RNM_CFLAG_VERBOSE;
 		} else if (!strcmp_list(*argv, "-t", "--test-only")) {
-			sysopt.cflags |= RNM_CFLAG_TEST;
+			sysopt.cflags |= RNM_CFLAG_TEST | RNM_CFLAG_VERBOSE;
 		} else if (!strcmp_list(*argv, "-A", "--always")) {
 			sysopt.cflags &= ~RNM_CFLAG_PROMPT_MASK;
 			sysopt.cflags |= RNM_CFLAG_ALWAYS;
 		} else if (!strcmp_list(*argv, "-N", "--never")) {
 			sysopt.cflags &= ~RNM_CFLAG_PROMPT_MASK;
 			sysopt.cflags |= RNM_CFLAG_NEVER;
+#ifdef	CFG_UNIX_API
 		} else if (!strcmp_list(*argv, "-o", "--owner")) {
 			if (--argc == 0) {
 				rc = RNM_ERR_PARAM;
 			} else {
 				rc = cli_set_owner(&sysopt, *++argv);
 			}
+#endif
 		} else if (argv[0][1] == 's') {
 			if (argv[0][2] != 0) {
 				rc = cli_set_pattern(&sysopt, argv[0]+2);
@@ -182,7 +189,11 @@ int main(int argc, char **argv)
 		sigaction(SIGTERM, &signew, NULL);
 	}
 
-	/*cli_dump(&sysopt, *argv);*/
+#ifdef	DEBUG
+	if (sysopt.cflags & RNM_CFLAG_TEST) {
+		cli_dump(&sysopt, *argv);
+	}
+#endif
 	while (argc-- && (rc == RNM_ERR_NONE))  {
 		if (infile) {
 			rc = rename_enfile(&sysopt, *argv++);
@@ -194,9 +205,11 @@ int main(int argc, char **argv)
 	if (sysopt.action == RNM_ACT_REGEX) { 
 		regfree(sysopt.preg);
 	}
+	printf("%d files renamed.\n", sysopt.rpcnt);
 	return rc;
 }
 
+#ifdef	CFG_UNIX_API
 static int cli_set_owner(RENOP *opt, char *optarg)
 {
 	struct	passwd	pwd, *result;
@@ -232,6 +245,7 @@ static int cli_set_owner(RENOP *opt, char *optarg)
 	free(buf);
 	return RNM_ERR_NONE;
 }
+#endif	/* CFG_UNIX_API */
 
 static int cli_set_pattern(RENOP *opt, char *optarg)
 {
@@ -284,7 +298,7 @@ static int cli_set_pattern(RENOP *opt, char *optarg)
 			cflags |= REG_EXTENDED;
 			break;
 		default:
-			if (isdigit(*p)) {
+			if (isdigit((int) *p)) {
 				opt->count = *p - '0';
 			}
 			break;
@@ -300,6 +314,7 @@ static int cli_set_pattern(RENOP *opt, char *optarg)
 	return RNM_ERR_NONE;
 }
 
+#ifdef	DEBUG
 static int cli_dump(RENOP *opt, char *filename)
 {
 	printf("Source:         %s\n", filename);
@@ -314,6 +329,7 @@ static int cli_dump(RENOP *opt, char *filename)
 	printf("\n");
 	return 0;
 }
+#endif	/* DEBUG */
 
 
 /* Zis is KAOS! */

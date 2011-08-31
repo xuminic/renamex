@@ -22,6 +22,7 @@
 #define _RENAME_H_
   
 #define RNM_ERR_NONE		0
+#define RNM_ERR_SKIP		1
 #define RNM_ERR_HELP		-1
 #define RNM_ERR_PARAM		-2	/* wrong (command line) parameters */
 #define RNM_ERR_GETDIR		-3	/* can not get directory name */
@@ -79,13 +80,14 @@ typedef	struct	{
 	int	pa_len;
 	char	*substit;
 	int	su_len;
-	int	count;		/* */
+	int	count;		/* replace occurance */
 	regex_t	preg[1];
 
 	int	(*compare)(const char *s1, const char *s2, size_t n);
 
 	char	buffer[FNBUF];		/* hope that's big enough */
 	int	room;
+	int	rpcnt;
 } RENOP;
 
 

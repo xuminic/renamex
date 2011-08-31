@@ -284,47 +284,78 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Please send bug reports to "Andy Xuming" <xuming@users.sourceforge.net>
 
 .SH EXAMPLES
-.TP 
-.I rename foo food
-Change file 'foo' to 'food', just like 
-.I mv(1)
-does.
+.TP
+.B renamex "\-l \-R" *
+To lowercase all files' names recursively.
 
 .TP
-.I rename -lR *
-To lowcase all filenames, directories and filenames and directories under 
-subdirectories.
+.B renamex "\-u \-s/abc/xyz/gi" *.c
+Substitute all 
+.I abc 
+substrings appeared in C  sources  files  with
+.I xyz , 
+ignoring the case, then uppercase the whole file name.
 
 .TP
-.I rename -s/abc/xyz/gi *.c
-Substitute all 'abc' substrings appeared in C sources files with 'xyz',
-ignoring case.
+.B renamex "\-v \-s/.c/.cpp/s" *
+Find all files with the 
+.I '.c' 
+suffix in the current directory and change them to 
+.I '.cpp' 
+suffix. Print the verbose information.
 
 .TP
-.I rename -vs/.c/.cpp/s *.c
-Change C sources suffix to C++ sources suffix, with verbose information.
+.B "find . \-name *.c > filename.lst"
+.TP
+.B renamex "\-s/.c/.cpp/s \-f" filename.lst
+Find all files with the 
+.I '.c' 
+suffix under the current directory and change them to 
+.I '.cpp' 
+suffix by the list file.
 
 .TP
-.I rename -s/abc/12345/bi *
-Find the last occurrence of 'abc' and replace it with '12345', ignoring case.
+.B renamex "\-s/abc/12345/bi" *
+Read names from the 
+.I 'filename.lst' , 
+find the last occurrence of 
+.I 'abc'
+and  replace it with 
+.I '12345' , 
+ignoring the case.
 
 .TP
-.I rename -o guest -R /home/custom
-change the owner of the file '/home/custom' to 'guest'. The 'guest' should 
-be an effective user in the current system. If '/home/custom' is a directory, 
-all files in this directory tree will hand to 'guest'.
+.B renamex "\-s/^[A\-Z].*file/nofile/r" *
+The target substring starts with a capital letter, and ends with string
+.I 'file' . 
+There are 0 or any numbers of characters between the capital letter and 
+.I 'file' . 
+The substring, if encountered in filenames, will be replaced with 
+.I 'nofile'.
 
 .TP
-.I rename -s/^[A-Z].*file/nofile/r *
-The target substring starts with a capital letter, and ends with string 'file'.
-There are 0 or any numbers of characters between the capital letter and 'file'.
-The substring, if encountered in filenames, will be replaced with 'nofile'.
+.B renamex "\-s/^[A\-Z].+file/nofile/eg" *
+Similar to above, except it uses extended regular expression, such as the 
+.I '+' 
+metacharacter, and replaces all matching strings with 
+.I 'nofile'.
 
 .TP
-.I rename -s/^[A-Z].+file/nofile/eg *
-Similar to last example, except it uses extended regular expression, such as 
-the '+' metacharacter, and replaces all matching strings with 'nofile'.
+.B renamex "\-t \-s/^[A\-Z].+file/nofile/eg" *
+.BR Test mode 
+only. Simulate the rename process but no files would be actually changed.
 
-
+.TP
+.B renamex "\-o guest \-R" /home/custom
+change the ownership of 
+.I '/home/custom' 
+to 
+.I 'guest' . 
+The 
+.I 'guest' 
+should be an effective user in the current system. If 
+.I '/home/custom' 
+is a directory, all files' ownership in this directory tree will be changed to
+.I 'guest' .
 
 
