@@ -23,40 +23,36 @@
 #include "config.h"
 #endif
 
+#ifdef	CFG_UNIX_API
+#undef	UNICODE
+#else	/* CFG_WIN32_API */
+#define UNICODE
+#endif
+
 #include <ctype.h>
-#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#ifdef	CFG_UNIX_API
+#include <pwd.h>
 #include <signal.h>
-
-#if HAVE_UNISTD_H
-  #include <sys/types.h>
-  #include <unistd.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <regex.h>
+#else	/* CFG_WIN32_API */
+#include <windows.h>
+#include "regex.h"
 #endif
 
-#if STDC_HEADERS
-  #include <string.h>
-#else
-  #ifndef HAVE_STRCHR
-    #define strchr index
-    #define strrchr rindex
-  #endif
-  char *strchr(), *strrchr();
-#endif
-
-#if HAVE_REGEX_H
-  #include <regex.h>
-#else
-  #include "regex.h"
-#endif
-
+#include "libsmm.h"
 #include "rename.h"
 
 #define	WHOAMI	"renamex"
-#define VERSION	"1.99.1"
+#define VERSION	"1.99.3"
 
-static	char	cwd[SVRBUF];	/* current working directory */
-static	RENOP	sysopt;
+int	sys_cwd_id = 0;
+RENOP	*sysopt = NULL;
 
 static	char	*usage = "\
 Usage: " WHOAMI " [OPTIONS] filename ...\n\
@@ -73,11 +69,9 @@ OPTIONS:\n\
                           [e] PATTERN is extended regular expression\n\
                           [g] replace all occurrences in the filename\n\
                           [1-9] replace specified occurrences in the filename\n\
-  -R, --recursive         Operate on files and directories recursively\n"
-#ifdef	CFG_UNIX_API
-"  -o, --owner OWNER       Change file's ownership (superuser only)\n"
-#endif
-"  -v, --verbose           Display verbose information\n\
+  -R, --recursive         Operate on files and directories recursively\n\
+  -o, --owner OWNER       Change file's ownership (root in unix only)\n\
+  -v, --verbose           Display verbose information\n\
   -t, --test              Test only mode. Do not change any thing\n\
   -h, --help              Display this help and exit\n\
   -V, --version           Output version information and exit\n\
@@ -93,22 +87,25 @@ License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n";
 
-#ifdef	CFG_UNIX_API
-static int cli_set_owner(RENOP *opt, char *optarg);
-#endif
+static int free_all(int sig);
 static int cli_set_pattern(RENOP *opt, char *optarg);
+
 #ifdef	DEBUG
 static int cli_dump(RENOP *opt, char *filename);
 #endif
-static void siegfried (int signum);
 
 int main(int argc, char **argv)
 {
-	struct	sigaction	signew, sigold;
 	int 	infile = 0, rc = RNM_ERR_NONE;
 
-	memset(&sysopt, 0, sizeof(RENOP));
-	sysopt.compare = strncmp;
+	smm_init();
+
+	if ((sysopt = malloc(sizeof(RENOP))) == NULL) {
+		return RNM_ERR_LOWMEM;
+	}
+	memset(sysopt, 0, sizeof(RENOP));
+	
+	sysopt->compare = strncmp;
 	while (--argc && (**++argv == '-')) {
 		rc = RNM_ERR_NONE;
 		if (!strcmp_list(*argv, "-h", "--help")) {
@@ -120,132 +117,94 @@ int main(int argc, char **argv)
 		} else if (!strcmp_list(*argv, "-f", "--file")) {
 			infile = 1;
 		} else if (!strcmp_list(*argv, "-l", "--lowercase")) {
-			sysopt.oflags &= ~RNM_OFLAG_MASKCASE;
-			sysopt.oflags |= RNM_OFLAG_LOWERCASE;
+			sysopt->oflags &= ~RNM_OFLAG_MASKCASE;
+			sysopt->oflags |= RNM_OFLAG_LOWERCASE;
 		} else if (!strcmp_list(*argv, "-u", "--uppercase")) {
-			sysopt.oflags &= ~RNM_OFLAG_MASKCASE;
-			sysopt.oflags |= RNM_OFLAG_UPPERCASE;
+			sysopt->oflags &= ~RNM_OFLAG_MASKCASE;
+			sysopt->oflags |= RNM_OFLAG_UPPERCASE;
 		} else if (!strcmp_list(*argv, "-R", "--recursive")) {
-			sysopt.cflags |= RNM_CFLAG_RECUR;
+			sysopt->cflags |= RNM_CFLAG_RECUR;
 		} else if (!strcmp_list(*argv, "-v", "--verbose")) {
-			sysopt.cflags |= RNM_CFLAG_VERBOSE;
+			sysopt->cflags |= RNM_CFLAG_VERBOSE;
 		} else if (!strcmp_list(*argv, "-t", "--test-only")) {
-			sysopt.cflags |= RNM_CFLAG_TEST | RNM_CFLAG_VERBOSE;
+			sysopt->cflags |= RNM_CFLAG_TEST | RNM_CFLAG_VERBOSE;
 		} else if (!strcmp_list(*argv, "-A", "--always")) {
-			sysopt.cflags &= ~RNM_CFLAG_PROMPT_MASK;
-			sysopt.cflags |= RNM_CFLAG_ALWAYS;
+			sysopt->cflags &= ~RNM_CFLAG_PROMPT_MASK;
+			sysopt->cflags |= RNM_CFLAG_ALWAYS;
 		} else if (!strcmp_list(*argv, "-N", "--never")) {
-			sysopt.cflags &= ~RNM_CFLAG_PROMPT_MASK;
-			sysopt.cflags |= RNM_CFLAG_NEVER;
-#ifdef	CFG_UNIX_API
+			sysopt->cflags &= ~RNM_CFLAG_PROMPT_MASK;
+			sysopt->cflags |= RNM_CFLAG_NEVER;
 		} else if (!strcmp_list(*argv, "-o", "--owner")) {
 			if (--argc == 0) {
 				rc = RNM_ERR_PARAM;
 			} else {
-				rc = cli_set_owner(&sysopt, *++argv);
-			}
+#ifdef	CFG_UNIX_API
+				smm_pwuid(*++argv, (long*)&sysopt->pw_uid, 
+						(long*)&sysopt->pw_gid);
+				sysopt->oflags |= RNM_OFLAG_OWNER;
 #endif
+			}
 		} else if (argv[0][1] == 's') {
 			if (argv[0][2] != 0) {
-				rc = cli_set_pattern(&sysopt, argv[0]+2);
+				rc = cli_set_pattern(sysopt, argv[0]+2);
 			} else if (--argc == 0) {
 				rc = RNM_ERR_PARAM;
 			} else {
-				rc = cli_set_pattern(&sysopt, *++argv);
+				rc = cli_set_pattern(sysopt, *++argv);
 			}
 		} else {
 			printf("Unknown option. [%s]\n", *argv);
 			rc = RNM_ERR_PARAM;
 		}
 		if (rc != RNM_ERR_NONE) {
+			free_all(0);
 			return rc;
 		}
 	}
 
-	if ((argc < 1) || (!sysopt.oflags && !sysopt.action)) {
+	if ((argc < 1) || (!sysopt->oflags && !sysopt->action)) {
 		puts(usage);
+		free_all(0);
 		return RNM_ERR_HELP;
 	}
 	
-	if (getcwd(cwd, SVRBUF) == NULL)  {
-		printf("Out of path!\n");
-		return RNM_ERR_GETDIR;
-	}
-    
-	signew.sa_handler = siegfried;
-	sigemptyset(&signew.sa_mask);
-	signew.sa_flags = 0;
-	
-	sigaction(SIGINT, NULL, &sigold);
-	if (sigold.sa_handler != SIG_IGN) {
-		sigaction(SIGINT, &signew, NULL);
-	}
-	sigaction(SIGHUP, NULL, &sigold);
-	if (sigold.sa_handler != SIG_IGN) {
-		sigaction(SIGHUP, &signew, NULL);
-	}
-	sigaction(SIGTERM, NULL, &sigold);
-	if (sigold.sa_handler != SIG_IGN) {
-		sigaction(SIGTERM, &signew, NULL);
-	}
+	sys_cwd_id = smm_cwd_push();
+	smm_signal_break(free_all);
 
 #ifdef	DEBUG
-	if (sysopt.cflags & RNM_CFLAG_TEST) {
-		cli_dump(&sysopt, *argv);
+	if (sysopt->cflags & RNM_CFLAG_TEST) {
+		cli_dump(sysopt, *argv);
 	}
 #endif
 	while (argc-- && (rc == RNM_ERR_NONE))  {
 		if (infile) {
-			rc = rename_enfile(&sysopt, *argv++);
+			rc = rename_enfile(sysopt, *argv++);
 		} else {
-			rc = rename_entry(&sysopt, *argv++);
+			rc = rename_entry(sysopt, *argv++);
 		}
 	}
 
-	if (sysopt.action == RNM_ACT_REGEX) { 
-		regfree(sysopt.preg);
-	}
-	printf("%d files renamed.\n", sysopt.rpcnt);
+	printf("%d files renamed.\n", sysopt->rpcnt);
+	free_all(0);
 	return rc;
 }
 
-#ifdef	CFG_UNIX_API
-static int cli_set_owner(RENOP *opt, char *optarg)
+static int free_all(int sig)
 {
-	struct	passwd	pwd, *result;
-	char	*buf;
-	size_t	bufsize;
-
-	if (geteuid() != 0) {
-		printf("Access denied!\n");
-		return RNM_ERR_EUID;
+#ifdef	CFG_REGEX
+	if (sysopt->action == RNM_ACT_REGEX) {
+		regfree(sysopt->preg);
 	}
-
-	bufsize = sysconf(_SC_GETPW_R_SIZE_MAX);
-	if (bufsize == -1) {		/* Value was indeterminate */
-		bufsize = 16384;	/* Should be more than enough */
+#endif
+	if (sysopt->buffer) {
+		free(sysopt->buffer);
 	}
-	if ((buf = malloc(bufsize)) == NULL) {
-		return RNM_ERR_LOWMEM;
+	if (sys_cwd_id) {
+		smm_cwd_pop(sys_cwd_id);
 	}
-	if (getpwnam_r(optarg, &pwd, buf, bufsize, &result)) {
-		printf("Access failed!\n");
-		free(buf);
-		return RNM_ERR_EUID;
-	}
-	if (result == NULL) {
-		printf("User not existed!\n");
-		free(buf);
-		return RNM_ERR_EUID;
-	}
-
-	opt->pw_uid = pwd.pw_uid;
-	opt->pw_gid = pwd.pw_gid;
-	opt->oflags |= RNM_OFLAG_OWNER;
-	free(buf);
-	return RNM_ERR_NONE;
+	free(sysopt);
+	return 0;
 }
-#endif	/* CFG_UNIX_API */
 
 static int cli_set_pattern(RENOP *opt, char *optarg)
 {
@@ -288,15 +247,17 @@ static int cli_set_pattern(RENOP *opt, char *optarg)
 			cflags |= REG_ICASE;
 			opt->compare = strncasecmp;
 			break;
+#ifdef	CFG_REGEX
 		case 'r':
 		case 'R':
 			opt->action = RNM_ACT_REGEX;
 			break;
 		case 'e':
 		case 'E':
-	    		opt->action = RNM_ACT_REGEX;
 			cflags |= REG_EXTENDED;
+	    		opt->action = RNM_ACT_REGEX;
 			break;
+#endif
 		default:
 			if (isdigit((int) *p)) {
 				opt->count = *p - '0';
@@ -304,6 +265,7 @@ static int cli_set_pattern(RENOP *opt, char *optarg)
 			break;
 		}
 	}
+#ifdef	CFG_REGEX
 	if (opt->action == RNM_ACT_REGEX) {
 		if (regcomp(opt->preg, opt->pattern, cflags))  {
 			printf("Wrong regular expression. [%s]\n", 
@@ -311,6 +273,7 @@ static int cli_set_pattern(RENOP *opt, char *optarg)
 			return RNM_ERR_REGPAT;
 		}
 	}
+#endif
 	return RNM_ERR_NONE;
 }
 
@@ -320,29 +283,21 @@ static int cli_dump(RENOP *opt, char *filename)
 	printf("Source:         %s\n", filename);
 	printf("Flags:          OF=%x CF=%x ACT=%d\n", 
 			opt->oflags, opt->cflags, opt->action);
+#ifdef	CFG_UNIX_API
 	printf("Owership:       UID=%d GID=%d\n",
 			(int)opt->pw_uid, (int)opt->pw_gid);
-	printf("Pattern:        %s (%d)\n", opt->pattern, opt->pa_len);
+#endif
+	printf("Pattern:        %s (%d) %x %x %x %x %x %x\n", opt->pattern, opt->pa_len,
+			opt->pattern[0], opt->pattern[1],
+			opt->pattern[2], opt->pattern[3],
+			opt->pattern[4], opt->pattern[5]);
 	printf("Substituter:    %s (%d+%d)\n", 
 			opt->substit, opt->su_len, opt->count);
-	printf("Name Buffer:    %d (%d)\n", opt->room, FNBUF);
+	printf("Name Buffer:    %d (%d)\n", opt->room, RNM_PATH_MAX);
 	printf("\n");
 	return 0;
 }
 #endif	/* DEBUG */
-
-
-/* Zis is KAOS! */
-static void siegfried (int signum)
-{
-	if (sysopt.action == RNM_ACT_REGEX) {
-		regfree(sysopt.preg);
-	}
-	if (chdir(cwd) < 0) {	/* kill the warning */
-		perror("chdir");
-	}
-	exit(signum);
-}
 
 
 

@@ -65,27 +65,37 @@
 #define RNM_REP_FAILED		3
 #define RNM_REP_CHOWN		4
 
-#define	SVRBUF	512
-#define FNBUF	4096
+
+#ifdef	CFG_UNIX_API
+#include <limits.h>
+#define	RNM_PATH_MAX	(PATH_MAX << 1)
+#define RNM_PATH_TOK	'/'
+#else
+#define	RNM_PATH_MAX	(MAX_PATH << 2)
+#define RNM_PATH_TOK	'\\'
+#endif
+
 
 typedef	struct	{
 	int	oflags;
 	int	cflags;
 	int	action;
 
+#ifdef	CFG_UNIX_API
 	uid_t	pw_uid;
 	gid_t	pw_gid;
-
+#endif
 	char	*pattern;
 	int	pa_len;
 	char	*substit;
 	int	su_len;
 	int	count;		/* replace occurance */
+#ifdef	CFG_REGEX
 	regex_t	preg[1];
-
+#endif
 	int	(*compare)(const char *s1, const char *s2, size_t n);
 
-	char	buffer[FNBUF];		/* hope that's big enough */
+	char	*buffer;	/* change to dynamic allocation */
 	int	room;
 	int	rpcnt;
 } RENOP;
@@ -99,6 +109,11 @@ int rename_entry(RENOP *opt, char *filename);
 int safe_copy(char *dest, const char *src, size_t n);
 int safe_cat(char *dest, const char *src, size_t n);
 char *skip_space(char *sour);
+
+int syscall_codepage(void);
+int syscall_chdir(char *path);
+int syscall_getcwd(char *path, int len);
+int syscall_isdir(char *path);
 
 /* see fixtoken.c */
 

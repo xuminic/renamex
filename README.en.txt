@@ -17,6 +17,7 @@ Features
  * uppercase or lowercase file's name
  * support batch renaming
  * recursively processing directories and subdirectories
+ * support to read the filename list from a file
  * change ownership of files
  * safe mode: test before you go
 

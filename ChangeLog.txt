@@ -1,3 +1,5 @@
+20110320: v1.99.2
+  - baseline version released
 
 20110312: v1.99.1
   - almost rewrote the whole thing

@@ -69,17 +69,21 @@
   #include "regex.h"
 #endif
 
+#include "libsmm.h"
 #include "rename.h"
   
 
 static	char	*rep_state[] = { "done", "skip", "test", "fail", "own" };
 
 static int rename_recursive(RENOP *opt, char *path);
+static int rename_recursive_cb(void *option, char *path, int type, void *info);
 static int rename_action(RENOP *opt, char *oldname);
 static int rename_executing(RENOP *opt, char *dest, char *sour);
 static int rename_chown(RENOP *opt, char *fname);
 static int rename_prompt(RENOP *opt, char *fname);
+#ifdef	CFG_REGEX
 static int match_regexpr(RENOP *opt, char *fname, int flen);
+#endif
 static int match_forward(RENOP *opt, char *fname, int flen);
 static int match_backward(RENOP *opt, char *fname, int flen);
 static int match_suffix(RENOP *opt, char *fname, int flen);
@@ -93,7 +97,7 @@ static int report(char *dest, char *sour, int state, int flag);
 int rename_enfile(RENOP *opt, char *filename)
 {
 	FILE	*fp;
-	char	buf[SVRBUF];
+	char	buf[RNM_PATH_MAX];
 	int	rc = RNM_ERR_NONE;
 
 	if ((fp = fopen(filename, "r")) == NULL) {
@@ -112,14 +116,10 @@ int rename_enfile(RENOP *opt, char *filename)
 
 int rename_entry(RENOP *opt, char *filename)
 {
-	struct	stat	fs;
 	int	rc;
 
 	if (opt->cflags & RNM_CFLAG_RECUR)  {
-		if (lstat(filename, &fs) < 0)  {
-			return RNM_ERR_STAT;
-		}
-		if (S_ISDIR(fs.st_mode))  {
+		if (smm_fstat(filename) == SMM_FSTAT_DIR) {
 			rc = rename_recursive(opt, filename);
 			if (rc != RNM_ERR_NONE) {
 				return rc;	//FIXME: return to entry dir
@@ -131,51 +131,28 @@ int rename_entry(RENOP *opt, char *filename)
 
 static int rename_recursive(RENOP *opt, char *path)
 {
-	DIR 	*dir;
-	struct	stat	fs;
-	struct	dirent	*de;
-	int	rc;
+	return smm_pathtrek(path, SMM_PATH_DIR_FIFO, rename_recursive_cb, opt);
+}
 
-	if (opt->cflags & RNM_CFLAG_VERBOSE) { 
-		printf("Entering directory [%s]\n", path);
-	}
-	if (chdir(path) < 0)  {
-		perror(path);
-		return RNM_ERR_CHDIR;
-	}
-	if ((dir = opendir(".")) == NULL)  {
-		perror("opendir");
-		return RNM_ERR_OPENDIR;
-	}
+static int rename_recursive_cb(void *option, char *path, int type, void *info)
+{
+	RENOP	*opt = option;
+	int	rc = RNM_ERR_NONE;
 
-	rc = RNM_ERR_NONE;
-	while ((de = readdir(dir)) != NULL)  {
-		if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
-			continue;
+	switch (type) {
+	case SMM_MSG_PATH_ENTER:
+		if (opt->cflags & RNM_CFLAG_VERBOSE) {
+			printf("Entering directory [%s]\n", path);
 		}
-		if (lstat(de->d_name, &fs) < 0) {
-			continue; 	/* maybe permission denied */
+		break;
+	case SMM_MSG_PATH_LEAVE:
+		if (opt->cflags & RNM_CFLAG_VERBOSE) {
+			printf("Leaving directory [%s]\n", path);
 		}
-	
-		if (S_ISDIR(fs.st_mode)) {
-			rc = rename_recursive(opt, de->d_name);
-			if (rc != RNM_ERR_NONE) {
-				break;
-			}
-		}
-		rc = rename_action(opt, de->d_name);
-		if (rc != RNM_ERR_NONE) {
-			break;
-		}
-	}
-	closedir(dir);
-    
-	if (chdir("..") < 0) {
-		perror("..");
-		return RNM_ERR_CHDIR;
-	}
-	if (opt->cflags & RNM_CFLAG_VERBOSE) {
-		printf("Leaving directory [%s]\n", path);
+		break;
+	case SMM_MSG_PATH_EXEC:
+		rc = rename_action(opt, path);
+		break;
 	}
 	return rc;
 }
@@ -185,19 +162,23 @@ static int rename_action(RENOP *opt, char *oldname)
 	char	*fname;
 	int	rc = RNM_ERR_NONE, flen, renamed = 0;
 
-	if (safe_copy(opt->buffer, oldname, FNBUF) < 0) {
-		return RNM_ERR_OVERFLOW;
+	flen = strlen(oldname) + RNM_PATH_MAX + 1;
+	if ((opt->buffer = malloc(flen)) == NULL) {
+		return RNM_ERR_LOWMEM;
 	}
-	opt->room = FNBUF - strlen(opt->buffer) - 1;
+	strcpy(opt->buffer, oldname);
+	opt->room = RNM_PATH_MAX;
 
 	/* indicate the expected filename, not the whole path */
-	if ((fname = strrchr(opt->buffer, '/')) == NULL) {
+	if ((fname = strrchr(opt->buffer, RNM_PATH_TOK)) == NULL) {
 		fname = opt->buffer;
 	} else {
 		fname++;
 	}
 	
 	if (!strcmp(fname, ".") || !strcmp(fname, "..")) {
+		free(opt->buffer);
+		opt->buffer = NULL;
 		return RNM_ERR_NONE;
 	}
     
@@ -209,17 +190,23 @@ static int rename_action(RENOP *opt, char *oldname)
 	case RNM_ACT_BACKWARD:
 		rc = match_backward(opt, fname, flen);
 		break;
+#ifdef	CFG_REGEX
 	case RNM_ACT_REGEX:
 		rc = match_regexpr(opt, fname, flen);
 		break;
+#endif
 	case RNM_ACT_SUFFIX:
 		rc = match_suffix(opt, fname, flen);
 		break;
 	}
 	if (rc < 0) {
+		free(opt->buffer);
+		opt->buffer = NULL;
 		return RNM_ERR_LONGPATH;
 	}
 	if (opt->action && !strcmp(opt->buffer, oldname)) {
+		free(opt->buffer);
+		opt->buffer = NULL;
 		return RNM_ERR_NONE;
 	}
 	
@@ -236,6 +223,8 @@ static int rename_action(RENOP *opt, char *oldname)
 		} else if (rc == RNM_ERR_NONE) {
 			renamed++;
 		} else {
+			free(opt->buffer);
+			opt->buffer = NULL;
 			return rc;
 		}
 	}
@@ -250,23 +239,28 @@ static int rename_action(RENOP *opt, char *oldname)
 	if (renamed) {
 		opt->rpcnt++;
 	}
+
+	free(opt->buffer);
+	opt->buffer = NULL;
 	return rc;
 }
 
 static int rename_executing(RENOP *opt, char *dest, char *sour)
 {
-	struct	stat	fs;
+	char	tmp[4];
 
-	if (!stat(dest, &fs) && S_ISDIR(fs.st_mode))  {
+	if (smm_fstat(dest) == SMM_FSTAT_DIR) {
 		/* the destination is directory, which means we must move the
 		 * original file into this directory, just like mv(1) does */
 		if (strlen(sour) + 2 > opt->room) {
 			return RNM_ERR_LONGPATH;
 		}
-		strcat(dest, "/");
+		tmp[0] = RNM_PATH_TOK;
+		tmp[1] = '\0';
+		strcat(dest, tmp);
 		strcat(dest, sour);
 	}
-	if (!stat(dest, &fs)) {	/* the target file has existed already */
+	if (smm_fstat(dest) >= 0) {	/* the target file has existed already */
 		switch (opt->cflags & RNM_CFLAG_PROMPT_MASK) {
 		case RNM_CFLAG_NEVER:
 			report(dest, sour, RNM_REP_SKIP, opt->cflags);
@@ -295,6 +289,9 @@ static int rename_executing(RENOP *opt, char *dest, char *sour)
 
 static int rename_chown(RENOP *opt, char *fname)
 {
+#ifdef	CFG_WIN32_API
+	return RNM_ERR_SKIP;
+#else
 	struct	stat	fs;
 
 	if (stat(fname, &fs)) {
@@ -313,6 +310,7 @@ static int rename_chown(RENOP *opt, char *fname)
 	}
 	report(fname, fname, RNM_REP_CHOWN, opt->cflags);
 	return RNM_ERR_NONE; 
+#endif
 }
 
 static int rename_prompt(RENOP *opt, char *fname)
@@ -320,8 +318,7 @@ static int rename_prompt(RENOP *opt, char *fname)
 	char	buf[64];
 
 	fprintf(stderr, "Overwrite '%s'?  (Yes/No/Always/Skip) ", fname);
-	tcflush(0, TCIFLUSH);
-	if (read(0, buf, 64) <= 0) {
+	if (fgets(buf, 64, stdin) == NULL) {
 		return 0;
 	}
 
@@ -353,6 +350,7 @@ static int rename_prompt(RENOP *opt, char *fname)
    Note: precompiled pattern buffer be set to globel.
    If no matches in the string, return 0.
 */
+#ifdef	CFG_REGEX
 static int match_regexpr(RENOP *opt, char *fname, int flen)
 {
 	regmatch_t	pmatch[1];
@@ -378,6 +376,7 @@ static int match_regexpr(RENOP *opt, char *fname, int flen)
 	}
 	return count;
 }
+#endif
 
 static int match_forward(RENOP *opt, char *fname, int flen)
 {
