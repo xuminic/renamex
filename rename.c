@@ -69,7 +69,7 @@
   #include "regex.h"
 #endif
 
-#include "libsmm.h"
+#include "libcsoup.h"
 #include "rename.h"
   
 

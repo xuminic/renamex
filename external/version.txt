@@ -1,0 +1,4 @@
+gd-2.0.35
+iup-3.18
+libcsoup-0.8.13
+https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Map_making_conventions_logo.svg/458px-Map_making_conventions_logo.svg.png

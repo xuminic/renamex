@@ -1,41 +1,160 @@
 
-include Make.conf
-
-
-ifeq	($(SYSTOOL),unix)
-TARGET	= renamex
+ifndef	SYSTOOL		# Options: unix, mingw
+ifeq	($(MSYSTEM),MINGW32)
+SYSTOOL = mingw
 else
-TARGET	= renamex.exe
+SYSTOOL	= unix
+endif
 endif
 
-OBJS	= main.o  fixtoken.o	rename.o
-MANPAGE	= renamex.1
-
-all: libsmm $(TARGET)
-
-$(TARGET) : $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^ -lsmm
-
-static:	$(OBJS)
-	$(CC) $(CFLAGS) -static -o $@ $^
-
-libsmm:
-	make -C libsmm all
-
-.PHONY: clean clean-all install libsmm
-clean:
-	$(RM) $(TARGET) $(OBJS)
-	make -C libsmm clean
-
-clean-all: clean
-	$(RM) config.status config.cache config.h config.log Makefile
+ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF
+SYSGUI	= CFG_GUI_OFF
+endif
 
 ifeq	($(SYSTOOL),mingw)
-install:
-	echo Not functional
+CC	= gcc -mms-bitfields
+AR	= ar
+CP	= cp
+RM	= rm -f
+
+SYSINC  = -I./libmingw/include -I./libmingw/include/iup
+SYSLDD  = -L./libmingw/lib
+SYSFLAG	= -DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 \
+	  -DNONDLL -DCURL_STATICLIB #For linking static libgd and libcurl
+# Options: -mwindows, -mconsole -mwindows, -Wl,--subsystem,windows
+SYSLIB	= -ljpeg -lpng -lz -lwsock32 -lwldap32
+ifeq	($(SYSGUI),CFG_GUI_ON)
+SYSLIB	+= -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
+	   -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
 else
-install:
-	install -o root -g root -m 0755 -s $(TARGET) $(BINDIR)
-	install -o root -g root -m 0644 $(MANPAGE) $(MANDIR)
-endif	
+SYSLIB	+= -mconsole
+endif
+endif
+
+# This setting is used for POSIX environment with the following libraries
+# installed: GTK+, FreeType and libgd
+ifeq	($(SYSTOOL),unix)
+CC	= gcc
+AR	= ar
+CP	= cp
+RM	= rm -f
+
+SYSINC	= -I./external/libcsoup 
+SYSLDD	= -L./external/libcsoup
+SYSLIB	=
+ifeq	($(SYSGUI),CFG_GUI_ON)
+SYSINC	+= -I./external/iup/include `pkg-config gtk+-2.0 --cflags`
+SYSLDD	+= -L$(shell echo ./external/iup/lib/*)
+SYSLIB	+= `pkg-config gtk+-2.0 --libs` -lX11
+endif
+SYSFLAG =
+endif
+
+include	version.mk
+
+PREFIX	= /usr/local
+BINDIR	= /usr/local/bin
+MANDIR	= /usr/local/man/man1
+
+DEBUG	= -g -DDEBUG
+#DEBUG	= -O3
+DEFINES = -D$(SYSGUI)
+CFLAGS  = -Wall -Wextra $(DEBUG) $(DEFINES) $(SYSINC) $(SYSFLAG)
+
+
+PROJECT	= renamex
+
+ifeq	($(SYSTOOL),unix)
+TARGET	= $(PROJECT)
+else 
+ifeq	($(SYSGUI),CFG_GUI_OFF)
+TARGET	= $(PROJECT).exe
+else
+TARGET	= $(PROJECT)_win.exe
+endif
+endif
+
+RELDATE	= `date +%Y%m%d`
+RELDIR	= $(PROJECT)-$(RELVERS)
+RELWIN	= $(RELDIR)-win32-bin
+
+OBJS	= main.o rename.o
+LIBS	= -lcsoup 
+ifeq	($(SYSGUI),CFG_GUI_ON)
+OBJS	+= mmgui.o
+ifeq	($(SYSTOOL),mingw)
+OBJS	+= rename_icon.o
+endif
+LIBS	+= -liup
+endif
+LIBS	+= $(SYSLIB)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+	
+.PHONY: $(TARGET)
+
+all: $(TARGET) version.mk
+
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) $(SYSLDD) -o $@ $(OBJS) $(LIBS)
+
+rename_icon.o: rename_icon.rc
+	windres $< -o $@
+
+renamex.pdf: renamex.1
+	man -l -Tps $< | ps2pdf - $@
+
+cleanobj:
+	$(RM) -r $(OBJS)
+
+clean: cleanobj
+	$(RM) $(TARGET)
+
+extlib:
+	make -C ./external/iup do_all
+	make -C ./external/libcsoup all
+
+extinstall:
+	cp -f  ./external/libcsoup/libcsoup.a ./libmingw/lib
+	cp -f  ./external/libcsoup/libcsoup.h ./libmingw/include
+	cp -af ./external/iup/include ./libmingw/include/iup
+	cp -f  ./external/iup/lib/mingw4/*.a ./libmingw/lib
+
+extclean:
+	make -C ./external/iup clean
+	make -C ./external/libcsoup clean
+
+version.mk: rename.h 
+	echo -n "RELVERS	= " > $@
+	grep RENAME_VERSION $< | cut -d\" -f 2 >> $@
+ifeq	($(SYSTOOL),unix)
+	make extlib
+endif
+
+ifeq	($(SYSTOOL),unix)
+release: extclean
+else
+release: release-win extclean
+endif
+	-if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
+	-mkdir $(RELDIR)
+	-$(CP) *.c *.h *.1 Make* *.txt *.rc *.ico *.lsm COPYING $(RELDIR)
+	-$(CP) -a libmingw $(RELDIR)
+	-$(CP) -a external $(RELDIR)
+	-7z a -tzip $(RELDIR).zip $(RELDIR)
+
+release-win: 
+	-if [ -d $(RELWIN) ]; then $(RM) -r $(RELWIN); fi
+	-mkdir $(RELWIN)
+	-$(CP) COPYING *.pdf *.1 *.txt $(RELWIN)
+	SYSGUI=CFG_GUI_OFF make clean
+	SYSGUI=CFG_GUI_OFF make
+	-$(CP) $(PROJECT).exe $(RELWIN)
+	SYSGUI=CFG_GUI_ON make clean
+	SYSGUI=CFG_GUI_ON make
+	-$(CP) $(PROJECT)_win.exe $(RELWIN)
+	-7z a -tzip $(RELWIN).zip $(RELWIN)
+	-$(RM) -r $(RELWIN)
+
 

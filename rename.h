@@ -20,6 +20,8 @@
 
 #ifndef	_RENAME_H_
 #define _RENAME_H_
+
+#define RENAME_VERSION		"2.0"
   
 #define RNM_ERR_NONE		0
 #define RNM_ERR_SKIP		1

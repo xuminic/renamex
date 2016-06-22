@@ -23,39 +23,44 @@
 #include "config.h"
 #endif
 
-#ifdef	CFG_UNIX_API
-#undef	UNICODE
-#else	/* CFG_WIN32_API */
-#define UNICODE
-#endif
-
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef	CFG_UNIX_API
 #include <pwd.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <regex.h>
-#else	/* CFG_WIN32_API */
-#include <windows.h>
-#include "regex.h"
-#endif
 
-#include "libsmm.h"
+#include "libcsoup.h"
 #include "rename.h"
 
-#define	WHOAMI	"renamex"
-#define VERSION	"1.99.3"
-
-int	sys_cwd_id = 0;
+void	*sys_cwd_id = NULL;
 RENOP	*sysopt = NULL;
 
+
+static	struct	cliopt	clist[] = {
+	{ 0, NULL, 0, "Usage: renamex [OPTIONS] filename ..." },
+	{ 0, NULL, 0, "OPTIONS:" },
+	{ 'f', "file",    1, "Load file names from the file" },
+	{ 'l', "lowercase", 0, "Lowercase the file name" },
+	{ 'u', "uppercase", 0, "Uppercase the file name" },
+	{ 's', "search",    1, "search and replace in the file name" },
+	{ 'R', "recursive", 0, "Operate on files and directories recursively" },
+	{ 'o', "owner",     1, "Change file's ownership (root in unix only)" },
+	{ 'v', "verbose",   0, "Display verbose information" },
+	{ 't', "test",      0, "Test only mode. Nothing will be changed" },
+	{ 'A', "always",    0, "Always overwrite the existing files" },
+	{ 'N', "never",     0, "Never overwrite the existing files" },
+	{   1, "help",      0, "Display the help message" },
+	{   2, "version",   0, "Display the version message" },
+	{ 0, NULL, 0, NULL }
+};
+
 static	char	*usage = "\
-Usage: " WHOAMI " [OPTIONS] filename ...\n\
+Usage: renamex [OPTIONS] filename ...\n\
 OPTIONS:\n\
   -f, --file              Load file names from the file\n\
   -l, --lowercase         Lowercase the file name\n\
@@ -80,7 +85,7 @@ OPTIONS:\n\
 \n\
 Please see manpage regex(7) for the details of extended regular expression.\n";
 
-static	char	*version = WHOAMI " " VERSION
+static	char	*version = "renamex " RENAME_VERSION
 ", Rename files by substituting the specified patterns.\n\
 Copyright (C) 1998-2011 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
