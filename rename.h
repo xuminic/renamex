@@ -87,6 +87,7 @@ typedef	struct	{
 	uid_t	pw_uid;
 	gid_t	pw_gid;
 #endif
+	char	*patbuf;	/* buffer for patterns */
 	char	*pattern;
 	int	pa_len;
 	char	*substit;
@@ -97,13 +98,13 @@ typedef	struct	{
 #endif
 	int	(*compare)(const char *s1, const char *s2, size_t n);
 
+	void	*rtpath;	/* return path */
 	char	*buffer;	/* change to dynamic allocation */
 	int	room;
 	int	rpcnt;
 } RENOP;
 
 
-#define strcmp_list(dst,s1,s2)	(strcmp((dst),(s1)) && strcmp((dst),(s2)))
 
 int rename_enfile(RENOP *opt, char *filename);
 int rename_entry(RENOP *opt, char *filename);
