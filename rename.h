@@ -53,7 +53,6 @@
 #define RNM_OFLAG_LOWERCASE	1	/* lowercase the output filename */
 #define RNM_OFLAG_UPPERCASE	2	/* uppercase the output filename */
 #define RNM_OFLAG_MASKCASE	3
-#define RNM_OFLAG_OWNER		4	/* change the file's ownership */
 
 #define RNM_ACT_NONE		0
 #define RNM_ACT_FORWARD		1	/* search and substitute simplely */
@@ -71,10 +70,8 @@
 #ifdef	CFG_UNIX_API
 #include <limits.h>
 #define	RNM_PATH_MAX	(PATH_MAX << 1)
-#define RNM_PATH_TOK	'/'
 #else
 #define	RNM_PATH_MAX	(MAX_PATH << 2)
-#define RNM_PATH_TOK	'\\'
 #endif
 
 
@@ -83,10 +80,6 @@ typedef	struct	{
 	int	cflags;
 	int	action;
 
-#ifdef	CFG_UNIX_API
-	uid_t	pw_uid;
-	gid_t	pw_gid;
-#endif
 	char	*patbuf;	/* buffer for patterns */
 	char	*pattern;
 	int	pa_len;
@@ -109,19 +102,10 @@ typedef	struct	{
 int rename_enfile(RENOP *opt, char *filename);
 int rename_entry(RENOP *opt, char *filename);
 
-int safe_copy(char *dest, const char *src, size_t n);
-int safe_cat(char *dest, const char *src, size_t n);
-char *skip_space(char *sour);
-
 int syscall_codepage(void);
 int syscall_chdir(char *path);
 int syscall_getcwd(char *path, int len);
 int syscall_isdir(char *path);
 
-/* see fixtoken.c */
-
-int fixtoken(char *sour, char **idx, int ids, char *delim);
-int ziptoken(char *sour, char **idx, int ids, char *delim);
-  
 #endif
 

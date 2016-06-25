@@ -40,6 +40,7 @@
 RENOP	*sysopt = NULL;
 
 
+
 static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, "Usage: renamex [OPTIONS] filename ..." },
 	{ 0, NULL, 0, "OPTIONS:" },
@@ -48,55 +49,36 @@ static	struct	cliopt	clist[] = {
 	{ 'u', "uppercase", 0, "Uppercase the file name" },
 	{ 's', "search",    1, "search and replace in the file name" },
 	{ 'R', "recursive", 0, "Operate on files and directories recursively" },
-	{ 'o', "owner",     1, "Change file's ownership (root in unix only)" },
 	{ 'v', "verbose",   0, "Display verbose information" },
 	{ 't', "test",      0, "Test only mode. Nothing will be changed" },
 	{ 'A', "always",    0, "Always overwrite the existing files" },
 	{ 'N', "never",     0, "Never overwrite the existing files" },
 	{   1, "help",      0, "Display the help message" },
 	{   2, "version",   0, "Display the version message" },
+	{ 0, NULL, 0, "\nSEARCH SETTING:\n\
+  -s /PATTERN/STRING[/SW]  Replace the matching PATTERN by STRING.\n\
+The SW could be:\n\
+  [i] ignore case when searching\n\
+  [b] backward searching and replacing\n\
+  [s] change file's suffix name\n\
+  [r] PATTERN is regular expression, see regex(7)\n\
+  [e] PATTERN is extended regular expression, see regex(7)\n\
+  [g] replace all occurrences in the filename\n\
+  [1-9] replace specified occurrences in the filename\n" },
 	{ 0, NULL, 0, NULL }
 };
 
-static	char	*usage = "\
-Usage: renamex [OPTIONS] filename ...\n\
-OPTIONS:\n\
-  -f, --file              Load file names from the file\n\
-  -l, --lowercase         Lowercase the file name\n\
-  -u, --uppercase         Uppercase the file name\n\
-  -s/PATTERN/STRING[/SW]  Replace the matching PATTERN with STRING.\n\
-                          The SW could be:\n\
-                          [i] ignore case when searching\n\
-                          [b] backward searching and replacing\n\
-                          [s] change file's suffix name\n\
-                          [r] PATTERN is regular expression\n\
-                          [e] PATTERN is extended regular expression\n\
-                          [g] replace all occurrences in the filename\n\
-                          [1-9] replace specified occurrences in the filename\n\
-  -R, --recursive         Operate on files and directories recursively\n\
-  -o, --owner OWNER       Change file's ownership (root in unix only)\n\
-  -v, --verbose           Display verbose information\n\
-  -t, --test              Test only mode. Do not change any thing\n\
-  -h, --help              Display this help and exit\n\
-  -V, --version           Output version information and exit\n\
-  -A, --always            Always overwrite the existing files\n\
-  -N, --never             Never overwrite the existing files\n\
-\n\
-Please see manpage regex(7) for the details of extended regular expression.\n";
 
 static	char	*version = "renamex " RENAME_VERSION
 ", Rename files by substituting the specified patterns.\n\
-Copyright (C) 1998-2011 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
+Copyright (C) 1998-2016 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n";
 
 static int rename_free_all(int sig);
 static int cli_set_pattern(RENOP *opt, char *optarg);
-
-#ifdef	DEBUG
 static int cli_dump(RENOP *opt, char *filename);
-#endif
 
 int main(int argc, char **argv)
 {
@@ -157,14 +139,6 @@ int main(int argc, char **argv)
 			sysopt->cflags &= ~RNM_CFLAG_PROMPT_MASK;
 			sysopt->cflags |= RNM_CFLAG_NEVER;
 			break;
-
-#ifdef	CFG_UNIX_API
-		case 'o':
-			smm_pwuid(optarg, (long*)&sysopt->pw_uid, 
-						(long*)&sysopt->pw_gid);
-			sysopt->oflags |= RNM_OFLAG_OWNER;
-			break;
-#endif
 		case 's':
 			rc = cli_set_pattern(sysopt, optarg);
 			if (rc != RNM_ERR_NONE) {
@@ -174,7 +148,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if ((argc < 1) || (!sysopt->oflags && !sysopt->action)) {
+	if ((optind >= argc) || (!sysopt->oflags && !sysopt->action)) {
 		csc_cli_print(clist, NULL);
 		rename_free_all(0);
 		return RNM_ERR_HELP;
@@ -184,16 +158,15 @@ int main(int argc, char **argv)
 	sysopt->rtpath  = smm_cwd_push();
 	smm_signal_break(rename_free_all);
 
-#ifdef	DEBUG
 	if (sysopt->cflags & RNM_CFLAG_TEST) {
-		cli_dump(sysopt, *argv);
+		cli_dump(sysopt, argv[optind]);
 	}
-#endif
-	while (argc-- && (rc == RNM_ERR_NONE))  {
+
+	for (c = optind; (c < argc) && (rc == RNM_ERR_NONE); c++) {
 		if (infile) {
-			rc = rename_enfile(sysopt, *argv++);
+			rc = rename_enfile(sysopt, argv[c]);
 		} else {
-			rc = rename_entry(sysopt, *argv++);
+			rc = rename_entry(sysopt, argv[c]);
 		}
 	}
 
@@ -204,16 +177,18 @@ int main(int argc, char **argv)
 
 static int rename_free_all(int sig)
 {
+	(void) sig;
+
 #ifdef	CFG_REGEX
 	if (sysopt->action == RNM_ACT_REGEX) {
 		regfree(sysopt->preg);
 	}
 #endif
 	if (sysopt->buffer) {
-		free(sysopt->buffer);
+		sysopt->buffer = smm_free(sysopt->buffer);
 	}
 	if (sysopt->patbuf) {
-		free(sysopt->patbuf);
+		sysopt->patbuf = smm_free(sysopt->patbuf);
 	}
 	if (sysopt->rtpath) {
 		smm_cwd_pop(sysopt->rtpath);
@@ -238,8 +213,7 @@ static int cli_set_pattern(RENOP *opt, char *optarg)
 	opt->substit = idx[1];
 
 	if (!opt->pattern || !opt->substit) {
-		smm_free(opt->patbuf);
-		opt->patbuf = NULL;
+		opt->patbuf = smm_free(opt->patbuf);
 		return RNM_ERR_PARAM;
 	}
 
@@ -294,27 +268,63 @@ static int cli_set_pattern(RENOP *opt, char *optarg)
 	return RNM_ERR_NONE;
 }
 
-#ifdef	DEBUG
 static int cli_dump(RENOP *opt, char *filename)
 {
+	char	buf[80];
+
+	switch (opt->cflags & RNM_CFLAG_PROMPT_MASK) {
+	case RNM_CFLAG_NEVER:
+		strcpy(buf, "[SKIP");
+		break;
+	case RNM_CFLAG_ALWAYS:
+		strcpy(buf, "[OVERWT");
+		break;
+	default:
+		strcpy(buf, "[AUTO");
+		break;
+	}
+	if (opt->cflags & RNM_CFLAG_RECUR) {
+		strcat(buf, "|RECUR");
+	}
+	if (opt->cflags & RNM_CFLAG_VERBOSE) {
+		strcat(buf, "|VERBOSE");
+	}
+	if (opt->cflags & RNM_CFLAG_TEST) {
+		strcat(buf, "|TEST");
+	}
+	strcat(buf, "]");
+	switch (opt->oflags & RNM_OFLAG_MASKCASE) {
+	case RNM_OFLAG_LOWERCASE:
+		strcat(buf, "[LOWCASE]");
+		break;
+	case RNM_OFLAG_UPPERCASE:
+		strcat(buf, "[UPCASE]");
+		break;
+	}
+	switch (opt->action) {
+	case RNM_ACT_FORWARD:
+		strcat(buf, "[FORWARD]");
+		break;
+	case RNM_ACT_BACKWARD:
+		strcat(buf, "[BACKWARD]");
+		break;
+	case RNM_ACT_REGEX:
+		strcat(buf, "[REGEX]");
+		break;
+	case RNM_ACT_SUFFIX:
+		strcat(buf, "[SUFFIX]");
+		break;
+	}
+
 	printf("Source:         %s\n", filename);
-	printf("Flags:          OF=%x CF=%x ACT=%d\n", 
-			opt->oflags, opt->cflags, opt->action);
-#ifdef	CFG_UNIX_API
-	printf("Owership:       UID=%d GID=%d\n",
-			(int)opt->pw_uid, (int)opt->pw_gid);
-#endif
-	printf("Pattern:        %s (%d) %x %x %x %x %x %x\n", opt->pattern, opt->pa_len,
-			opt->pattern[0], opt->pattern[1],
-			opt->pattern[2], opt->pattern[3],
-			opt->pattern[4], opt->pattern[5]);
-	printf("Substituter:    %s (%d+%d)\n", 
+	printf("Flags:          %s\n", buf);
+	printf("Pattern:        %s (%d)\n", opt->pattern, opt->pa_len);
+	printf("Substituter:    %s (%d)(x %d)\n", 
 			opt->substit, opt->su_len, opt->count);
 	printf("Name Buffer:    %d (%d)\n", opt->room, RNM_PATH_MAX);
 	printf("\n");
 	return 0;
 }
-#endif	/* DEBUG */
 
 
 

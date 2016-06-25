@@ -79,7 +79,6 @@ static int rename_recursive(RENOP *opt, char *path);
 static int rename_recursive_cb(void *option, char *path, int type, void *info);
 static int rename_action(RENOP *opt, char *oldname);
 static int rename_executing(RENOP *opt, char *dest, char *sour);
-static int rename_chown(RENOP *opt, char *fname);
 static int rename_prompt(RENOP *opt, char *fname);
 #ifdef	CFG_REGEX
 static int match_regexpr(RENOP *opt, char *fname, int flen);
@@ -139,6 +138,7 @@ static int rename_recursive_cb(void *option, char *path, int type, void *info)
 	RENOP	*opt = option;
 	int	rc = RNM_ERR_NONE;
 
+	(void) info;
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
 		if (opt->cflags & RNM_CFLAG_VERBOSE) {
@@ -162,23 +162,16 @@ static int rename_action(RENOP *opt, char *oldname)
 	char	*fname;
 	int	rc = RNM_ERR_NONE, flen, renamed = 0;
 
-	flen = strlen(oldname) + RNM_PATH_MAX + 1;
-	if ((opt->buffer = malloc(flen)) == NULL) {
+	if ((opt->buffer = csc_strcpy_alloc(oldname, RNM_PATH_MAX)) == NULL) {
 		return RNM_ERR_LOWMEM;
 	}
-	strcpy(opt->buffer, oldname);
 	opt->room = RNM_PATH_MAX;
 
 	/* indicate the expected filename, not the whole path */
-	if ((fname = strrchr(opt->buffer, RNM_PATH_TOK)) == NULL) {
-		fname = opt->buffer;
-	} else {
-		fname++;
-	}
+	fname = csc_path_basename(opt->buffer, NULL, 0);
 	
 	if (!strcmp(fname, ".") || !strcmp(fname, "..")) {
-		free(opt->buffer);
-		opt->buffer = NULL;
+		opt->buffer = smm_free(opt->buffer);
 		return RNM_ERR_NONE;
 	}
     
@@ -200,13 +193,11 @@ static int rename_action(RENOP *opt, char *oldname)
 		break;
 	}
 	if (rc < 0) {
-		free(opt->buffer);
-		opt->buffer = NULL;
+		opt->buffer = smm_free(opt->buffer);
 		return RNM_ERR_LONGPATH;
 	}
 	if (opt->action && !strcmp(opt->buffer, oldname)) {
-		free(opt->buffer);
-		opt->buffer = NULL;
+		opt->buffer = smm_free(opt->buffer);
 		return RNM_ERR_NONE;
 	}
 	
@@ -223,41 +214,27 @@ static int rename_action(RENOP *opt, char *oldname)
 		} else if (rc == RNM_ERR_NONE) {
 			renamed++;
 		} else {
-			free(opt->buffer);
-			opt->buffer = NULL;
+			opt->buffer = smm_free(opt->buffer);
 			return rc;
-		}
-	}
-	if (opt->oflags & RNM_OFLAG_OWNER) {
-		rc = rename_chown(opt, opt->buffer);
-		if (rc == RNM_ERR_SKIP) {
-			rc = RNM_ERR_NONE;
-		} else if (rc == RNM_ERR_NONE) {
-			renamed++;
 		}
 	}
 	if (renamed) {
 		opt->rpcnt++;
 	}
 
-	free(opt->buffer);
-	opt->buffer = NULL;
+	opt->buffer = smm_free(opt->buffer);
 	return rc;
 }
 
 static int rename_executing(RENOP *opt, char *dest, char *sour)
 {
-	char	tmp[4];
-
 	if (smm_fstat(dest) == SMM_FSTAT_DIR) {
 		/* the destination is directory, which means we must move the
 		 * original file into this directory, just like mv(1) does */
-		if (strlen(sour) + 2 > opt->room) {
+		if ((int)strlen(sour) + 2 > opt->room) {
 			return RNM_ERR_LONGPATH;
 		}
-		tmp[0] = RNM_PATH_TOK;
-		tmp[1] = '\0';
-		strcat(dest, tmp);
+		strcat(dest, SMM_DEF_DELIM);
 		strcat(dest, sour);
 	}
 	if (smm_fstat(dest) >= 0) {	/* the target file has existed already */
@@ -287,32 +264,6 @@ static int rename_executing(RENOP *opt, char *dest, char *sour)
 	return RNM_ERR_NONE;
 }
 
-static int rename_chown(RENOP *opt, char *fname)
-{
-#ifdef	CFG_WIN32_API
-	return RNM_ERR_SKIP;
-#else
-	struct	stat	fs;
-
-	if (stat(fname, &fs)) {
-		return RNM_ERR_SKIP;	//FIXME: file not exist
-	}
-	if ((fs.st_uid == opt->pw_uid) && (fs.st_gid == opt->pw_gid)) {
-		return RNM_ERR_SKIP;
-	}
-	if (opt->cflags & RNM_CFLAG_TEST) {
-		report(fname, fname, RNM_REP_TEST, opt->cflags);
-		return RNM_ERR_SKIP;
-	}
-	if (chown(fname, opt->pw_uid, opt->pw_gid) < 0) {
-		report(fname, fname, RNM_REP_FAILED, opt->cflags);
-		return RNM_ERR_CHOWN;
-	}
-	report(fname, fname, RNM_REP_CHOWN, opt->cflags);
-	return RNM_ERR_NONE; 
-#endif
-}
-
 static int rename_prompt(RENOP *opt, char *fname)
 {
 	char	buf[64];
@@ -322,7 +273,7 @@ static int rename_prompt(RENOP *opt, char *fname)
 		return 0;
 	}
 
-	switch (*(skip_space(buf)))  {
+	switch (*(csc_strbody(buf, NULL)))  {
 	case 'a':
 	case 'A':
 		opt->cflags &= ~RNM_CFLAG_PROMPT_MASK;
@@ -528,42 +479,4 @@ static int report(char *dest, char *sour, int state, int flag)
 	return 0;
 }
 
-int safe_copy(char *dest, const char *src, size_t n)
-{
-	int	rc;
-
-	if ((rc = strlen(src)) < n) {
-		strcpy(dest, src);
-		rc++;
-	} else if (n <= 0) {
-		rc = 0;
-	} else {
-		strncpy(dest, src, n);
-		dest[n-1] = 0;
-		rc = -1;
-	}
-	return rc;
-}
-
-int safe_cat(char *dest, const char *src, size_t n)
-{
-	int	rc;
-
-	if ((rc = strlen(src) + strlen(dest)) < n) {
-		strcat(dest, src);
-	} else {
-		strncat(dest, src, n);
-		dest[n - 1] = 0;
-		rc = -1;
-	}
-	return rc;
-}
-
-char *skip_space(char *sour)
-{
-	while (*sour && isspace((int) *sour)) {
-		sour++;
-	}
-	return sour;
-}
 

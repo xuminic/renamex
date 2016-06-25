@@ -648,7 +648,7 @@ extern "C"
 {
 #endif
 void *smm_alloc(size_t size);
-int smm_free(void *ptr);
+void *smm_free(void *ptr);
 int smm_chdir(char *path);
 int smm_codepage(void);
 int smm_codepage_set(int cpno);

@@ -56,9 +56,9 @@ PREFIX	= /usr/local
 BINDIR	= /usr/local/bin
 MANDIR	= /usr/local/man/man1
 
-DEBUG	= -g -DDEBUG
+DEBUG	= -g -O0 -DDEBUG
 #DEBUG	= -O3
-DEFINES = -D$(SYSGUI)
+DEFINES = -D$(SYSGUI) -DHAVE_CONFIG_H
 CFLAGS  = -Wall -Wextra $(DEBUG) $(DEFINES) $(SYSINC) $(SYSFLAG)
 
 
