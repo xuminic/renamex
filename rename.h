@@ -40,7 +40,6 @@
 #define RNM_ERR_RENAME		-13
 #define RNM_ERR_CHOWN		-14
 
-
 #define RNM_CFLAG_NONE		0
 #define RNM_CFLAG_NEVER		1	/* say no to all existed files */
 #define RNM_CFLAG_ALWAYS 	2	/* say yes to all existed files */
@@ -53,6 +52,8 @@
 #define RNM_OFLAG_LOWERCASE	1	/* lowercase the output filename */
 #define RNM_OFLAG_UPPERCASE	2	/* uppercase the output filename */
 #define RNM_OFLAG_MASKCASE	3
+#define RNM_OFLAG_PREFIX	4	/* append a prefix */
+#define RNM_OFLAG_SUFFIX	8	/* append a suffix */
 
 #define RNM_ACT_NONE		0
 #define RNM_ACT_FORWARD		1	/* search and substitute simplely */
@@ -65,6 +66,23 @@
 #define RNM_REP_TEST		2
 #define RNM_REP_FAILED		3
 #define RNM_REP_CHOWN		4
+
+#define RNM_MSG_ENTER_DIR	1
+#define RNM_MSG_LEAVE_DIR	2
+#define RNM_MSG_ACT_FORWARD	3
+#define RNM_MSG_ACT_BACKWARD	4
+#define RNM_MSG_ACT_REGEX	5
+#define RNM_MSG_ACT_SUFFIX	6
+#define RNM_MSG_PPRO_PREFIX	7
+#define RNM_MSG_PPRO_SUFFIX	8
+#define RNM_MSG_PPRO_LOWCASE	9
+#define RNM_MSG_PPRO_UPCASE	10
+#define RNM_MSG_SKIP_EXISTED	11
+#define RNM_MSG_OVERWRITE	12
+#define RNM_MSG_PROMPT		13
+#define RNM_MSG_SIMULATION	14
+#define RNM_MSG_SYS_FAIL	15
+#define RNM_MSG_RENAME		16
 
 
 #ifdef	CFG_UNIX_API
@@ -85,11 +103,14 @@ typedef	struct	{
 	int	pa_len;
 	char	*substit;
 	int	su_len;
+	char	*prefix;
+	char	*suffix;
 	int	count;		/* replace occurance */
 #ifdef	CFG_REGEX
 	regex_t	preg[1];
 #endif
 	int	(*compare)(const char *s1, const char *s2, size_t n);
+	int	(*notify)(void *opt, int msg, int cur, int max, void *opt);
 
 	void	*rtpath;	/* return path */
 	char	*buffer;	/* change to dynamic allocation */

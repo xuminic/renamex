@@ -44,9 +44,11 @@ RENOP	*sysopt = NULL;
 static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, "Usage: renamex [OPTIONS] filename ..." },
 	{ 0, NULL, 0, "OPTIONS:" },
-	{ 'f', "file",    1, "Load file names from the file" },
+	{ 'f', "file",      1, "Load file names from the file" },
 	{ 'l', "lowercase", 0, "Lowercase the file name" },
 	{ 'u', "uppercase", 0, "Uppercase the file name" },
+	{ 'p', "prefix",    1, "Add prefix to the file name" },
+	{ 'x', "suffix",    1, "Add suffix to the file name" },
 	{ 's', "search",    1, "search and replace in the file name" },
 	{ 'R', "recursive", 0, "Operate on files and directories recursively" },
 	{ 'v', "verbose",   0, "Display verbose information" },
@@ -121,6 +123,14 @@ int main(int argc, char **argv)
 		case 'u':
 			sysopt->oflags &= ~RNM_OFLAG_MASKCASE;
 			sysopt->oflags |= RNM_OFLAG_UPPERCASE;
+			break;
+		case 'p':
+			sysopt->oflags |= RNM_OFLAG_PREFIX;
+			sysopt->prefix = optarg;
+			break;
+		case 'x':
+			sysopt->oflags |= RNM_OFLAG_SUFFIX;
+			sysopt->suffix = optarg;
 			break;
 		case 'R':
 			sysopt->cflags |= RNM_CFLAG_RECUR;
