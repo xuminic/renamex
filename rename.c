@@ -91,7 +91,7 @@ static int postproc_suffix(RENOP *opt, char *fname);
 static int postproc_lowercase(unsigned char *s);
 static int postproc_uppercase(unsigned char *s);
 static int inject(char *rec, int rlen, int del, int room, char *in, int ilen);
-static int console_notify(RENOP *opt, int msg, int cur, int max, void *opt);
+static int console_notify(RENOP *opt, int msg, int v, void *dest, void *sour);
 
 
 
@@ -130,6 +130,20 @@ int rename_entry(RENOP *opt, char *filename)
 	return rename_action(opt, filename);
 }
 
+int rename_notify(RENOP *opt, int msg, int v, void *dest, void *sour)
+{
+	int	rc;
+
+	if ((opt == NULL) || (opt->notify == NULL)) {
+		return console_notify(opt, msg, v, dest, sour);
+	}
+	rc = opt->notify(opt, msg, v, dest, sour);
+	if (rc == RNM_ERR_EVENT) {
+		return console_notify(opt, msg, v, dest, sour);
+	}
+	return rc;
+}
+
 static int rename_recursive(RENOP *opt, char *path)
 {
 	return smm_pathtrek(path, SMM_PATH_DIR_FIFO, rename_recursive_cb, opt);
@@ -143,10 +157,10 @@ static int rename_recursive_cb(void *option, char *path, int type, void *info)
 	(void) info;
 	switch (type) {
 	case SMM_MSG_PATH_ENTER:
-		opt->notify(opt, RNM_MSG_ENTER_DIR, 0, 0, NULL);
+		rename_notify(opt, RNM_MSG_ENTER_DIR, 0, path, NULL);
 		break;
 	case SMM_MSG_PATH_LEAVE:
-		opt->notify(opt, RNM_MSG_LEAVE_DIR, 0, 0, NULL);
+		rename_notify(opt, RNM_MSG_LEAVE_DIR, 0, path, NULL);
 		break;
 	case SMM_MSG_PATH_EXEC:
 		rc = rename_action(opt, path);
@@ -158,7 +172,7 @@ static int rename_recursive_cb(void *option, char *path, int type, void *info)
 static int rename_action(RENOP *opt, char *oldname)
 {
 	char	*fname;
-	int	rc = RNM_ERR_NONE, flen, renamed = 0;
+	int	rc = RNM_ERR_NONE, flen;
 
 	if ((opt->buffer = csc_strcpy_alloc(oldname, RNM_PATH_MAX)) == NULL) {
 		return RNM_ERR_LOWMEM;
@@ -206,8 +220,10 @@ static int rename_action(RENOP *opt, char *oldname)
 		postproc_suffix(opt, fname);
 	}
 	if ((opt->oflags & RNM_OFLAG_MASKCASE) == RNM_OFLAG_LOWERCASE) {
+		rename_notify(opt, RNM_MSG_PPRO_LOWCASE, 0, NULL, fname);
 		postproc_lowercase((unsigned char *) fname);
 	} else if ((opt->oflags & RNM_OFLAG_MASKCASE) == RNM_OFLAG_UPPERCASE) {
+		rename_notify(opt, RNM_MSG_PPRO_UPCASE, 0, NULL, fname);
 		postproc_uppercase((unsigned char *) fname);
 	}
 
@@ -234,13 +250,13 @@ static int rename_executing(RENOP *opt, char *dest, char *sour)
 	if (smm_fstat(dest) >= 0) {	/* the target file has existed already */
 		switch (opt->cflags & RNM_CFLAG_PROMPT_MASK) {
 		case RNM_CFLAG_NEVER:
-			opt->notify(opt, RNM_MSG_SKIP_EXISTED, 0, 0, dest);
+			rename_notify(opt, RNM_MSG_SKIP_EXISTED, 0, dest, sour);
 			return RNM_ERR_NONE;
 		case RNM_CFLAG_ALWAYS:
-			opt->notify(opt, RNM_MSG_OVERWRITE, 0, 0, dest);
+			rename_notify(opt, RNM_MSG_OVERWRITE, 0, dest, sour);
 			break;
 		default:
-			rc = opt->notify(opt, RNM_MSG_PROMPT, 0, 0, dest);
+			rc = rename_notify(opt, RNM_MSG_PROMPT, 0, dest, sour);
 			if (rc == RNM_ERR_SKIP) {
 				return RNM_ERR_NONE;
 			}
@@ -248,15 +264,15 @@ static int rename_executing(RENOP *opt, char *dest, char *sour)
 		}
 	}
 	if (opt->cflags & RNM_CFLAG_TEST) {
-		opt->notify(opt, RNM_MSG_SIMULATION, 0, 0, dest);
+		rename_notify(opt, RNM_MSG_SIMULATION, 0, dest, sour);
 		return RNM_ERR_NONE;
 	}
 	if ((rc = rename(sour, dest)) < 0) {
-		opt->notify(opt, RNM_MSG_SYS_FAIL, rc, 0, dest);
+		rename_notify(opt, RNM_MSG_SYS_FAIL, rc, dest, sour);
 		return RNM_ERR_RENAME;
 	}
 	opt->rpcnt++;
-	opt->notify(opt, RNM_MSG_RENAME, opt->rpcnt, 0, dest);
+	rename_notify(opt, RNM_MSG_RENAME, opt->rpcnt, dest, sour);
 	return RNM_ERR_NONE;
 }
 
@@ -303,7 +319,7 @@ static int match_regexpr(RENOP *opt, char *fname, int flen)
 	regmatch_t	pmatch[1];
 	int		count = 0;
 
-	opt->notify(opt, RNM_MSG_ACT_REGEX, 0, 0, fname);
+	rename_notify(opt, RNM_MSG_ACT_REGEX, 0, NULL, fname);
 	while (!regexec(opt->preg, fname, 1, pmatch, 0))  {
 		opt->room = inject(fname + pmatch->rm_so, flen - pmatch->rm_so,
 				pmatch->rm_eo - pmatch->rm_so, opt->room,
@@ -333,7 +349,7 @@ static int match_forward(RENOP *opt, char *fname, int flen)
 	if (opt->pa_len < 1) {
 		return 0;
 	}
-	opt->notify(opt, RNM_MSG_ACT_FORWARD, 0, 0, fname);
+	rename_notify(opt, RNM_MSG_ACT_FORWARD, 0, NULL, fname);
 	while (flen >= opt->pa_len) {
 		if (opt->compare(fname, opt->pattern, opt->pa_len)) {
 			fname++;
@@ -366,7 +382,7 @@ static int match_backward(RENOP *opt, char *fname, int flen)
 	if (opt->pa_len < 1) {
 		return 0;
 	}
-	opt->notify(opt, RNM_MSG_ACT_BACKWARD, 0, 0, fname);
+	rename_notify(opt, RNM_MSG_ACT_BACKWARD, 0, NULL, fname);
 	flen -= opt->pa_len;
 	fidx = fname + flen;
 	while (fidx >= fname) {
@@ -401,7 +417,7 @@ static int match_suffix(RENOP *opt, char *fname, int flen)
 	if (opt->su_len - opt->pa_len > opt->room) {
 		return -1;	/* oversized */
 	}
-	opt->notify(opt, RNM_MSG_ACT_SUFFIX, 0, 0, fname);
+	rename_notify(opt, RNM_MSG_ACT_SUFFIX, 0, NULL, fname);
 	fname += flen - opt->pa_len;
 	if (!opt->compare(fname, opt->pattern, opt->pa_len)) {
 		strcpy(fname, opt->substit);
@@ -412,17 +428,16 @@ static int match_suffix(RENOP *opt, char *fname, int flen)
 
 static int postproc_prefix(RENOP *opt, char *fname)
 {
-	opt->notify(opt, RNM_MSG_PPRO_PREFIX, 0, 0, fname);
+	rename_notify(opt, RNM_MSG_PPRO_PREFIX, 0, NULL, fname);
 }
 
 static int postproc_suffix(RENOP *opt, char *fname)
 {
-	opt->notify(opt, RNM_MSG_PPRO_SUFFIX, 0, 0, fname);
+	rename_notify(opt, RNM_MSG_PPRO_SUFFIX, 0, NULL, fname);
 }
 
 static int postproc_lowercase(unsigned char *s)
 {
-	opt->notify(opt, RNM_MSG_PPRO_LOWCASE, 0, 0, fname);
 	while (*s) {
 		*s = tolower((int) *s);
 		s++;
@@ -432,7 +447,6 @@ static int postproc_lowercase(unsigned char *s)
 
 static int postproc_uppercase(unsigned char *s)
 {
-	opt->notify(opt, RNM_MSG_PPRO_UPCASE, 0, 0, fname);
 	while (*s) {
 		*s = toupper((int) *s);
 		s++;
@@ -456,17 +470,19 @@ static int inject(char *rec, int rlen, int del, int room, char *in, int ilen)
 	return room;
 }
 
-static int console_notify(RENOP *opt, int msg, int cur, int max, void *opt)
+static int console_notify(RENOP *opt, int msg, int v, void *a1, void *a2)
 {
+	char	*dest = a1, *sour = a2;
+
 	switch (msg) {
 	case RNM_MSG_ENTER_DIR:
 		if (opt->cflags & RNM_CFLAG_VERBOSE) {
-			printf("Entering directory [%s]\n", path);
+			printf("Entering directory [%s]\n", dest);
 		}
 		break;
 	case RNM_MSG_LEAVE_DIR:
 		if (opt->cflags & RNM_CFLAG_VERBOSE) {
-			printf("Leaving directory [%s]\n", path);
+			printf("Leaving directory [%s]\n", dest);
 		}
 		break;
 	case RNM_MSG_ACT_FORWARD:

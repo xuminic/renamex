@@ -25,6 +25,7 @@
   
 #define RNM_ERR_NONE		0
 #define RNM_ERR_SKIP		1
+#define RNM_ERR_EVENT		2
 #define RNM_ERR_HELP		-1
 #define RNM_ERR_PARAM		-2	/* wrong (command line) parameters */
 #define RNM_ERR_GETDIR		-3	/* can not get directory name */
@@ -66,6 +67,7 @@
 #define RNM_REP_TEST		2
 #define RNM_REP_FAILED		3
 #define RNM_REP_CHOWN		4
+
 
 #define RNM_MSG_ENTER_DIR	1
 #define RNM_MSG_LEAVE_DIR	2
@@ -110,7 +112,7 @@ typedef	struct	{
 	regex_t	preg[1];
 #endif
 	int	(*compare)(const char *s1, const char *s2, size_t n);
-	int	(*notify)(void *opt, int msg, int cur, int max, void *opt);
+	int	(*notify)(void *opt, int msg, int v, void *dest, void *sour);
 
 	void	*rtpath;	/* return path */
 	char	*buffer;	/* change to dynamic allocation */
