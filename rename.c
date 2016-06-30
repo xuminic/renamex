@@ -72,8 +72,17 @@
 #include "libcsoup.h"
 #include "rename.h"
   
+/* PATH_MAX and MAX_PATH are all not quite reliable. Currently the NTFS
+ * seems having the longest path limit of 32768 utf-16 */
+#define RNM_PATH_MAX    65536
+/*#ifdef        CFG_UNIX_API
+#include <limits.h>
+#define RNM_PATH_MAX    (PATH_MAX << 1)
+#else
+#define RNM_PATH_MAX    (MAX_PATH << 2)
+#endif*/
 
-static	char	*rep_state[] = { "done", "skip", "test", "fail", "own" };
+
 
 static int rename_recursive(RENOP *opt, char *path);
 static int rename_recursive_cb(void *option, char *path, int type, void *info);
@@ -143,6 +152,59 @@ int rename_notify(RENOP *opt, int msg, int v, void *dest, void *sour)
 	}
 	return rc;
 }
+
+char *rename_alloc_newname(RENOP *opt, char *oldname)
+{
+	char	buffer[RNM_PATH_MAX];
+	char	*fname;
+	int	rc = RNM_ERR_NONE, flen;
+
+	/* indicate the expected filename, not the whole path */
+	csc_strlcpy(buffer, oldname, sizeof(buffer));
+	fname = csc_path_basename(buffer, NULL, 0);
+	opt->room = sizeof(buffer) - strlen(buffer) - 1;
+
+	/* ignore the "." and ".." system path */
+	if (!strcmp(fname, ".") || !strcmp(fname, "..")) {
+		return NULL;
+	}
+    
+	flen = strlen(fname);
+	switch (opt->action)  {
+	case RNM_ACT_FORWARD:
+		rc = match_forward(opt, fname, flen);
+		break;
+	case RNM_ACT_BACKWARD:
+		rc = match_backward(opt, fname, flen);
+		break;
+#ifdef	CFG_REGEX
+	case RNM_ACT_REGEX:
+		rc = match_regexpr(opt, fname, flen);
+		break;
+#endif
+	case RNM_ACT_SUFFIX:
+		rc = match_suffix(opt, fname, flen);
+		break;
+	}
+	if (rc < 0) {
+		return NULL;
+	}
+	
+	if (opt->oflags & RNM_OFLAG_PREFIX) {
+		postproc_prefix(opt, fname);
+	}
+	if (opt->oflags & RNM_OFLAG_SUFFIX) {
+		postproc_suffix(opt, fname);
+	}
+	if ((opt->oflags & RNM_OFLAG_MASKCASE) == RNM_OFLAG_LOWERCASE) {
+		postproc_lowercase((unsigned char *) fname);
+	} else if ((opt->oflags & RNM_OFLAG_MASKCASE) == RNM_OFLAG_UPPERCASE) {
+		postproc_uppercase((unsigned char *) fname);
+	}
+
+	return csc_strcpy_alloc(buffer, 0);
+}
+
 
 static int rename_recursive(RENOP *opt, char *path)
 {
@@ -319,7 +381,6 @@ static int match_regexpr(RENOP *opt, char *fname, int flen)
 	regmatch_t	pmatch[1];
 	int		count = 0;
 
-	rename_notify(opt, RNM_MSG_ACT_REGEX, 0, NULL, fname);
 	while (!regexec(opt->preg, fname, 1, pmatch, 0))  {
 		opt->room = inject(fname + pmatch->rm_so, flen - pmatch->rm_so,
 				pmatch->rm_eo - pmatch->rm_so, opt->room,
@@ -349,7 +410,6 @@ static int match_forward(RENOP *opt, char *fname, int flen)
 	if (opt->pa_len < 1) {
 		return 0;
 	}
-	rename_notify(opt, RNM_MSG_ACT_FORWARD, 0, NULL, fname);
 	while (flen >= opt->pa_len) {
 		if (opt->compare(fname, opt->pattern, opt->pa_len)) {
 			fname++;
@@ -382,7 +442,6 @@ static int match_backward(RENOP *opt, char *fname, int flen)
 	if (opt->pa_len < 1) {
 		return 0;
 	}
-	rename_notify(opt, RNM_MSG_ACT_BACKWARD, 0, NULL, fname);
 	flen -= opt->pa_len;
 	fidx = fname + flen;
 	while (fidx >= fname) {
@@ -417,7 +476,6 @@ static int match_suffix(RENOP *opt, char *fname, int flen)
 	if (opt->su_len - opt->pa_len > opt->room) {
 		return -1;	/* oversized */
 	}
-	rename_notify(opt, RNM_MSG_ACT_SUFFIX, 0, NULL, fname);
 	fname += flen - opt->pa_len;
 	if (!opt->compare(fname, opt->pattern, opt->pa_len)) {
 		strcpy(fname, opt->substit);
@@ -428,12 +486,10 @@ static int match_suffix(RENOP *opt, char *fname, int flen)
 
 static int postproc_prefix(RENOP *opt, char *fname)
 {
-	rename_notify(opt, RNM_MSG_PPRO_PREFIX, 0, NULL, fname);
 }
 
 static int postproc_suffix(RENOP *opt, char *fname)
 {
-	rename_notify(opt, RNM_MSG_PPRO_SUFFIX, 0, NULL, fname);
 }
 
 static int postproc_lowercase(unsigned char *s)

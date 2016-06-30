@@ -87,14 +87,6 @@
 #define RNM_MSG_RENAME		16
 
 
-#ifdef	CFG_UNIX_API
-#include <limits.h>
-#define	RNM_PATH_MAX	(PATH_MAX << 1)
-#else
-#define	RNM_PATH_MAX	(MAX_PATH << 2)
-#endif
-
-
 typedef	struct	{
 	int	oflags;
 	int	cflags;
