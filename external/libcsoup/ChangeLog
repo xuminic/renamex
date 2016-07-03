@@ -1,3 +1,6 @@
+20160701: 0.8.16
+	* csc_strlcat.c: added for systems where no strlcat().
+
 20160622: 0.8.15
 	* smm_userpath.c: added win32 include file Shlobj.h
 

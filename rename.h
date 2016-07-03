@@ -21,6 +21,12 @@
 #ifndef	_RENAME_H_
 #define _RENAME_H_
 
+#if HAVE_REGEX_H
+  #include <regex.h>
+#else
+  #include "regex.h"
+#endif
+
 #define RENAME_VERSION		"2.0"
   
 #define RNM_ERR_NONE		0
@@ -48,6 +54,7 @@
 #define RNM_CFLAG_RECUR		0x100	/* recursive operation */
 #define RNM_CFLAG_VERBOSE	0x200	/* verbose mode */
 #define RNM_CFLAG_TEST		0x400	/* test mode only */
+#define RNM_CFLAG_GUI		0x800	/* GUI mode */
 
 #define	RNM_OFLAG_NONE		0	/* do not change output filename */
 #define RNM_OFLAG_LOWERCASE	1	/* lowercase the output filename */
@@ -93,34 +100,36 @@ typedef	struct	{
 	int	action;
 
 	char	*patbuf;	/* buffer for patterns */
-	char	*pattern;
+	regex_t	preg[1];	/* buffer for regular expression */
+
+	char	*pattern;	/* pattern for search */
 	int	pa_len;
-	char	*substit;
+	char	*substit;	/* substitution string */
 	int	su_len;
-	char	*prefix;
-	char	*suffix;
-	int	count;		/* replace occurance */
-#ifdef	CFG_REGEX
-	regex_t	preg[1];
-#endif
+	char	*prefix;	/* prefix to file name */
+	int	pre_len;
+	char	*suffix;	/* suffix to file name */
+	int	suf_len;
+	int	rpnum;		/* replace occurance number*/
+	int	rpfrom;		/* replace from which occurance */
+
+	/* runtime area */
 	int	(*compare)(const char *s1, const char *s2, size_t n);
 	int	(*notify)(void *opt, int msg, int v, void *dest, void *sour);
 
 	void	*rtpath;	/* return path */
 	char	*buffer;	/* change to dynamic allocation */
+	void	*gui;
 	int	room;
 	int	rpcnt;
-} RENOP;
+} RNOPT;
 
 
-
-int rename_enfile(RENOP *opt, char *filename);
-int rename_entry(RENOP *opt, char *filename);
-
-int syscall_codepage(void);
-int syscall_chdir(char *path);
-int syscall_getcwd(char *path, int len);
-int syscall_isdir(char *path);
+int rename_enfile(RNOPT *opt, char *filename);
+int rename_entry(RNOPT *opt, char *filename);
+int rename_notify(RNOPT *opt, int msg, int v, void *dest, void *sour);
+char *rename_alloc(RNOPT *opt, char *oldname);
+int rename_executing(RNOPT *opt, char *dest, char *sour);
 
 #endif
 

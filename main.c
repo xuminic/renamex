@@ -37,9 +37,7 @@
 #include "libcsoup.h"
 #include "rename.h"
 
-RENOP	*sysopt = NULL;
-
-
+RNOPT	*sysopt = NULL;
 
 static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, "Usage: renamex [OPTIONS] filename ..." },
@@ -50,6 +48,9 @@ static	struct	cliopt	clist[] = {
 	{ 'p', "prefix",    1, "Add prefix to the file name" },
 	{ 'x', "suffix",    1, "Add suffix to the file name" },
 	{ 's', "search",    1, "search and replace in the file name" },
+#ifdef	CFG_GUI_ON
+	{ 'G', "gui",       0, "start the GUI mode" },
+#endif
 	{ 'R', "recursive", 0, "Operate on files and directories recursively" },
 	{ 'v', "verbose",   0, "Display verbose information" },
 	{ 't', "test",      0, "Test only mode. Nothing will be changed" },
@@ -79,8 +80,8 @@ This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n";
 
 static int rename_free_all(int sig);
-static int cli_set_pattern(RENOP *opt, char *optarg);
-static int cli_dump(RENOP *opt, char *filename);
+static int cli_set_pattern(RNOPT *opt, char *optarg);
+static int cli_dump(RNOPT *opt, char *filename);
 
 int main(int argc, char **argv)
 {
@@ -89,17 +90,17 @@ int main(int argc, char **argv)
 
 	smm_init();
 
-	if ((sysopt = malloc(sizeof(RENOP))) == NULL) {
+	if ((sysopt = malloc(sizeof(RNOPT))) == NULL) {
 		return RNM_ERR_LOWMEM;
 	}
-	memset(sysopt, 0, sizeof(RENOP));
+	memset(sysopt, 0, sizeof(RNOPT));
 
 	if ((argp = csc_cli_getopt_open(clist)) == NULL) {
 		return -1;
 	}
 	
 #ifdef  CFG_GUI_ON
-	if ((mopt.gui = mmgui_open(&mopt, &argc, &argv)) == NULL) {
+	if ((sysopt->gui = mmgui_open(sysopt, &argc, &argv)) == NULL) {
 		return -2; /* the config file */
 	}
 #endif
@@ -126,12 +127,19 @@ int main(int argc, char **argv)
 			break;
 		case 'p':
 			sysopt->oflags |= RNM_OFLAG_PREFIX;
-			sysopt->prefix = optarg;
+			sysopt->prefix  = optarg;
+			sysopt->pre_len = strlen(optarg);
 			break;
 		case 'x':
 			sysopt->oflags |= RNM_OFLAG_SUFFIX;
-			sysopt->suffix = optarg;
+			sysopt->suffix  = optarg;
+			sysopt->suf_len = strlen(optarg);
 			break;
+#ifdef	CFG_GUI_ON
+		case 'G':
+			sysopt->cflags |= RNM_CFLAG_GUI;
+			break;
+#endif
 		case 'R':
 			sysopt->cflags |= RNM_CFLAG_RECUR;
 			break;
@@ -158,20 +166,44 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if ((optind >= argc) || (!sysopt->oflags && !sysopt->action)) {
-		csc_cli_print(clist, NULL);
-		rename_free_all(0);
-		return RNM_ERR_HELP;
-	}
-	
 	sysopt->compare = strncmp;
 	sysopt->rtpath  = smm_cwd_push();
 	smm_signal_break(rename_free_all);
 
-	if (sysopt->cflags & RNM_CFLAG_TEST) {
-		cli_dump(sysopt, argv[optind]);
-	}
+	//if (sysopt->cflags & RNM_CFLAG_TEST) {
+	//	cli_dump(sysopt, argv[optind]);
+	//}
 
+#ifdef	CFG_GUI_ON
+	if (sysopt->cflags & RNM_CFLAG_GUI) {
+		return rename_run_gui(argc - optind, &argv[optind]);
+	}
+#endif
+	if (optind >= argc) {	/* no file name offered */
+#ifdef	CFG_GUI_ON
+		return rename_run_gui(0, NULL);
+#else
+		printf("%s: missing file operand\n", argv[0]);
+		rename_free_all(0);
+		return RNM_ERR_PARAM;
+#endif
+	}
+	if (!sysopt->oflags && !sysopt->action) {
+		if (optind + 2 == argc) {
+			rc = rename_executing(sysopt, argv[optind+1], argv[optind]);
+			rename_free_all(0);
+			return rc;
+		} else {
+#ifdef	CFG_GUI_ON
+			return rename_run_gui(argc - optind, &argv[optind]);
+#else
+			printf("%s: missing rename operand\n", argv[0]);
+			rename_free_all(0);
+			return RNM_ERR_PARAM;
+#endif
+		}
+	}
+	
 	for (c = optind; (c < argc) && (rc == RNM_ERR_NONE); c++) {
 		if (infile) {
 			rc = rename_enfile(sysopt, argv[c]);
@@ -185,15 +217,19 @@ int main(int argc, char **argv)
 	return rc;
 }
 
+static int rename_run_gui(int argc, char **argv)
+{
+	rename_free_all(0);
+	return 0;
+}
+
 static int rename_free_all(int sig)
 {
 	(void) sig;
 
-#ifdef	CFG_REGEX
 	if (sysopt->action == RNM_ACT_REGEX) {
 		regfree(sysopt->preg);
 	}
-#endif
 	if (sysopt->buffer) {
 		sysopt->buffer = smm_free(sysopt->buffer);
 	}
@@ -207,7 +243,7 @@ static int rename_free_all(int sig)
 	return 0;
 }
 
-static int cli_set_pattern(RENOP *opt, char *optarg)
+static int cli_set_pattern(RNOPT *opt, char *optarg)
 {
 	char	*idx[4], *p;
 	int	cflags = 0;
@@ -230,12 +266,12 @@ static int cli_set_pattern(RENOP *opt, char *optarg)
 	opt->pa_len = strlen(opt->pattern);
 	opt->su_len = strlen(opt->substit);
 	opt->action = RNM_ACT_FORWARD;
-	opt->count = 1;		/* default replace once */
+	opt->rpnum = 1;		/* default replace once */
     	for (p = idx[2]; p && *p; p++)  {
 		switch (*p)  {
 		case 'g':
 		case 'G':
-			opt->count = 0;	/* 0 = unlimit */
+			opt->rpnum = 0;	/* 0 = unlimit */
 			break;
 		case 'b':
 		case 'B':
@@ -250,7 +286,6 @@ static int cli_set_pattern(RENOP *opt, char *optarg)
 			cflags |= REG_ICASE;
 			opt->compare = strncasecmp;
 			break;
-#ifdef	CFG_REGEX
 		case 'r':
 		case 'R':
 			opt->action = RNM_ACT_REGEX;
@@ -260,25 +295,22 @@ static int cli_set_pattern(RENOP *opt, char *optarg)
 			cflags |= REG_EXTENDED;
 	    		opt->action = RNM_ACT_REGEX;
 			break;
-#endif
 		default:
 			if (isdigit(*p)) {
-				opt->count = *p - '0';
+				opt->rpnum = *p - '0';
 			}
 			break;
 		}
 	}
-#ifdef	CFG_REGEX
 	if ((opt->action == RNM_ACT_REGEX) &&
 			regcomp(opt->preg, opt->pattern, cflags))  {
 		printf("Wrong regular expression. [%s]\n", opt->pattern);
 		return RNM_ERR_REGPAT;
 	}
-#endif
 	return RNM_ERR_NONE;
 }
 
-static int cli_dump(RENOP *opt, char *filename)
+static int cli_dump(RNOPT *opt, char *filename)
 {
 	char	buf[80];
 
@@ -330,8 +362,8 @@ static int cli_dump(RENOP *opt, char *filename)
 	printf("Flags:          %s\n", buf);
 	printf("Pattern:        %s (%d)\n", opt->pattern, opt->pa_len);
 	printf("Substituter:    %s (%d)(x %d)\n", 
-			opt->substit, opt->su_len, opt->count);
-	printf("Name Buffer:    %d (%d)\n", opt->room, RNM_PATH_MAX);
+			opt->substit, opt->su_len, opt->rpnum);
+	printf("Name Buffer:    %d\n", opt->room);
 	printf("\n");
 	return 0;
 }
