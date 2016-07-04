@@ -87,6 +87,7 @@
 static int rename_recursive(RNOPT *opt, char *path);
 static int rename_recursive_cb(void *option, char *path, int type, void *info);
 static int rename_action(RNOPT *opt, char *oldname);
+static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour);
 static int rename_prompt(RNOPT *opt, char *fname);
 static int match_regexpr(RNOPT *opt, char *fname, int flen);
 static int match_forward(RNOPT *opt, char *fname, int flen);
@@ -150,6 +151,37 @@ int rename_notify(RNOPT *opt, int msg, int v, void *dest, void *sour)
 	return rc;
 }
 
+int rename_executing(RNOPT *opt, char *dest, char *sour)
+{
+	char	*bname;
+	int	rc;
+
+	/* if the destination is directory, which means we must move the
+	 * original file into this directory, just like mv(1) does */
+	/* mv abc dir/
+	 * mv home/path/file home/path/dir == home/path/dir/file */
+	if (smm_fstat(dest) != SMM_FSTAT_DIR) {
+		return rename_execute_stage2(opt, dest, sour);
+	}
+
+	bname = csc_path_basename(sour, NULL, 0);
+	if (*bname == 0) {
+		return RNM_ERR_PARAM;
+	}
+
+	dest = csc_strcpy_alloc(dest, strlen(bname) + 8);
+	if (dest == NULL) {
+		return RNM_ERR_LOWMEM;
+	}
+
+	strcat(dest, SMM_DEF_DELIM);
+	strcat(dest, bname);
+	rc = rename_execute_stage2(opt, dest, sour);
+	smm_free(dest);
+	return rc;
+}
+
+	
 static int rename_recursive(RNOPT *opt, char *path)
 {
 	return smm_pathtrek(path, SMM_PATH_DIR_FIFO, rename_recursive_cb, opt);
@@ -187,7 +219,7 @@ static int rename_action(RNOPT *opt, char *oldname)
 	return rc;
 }
 
-int rename_executing(RNOPT *opt, char *dest, char *sour)
+static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour)
 {
 	int	rc;
 

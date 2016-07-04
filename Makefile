@@ -105,9 +105,6 @@ rename_icon.o: rename_icon.rc
 renamex.pdf: renamex.1
 	man -l -Tps $< | ps2pdf - $@
 
-tester: tester.c
-	$(CC) $(CFLAGS) $(SYSLDD) -o $@ $< $(LIBS)
-
 cleanobj:
 	$(RM) -r $(OBJS)
 

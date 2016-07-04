@@ -1,0 +1,13 @@
+[Test001]
+MKFILE: 'Plan your trip.txt'
+RENAME: renamex 'Plan your trip.txt' 'my trip.txt'
+VERIFY: 'my trip.txt'
+DELETE: 'Plan your trip.txt' 'my trip.txt'
+
+[Test002]
+MKFILE: 'Plan your trip.txt'
+MKDIR: "trip per"
+RENAME: renamex 'Plan your trip.txt' "trip per"
+VERIFY: 'trip per/Plan your trip.txt'
+DELETE: 'trip per/Plan your trip.txt'
+RMDIR: "trip per"
