@@ -52,7 +52,6 @@ static	struct	cliopt	clist[] = {
 	{ 'G', "gui",       0, "start the GUI mode" },
 #endif
 	{ 'R', "recursive", 0, "Operate on files and directories recursively" },
-	{ 'T', "autotest",  1, "embeded auto-tester with script" },
 	{ 'v', "verbose",   0, "Display verbose information" },
 	{ 't', "test",      0, "Test only mode. Nothing will be changed" },
 	{ 'A', "always",    0, "Always overwrite the existing files" },
@@ -81,10 +80,9 @@ This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n";
 
 static int rename_free_all(int sig);
+static int rename_run_gui(RNOPT *opt, int argc, char **argv);
 static int cli_set_pattern(RNOPT *opt, char *optarg);
 static int cli_dump(RNOPT *opt);
-static int auto_test_main(char *scrpit);
-static int auto_test_verify(char *newname);
 
 int main(int argc, char **argv)
 {
@@ -146,8 +144,6 @@ int main(int argc, char **argv)
 		case 'R':
 			sysopt->cflags |= RNM_CFLAG_RECUR;
 			break;
-		case 'T':
-			return auto_test_main(optarg);
 		case 'v':
 			sysopt->cflags |= RNM_CFLAG_VERBOSE;
 			break;
@@ -181,14 +177,14 @@ int main(int argc, char **argv)
 
 #ifdef	CFG_GUI_ON
 	if (sysopt->cflags & RNM_CFLAG_GUI) {
-		rc = rename_run_gui(argc - optind, &argv[optind]);
+		rc = rename_run_gui(sysopt, argc - optind, &argv[optind]);
 		rename_free_all(0);
 		return rc;
 	}
 #endif
 	if (optind >= argc) {	/* no file name offered */
 #ifdef	CFG_GUI_ON
-		rc = rename_run_gui(0, NULL);
+		rc = rename_run_gui(sysopt, 0, NULL);
 #else
 		printf("%s: missing file operand\n", argv[0]);
 		rc = RNM_ERR_PARAM;
@@ -201,7 +197,7 @@ int main(int argc, char **argv)
 			rc = rename_executing(sysopt, argv[optind+1], argv[optind]);
 		} else {
 #ifdef	CFG_GUI_ON
-			rc = rename_run_gui(argc - optind, &argv[optind]);
+			rc = rename_run_gui(sysopt, argc - optind, &argv[optind]);
 #else
 			printf("%s: missing rename operand\n", argv[0]);
 			rc = RNM_ERR_PARAM;
@@ -241,6 +237,12 @@ static int rename_free_all(int sig)
 		smm_cwd_pop(sysopt->rtpath);
 	}
 	free(sysopt);
+	return 0;
+}
+
+static int rename_run_gui(RNOPT *opt, int argc, char **argv)
+{
+	mmgui_run(opt->gui);
 	return 0;
 }
 
@@ -389,69 +391,6 @@ static int csc_strinsert(char *buf, int len, char *ip, int del, char *s)
 	}
 	memcpy(ip, s, tlen);
 	return rc;
-}
-
-#define CMDCMP(d,s)	(strncmp((d),(s),strlen(s)))
-
-static int auto_test_main(char *script)
-{
-	FILE	*fin;
-	char	buf[8192];
-
-	if ((fin = fopen(script, "r")) == NULL) {
-		perror(script);
-		return -1;
-	}
-	while (fgets(buf, sizeof(buf), fin)) {
-		buf[strlen(buf)-1] = 0;
-		if (buf[0] == '[') {
-			printf("Testing %s:  ", buf);
-		} else if (!CMDCMP(buf, "MKFILE:")) {
-			csc_strinsert(buf, sizeof(buf), buf, 7, "echo > ");
-			system(buf);
-		} else if (!CMDCMP(buf, "MKDIR:")) {
-			csc_strinsert(buf, sizeof(buf), buf, 6, "mkdir ");
-			system(buf);
-		} else if (!CMDCMP(buf, "DELETE:")) {
-			csc_strinsert(buf, sizeof(buf), buf, 7, "rm -f ");
-			system(buf);
-		} else if (!CMDCMP(buf, "RMDIR:")) {
-			csc_strinsert(buf, sizeof(buf), buf, 6, "rmdir ");
-			system(buf);
-		} else if (!CMDCMP(buf, "RENAME:")) {
-			system(&buf[7]);
-		} else if (!CMDCMP(buf, "VERIFY:")) {
-			if (auto_test_verify(&buf[7])) {
-				printf("ok\n");
-			} else {
-				printf("failed\n");
-			}
-		}
-	}
-	fclose(fin);
-	return 0;
-}
-
-static int auto_test_verify(char *newname)
-{
-	FILE	*ftmp;
-	char	*p = NULL;
-
-	newname = csc_strbody(newname, NULL);
-	if (*newname == '\'') {
-		p = strchr(++newname, '\'');
-	} else if (*newname == '\"') {
-		p = strchr(++newname, '\"');
-	}
-	if (p) {
-		*p = 0;
-	}
-
-	if ((ftmp = fopen(newname, "r")) == NULL) {
-		return 0;
-	}
-	fclose(ftmp);
-	return 1;
 }
 
 

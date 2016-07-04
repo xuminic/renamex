@@ -8,7 +8,7 @@ endif
 endif
 
 ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF
-SYSGUI	= CFG_GUI_OFF
+SYSGUI	= CFG_GUI_ON
 endif
 
 ifeq	($(SYSTOOL),mingw)
@@ -139,7 +139,8 @@ release: release-win extclean
 endif
 	-if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
 	-mkdir $(RELDIR)
-	-$(CP) *.c *.h *.1 Make* *.txt *.rc *.ico *.lsm COPYING $(RELDIR)
+	-$(CP) *.c *.h *.1 Make* *.txt *.rc *.ico *.lsm $(RELDIR)
+	-$(CP) COPYING autotest $(RELDIR)
 	-$(CP) -a libmingw $(RELDIR)
 	-$(CP) -a external $(RELDIR)
 	-7z a -tzip $(RELDIR).zip $(RELDIR)
@@ -147,7 +148,7 @@ endif
 release-win: 
 	-if [ -d $(RELWIN) ]; then $(RM) -r $(RELWIN); fi
 	-mkdir $(RELWIN)
-	-$(CP) COPYING *.pdf *.1 *.txt $(RELWIN)
+	-$(CP) COPYING *.pdf *.1 *.txt autotest $(RELWIN)
 	SYSGUI=CFG_GUI_OFF make clean
 	SYSGUI=CFG_GUI_OFF make
 	-$(CP) $(PROJECT).exe $(RELWIN)

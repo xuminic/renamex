@@ -131,5 +131,10 @@ int rename_notify(RNOPT *opt, int msg, int v, void *dest, void *sour);
 char *rename_alloc(RNOPT *opt, char *oldname);
 int rename_executing(RNOPT *opt, char *dest, char *sour);
 
+/* mmgui.c */
+void *mmgui_open(RNOPT *ropt, int *argcs, char ***argvs);
+int mmgui_close(void *gui);
+int mmgui_run(void *gui);
+
 #endif
 

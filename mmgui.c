@@ -6,6 +6,7 @@
 
 #include "iup.h"
 #include "libcsoup.h"
+#include "rename.h"
 
 #define RENAME_MAIN		"RENAMEGUIOBJ"
 
@@ -31,8 +32,8 @@ typedef	struct	{
 	Ihandle		*dlg_main;
 	char		inst_id[32];
 
-	Ihandle		*entry_geogcord_a;
-	Ihandle		*entry_geogcord_b;
+	Ihandle		*list_oldname;
+	Ihandle		*list_newname;
 
 	Ihandle		*combo_zoom;
 	int		zoom_now;
@@ -61,6 +62,14 @@ typedef	struct	{
 
 	RNOPT		*ropt;
 } MMGUI;
+
+
+static int mmgui_event_resize(Ihandle *ih, int width, int height);
+static int mmgui_event_show(Ihandle *ih, int state);
+static int mmgui_event_close(Ihandle *ih);
+static int mmgui_reset(MMGUI *gui);
+
+
 
 
 void *mmgui_open(RNOPT *ropt, int *argcs, char ***argvs)
@@ -96,42 +105,38 @@ int mmgui_close(void *gui)
 
 int mmgui_run(MMGUI *gui)
 {
-	Ihandle	*vbox;
+	Ihandle	*vbox_fname;
 
-	/* create an empty vertical box container */
-	vbox = IupVbox(NULL);
-	IupSetAttribute(vbox, "NGAP", "8");
-	IupSetAttribute(vbox, "NMARGIN", "16x16");
+	gui->list_oldname = IupList(NULL);
+	IupSetAttribute(gui->list_oldname, "EXPAND", "YES");
+	IupSetAttribute(gui->list_oldname, "MULTIPLE", "YES");
+	IupSetAttribute(gui->list_oldname, "SCROLLBAR", "YES");
+	IupSetAttribute(gui->list_oldname, "DROPFILESTARGET", "YES");
+	IupSetAttribute(gui->list_oldname, "ALIGNMENT", "ARIGHT");
+	gui->list_newname = IupList(NULL);
+	IupSetAttribute(gui->list_newname, "EXPAND", "YES");
+	IupSetAttribute(gui->list_newname, "MULTIPLE", "YES");
+	IupSetAttribute(gui->list_newname, "SCROLLBAR", "YES");
+	IupSetAttribute(gui->list_newname, "ALIGNMENT", "ARIGHT");
 
-	/* appending gui elements */
-	gui->entry_geogcord_a = mmgui_create_text(vbox, "Left Top Coordinate");
-	gui->entry_geogcord_b = mmgui_create_text(vbox, 
-			"Right Bottom Coordinate");
-	gui->combo_zoom = mmgui_create_dropdown(vbox, "Zoom");
-	gui->combo_mhost = mmgui_create_dropdown(vbox, "Map Server");
-	gui->combo_mtype = mmgui_create_dropdown(vbox, "Map Type");
-	gui->entry_saveas = mmgui_create_saveas(vbox, "Save As");
-	mmgui_create_toggles(vbox, gui);
-	gui->status = mmgui_create_progress(vbox, gui);
-	IupAppend(vbox, IupFill());
-	mmgui_create_button(vbox, gui);
-
-	/* initialize the attribute of the gui elements */
+	vbox_fname = IupVbox(gui->list_oldname, gui->list_newname, NULL);
+	IupSetAttribute(vbox_fname, "NGAP", "8");
+	IupSetAttribute(vbox_fname, "NMARGIN", "16x16");
 
 
 	/* create the Saveas-File dialog initially so it can be popup and hide 
 	 * without doing a real destory */
-	gui->dlg_saveas = IupFileDlg();
+	/*gui->dlg_saveas = IupFileDlg();
 	IupSetAttribute(gui->dlg_saveas, "PARENTDIALOG", gui->inst_id);
 	IupSetAttribute(gui->dlg_saveas, "TITLE", "Save As");
 	IupSetAttribute(gui->dlg_saveas, "EXTFILTER", 
-			"Image files|*.gif;*.jpg;*.png|All Files|*.*|");
+			"Image files|*.gif;*.jpg;*.png|All Files|*.*|");*/
 
 	/* create the dialog window */
-	IupSetHandle("DLG_ICON", IupImageRGBA(128, 128, mmrc_icon_dialog));
-	gui->dlg_main = IupDialog(vbox);
-	IupSetAttribute(gui->dlg_main, "TITLE", "Make A Map");
-	IupSetAttribute(gui->dlg_main, "ICON", "DLG_ICON");
+	//IupSetHandle("DLG_ICON", IupImageRGBA(128, 128, mmrc_icon_dialog));
+	gui->dlg_main = IupDialog(vbox_fname);
+	IupSetAttribute(gui->dlg_main, "TITLE", "Rename Extension");
+	//IupSetAttribute(gui->dlg_main, "ICON", "DLG_ICON");
 	IupSetAttribute(gui->dlg_main, "RASTERSIZE", "640");
 	IupSetAttribute(gui->dlg_main, RENAME_MAIN, (char*) gui);
 	IupSetHandle(gui->inst_id, gui->dlg_main);
@@ -211,167 +216,8 @@ static int mmgui_reset(MMGUI *gui)
 	return IUP_DEFAULT;
 }
 
-static int mmgui_notify(MAPOPT *mopt, int msg, int cur, int max, void *opt)
+static int mmgui_notify(RNOPT *ropt, int msg, int cur, void *a, void *opt)
 {
 	return IUP_DEFAULT;
-}
-
-static Ihandle *mmgui_create_text(Ihandle *vbox, char *label)
-{
-	Ihandle	*title, *text, *hbox;
-
-	title = IupLabel(label);
-	IupSetAttribute(title, "SIZE", "120");
-	IupSetAttribute(title, "ALIGNMENT", "ACENTER");
-
-	text = IupText(NULL);
-	IupSetAttribute(text, "EXPAND", "HORIZONTAL");
-
-	hbox = IupHbox(title, text, NULL);
-	IupSetAttribute(hbox, "ALIGNMENT", "ABOTTOM");
-	IupSetAttribute(hbox, "NGAP", "4");
-
-	IupAppend(vbox, hbox);
-	return text;
-}
-
-static Ihandle *mmgui_create_dropdown(Ihandle *vbox, char *label)
-{
-	Ihandle	*title, *list, *hbox;
-
-	title = IupLabel(label);
-	IupSetAttribute(title, "SIZE", "120");
-	IupSetAttribute(title, "ALIGNMENT", "ACENTER");
-
-	list = IupList(NULL);
-	IupSetAttribute(list, "DROPDOWN", "YES");
-	IupSetAttribute(list, "EXPAND", "HORIZONTAL");
-	IupSetAttribute(list, "VISIBLEITEMS", "10");
-
-	hbox = IupHbox(title, list, NULL);
-	IupSetAttribute(hbox, "ALIGNMENT", "ABOTTOM");
-	IupSetAttribute(hbox, "NGAP", "4");
-
-	IupAppend(vbox, hbox);
-	return list;
-}
-
-static Ihandle *mmgui_create_saveas(Ihandle *vbox, char *label)
-{
-	Ihandle	*title, *text, *butt, *hbox;
-
-	title = IupLabel(label);
-	IupSetAttribute(title, "SIZE", "120");
-	IupSetAttribute(title, "ALIGNMENT", "ACENTER");
-
-	text = IupText(NULL);
-	IupSetAttribute(text, "EXPAND", "HORIZONTAL");
-
-	butt = IupButton("Open", NULL);
-	IupSetAttributeHandle(butt, "IMAGE", 
-			IupImageRGBA(16, 16, mmrc_icon_saveas));
-	IupSetCallback(butt, "ACTION", (Icallback) mmgui_btn_saveas_event);
-
-	hbox = IupHbox(title, text, butt, NULL);
-	IupSetAttribute(hbox, "ALIGNMENT", "ABOTTOM");
-	IupSetAttribute(hbox, "NGAP", "4");
-
-	IupAppend(vbox, hbox);
-	return text;
-}
-
-static Ihandle *mmgui_create_toggles(Ihandle *vbox, MMGUI *gui)
-{
-	Ihandle	*title, *grid, *hbox, *hinput;
-
-	title = IupLabel("");
-	IupSetAttribute(title, "SIZE", "120");
-	IupSetAttribute(title, "ALIGNMENT", "ACENTER");
-
-	gui->tick_grid   = IupToggle("Hide Grid", NULL);
-	IupSetAttribute(gui->tick_grid, "EXPAND", "HORIZONTAL");
-	gui->tick_margin = IupToggle("No Margin", NULL);
-	IupSetAttribute(gui->tick_margin, "EXPAND", "HORIZONTAL");
-
-	gui->tick_split  = IupToggle("Split Map", NULL);
-	IupSetAttribute(gui->tick_split, "EXPAND", "HORIZONTAL");
-
-	gui->entry_split_width = IupText(NULL);
-	IupSetAttribute(gui->entry_split_width, "SIZE", "32");
-	gui->entry_split_height = IupText(NULL);
-	IupSetAttribute(gui->entry_split_height, "SIZE", "32");
-	gui->entry_split_sep = IupLabel("x");
-	hinput = IupHbox(gui->entry_split_width, gui->entry_split_sep,
-			gui->entry_split_height, NULL);
-	IupSetAttribute(hinput, "ALIGNMENT", "ACENTER");
-	IupSetAttribute(hinput, "NGAP", "4");
-
-	grid = IupGridBox(gui->tick_grid, gui->tick_margin, gui->tick_split, 
-			hinput, NULL);
-	IupSetAttribute(grid, "ORIENTATION", "HORIZONTAL");
-	IupSetAttribute(grid, "NUMDIV", "2");
-	IupSetAttribute(grid, "EXPAND", "HORIZONTAL");
-	IupSetAttribute(grid, "GAPLIN", "4");
-
-	hbox = IupHbox(title, grid, NULL);
-	IupSetAttribute(hbox, "ALIGNMENT", "ABOTTOM");
-	IupSetAttribute(hbox, "NGAP", "4");
-
-	IupAppend(vbox, hbox);
-	return grid;
-}
-
-static int mmgui_map_split_show(MMGUI *gui, int state)
-{
-	if (state) {	/* 1 if the toggle's state was shifted to on */
-		IupSetAttribute(gui->entry_split_width,  "VISIBLE", "YES");
-		IupSetAttribute(gui->entry_split_height, "VISIBLE", "YES");
-		IupSetAttribute(gui->entry_split_sep,    "VISIBLE", "YES");
-	} else {	/* 0 if it was shifted to off */
-		IupSetAttribute(gui->entry_split_width,  "VISIBLE", "NO");
-		IupSetAttribute(gui->entry_split_height, "VISIBLE", "NO");
-		IupSetAttribute(gui->entry_split_sep,    "VISIBLE", "NO");
-	}
-	return IUP_DEFAULT;
-}
-
-static Ihandle *mmgui_create_progress(Ihandle *vbox, MMGUI *gui)
-{
-	Ihandle	*title, *hbox;
-
-	title = IupLabel("");
-	IupSetAttribute(title, "SIZE", "120");
-	IupSetAttribute(title, "ALIGNMENT", "ACENTER");
-
-	gui->progress = IupProgressBar();
-	IupSetAttribute(gui->progress, "EXPAND", "HORIZONTAL");
-	IupSetAttribute(gui->progress, "DASHED", "YES");
-	IupSetAttribute(gui->progress, "SIZE", "x10");
-
-	hbox = IupHbox(title, gui->progress, NULL);
-	IupSetAttribute(hbox, "ALIGNMENT", "ABOTTOM");
-	IupSetAttribute(hbox, "NGAP", "4");
-
-	IupAppend(vbox, IupLabel(""));
-	IupAppend(vbox, hbox);
-	return title;
-}
-
-static Ihandle *mmgui_create_button(Ihandle *vbox, MMGUI *gui)
-{
-	Ihandle	*hbox;
-
-	gui->butt_run = IupButton("Run", NULL);
-	IupSetAttribute(gui->butt_run, "SIZE", "40");
-	gui->butt_reset = IupButton("Clear", NULL);
-	IupSetAttribute(gui->butt_reset, "SIZE", "40");
-	gui->butt_about = IupButton("About", NULL);
-	IupSetAttribute(gui->butt_about, "SIZE", "40");
-	hbox = IupHbox(IupFill(), gui->butt_run, gui->butt_reset, 
-			gui->butt_about, NULL);
-	IupSetAttribute(hbox, "NGAP", "4");
-
-	IupAppend(vbox, hbox);
-	return hbox;
 }
 

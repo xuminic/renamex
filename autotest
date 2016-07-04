@@ -1,0 +1,24 @@
+#!/bin/sh
+
+verify()
+{
+  if [ -f '$1' ]; then
+    echo done
+  else
+    echo failed
+  fi
+}
+
+
+echo "[Test001]"
+echo > 'Plan your trip.txt'
+renamex 'Plan your trip.txt' 'my trip.txt'
+verify 'my trip.txt'
+#rm -f 'my trip.txt' 'Plan your trip.txt'
+
+#echo "[Test002]"
+#echo > 'Plan your trip.txt'
+#mkdir "trip per"
+#renamex 'Plan your trip.txt' "trip per"
+#verify 'trip per/Plan your trip.txt'
+#rm -rf "trip per"
