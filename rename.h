@@ -134,7 +134,7 @@ int rename_executing(RNOPT *opt, char *dest, char *sour);
 /* mmgui.c */
 void *mmgui_open(RNOPT *ropt, int *argcs, char ***argvs);
 int mmgui_close(void *gui);
-int mmgui_run(void *gui);
+int mmgui_run(void *guiobj);
 
 #endif
 

@@ -1,24 +1,50 @@
 #!/bin/sh
 
+success=0
+failure=0
+
 verify()
 {
-  if [ -f '$1' ]; then
-    echo done
+  if [ -f "$1" ]; then
+    echo successful
+    success=`expr $success + 1`
   else
     echo failed
+    failure=`expr $failure + 1`
   fi
 }
 
-
 echo "[Test001]"
-echo > 'Plan your trip.txt'
-renamex 'Plan your trip.txt' 'my trip.txt'
-verify 'my trip.txt'
-#rm -f 'my trip.txt' 'Plan your trip.txt'
+echo Testing direct rename mode with quoted file names
+echo > "Plan your trip.txt"
+renamex "Plan your trip.txt" "my trip.txt"
+verify "my trip.txt"
+rm -f "my trip.txt" "Plan your trip.txt"
 
-#echo "[Test002]"
-#echo > 'Plan your trip.txt'
-#mkdir "trip per"
-#renamex 'Plan your trip.txt' "trip per"
-#verify 'trip per/Plan your trip.txt'
-#rm -rf "trip per"
+echo "[Test002]"
+echo Testing moving file by renaming
+echo > "Plan your trip.txt"
+mkdir "trip per"
+renamex "Plan your trip.txt" "trip per"
+verify "trip per/Plan your trip.txt"
+rm -rf "trip per"
+
+echo "[Test003]"
+echo Testing renaming symbol link as common file
+echo > /tmp/myrenametest.txt
+ln -s /tmp/myrenametest.txt locallink
+renamex locallink quicklink
+verify quicklink
+rm -f quicklink /tmp/myrenametest.txt
+
+echo "[Test004]"
+echo Testing symbol link as directory
+echo > myrenametest.txt
+mkdir dir1
+mkdir dir1/dir2
+ln -s dir1/dir2 locallink
+renamex myrenametest.txt locallink
+verify locallink/myrenametest.txt
+rm -rf dir1 locallink
+
+echo "Total $success successful and $failure failed"

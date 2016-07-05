@@ -30,35 +30,29 @@
 
 typedef	struct	{
 	Ihandle		*dlg_main;
+	Ihandle		*dlg_open;
 	char		inst_id[32];
 
 	Ihandle		*list_oldname;
 	Ihandle		*list_newname;
-
-	Ihandle		*combo_zoom;
-	int		zoom_now;
-
-	Ihandle		*combo_mhost;
-	Ihandle		*combo_mtype;
-
-	Ihandle		*entry_saveas;
-	Ihandle		*butt_saveas;
-	Ihandle		*dlg_saveas;
-
-	Ihandle		*tick_grid;
-	Ihandle		*tick_margin;
-
-	Ihandle		*tick_split;
-	Ihandle		*entry_split_width;
-	Ihandle		*entry_split_height;
-	Ihandle		*entry_split_sep;
-
-	Ihandle		*status;
 	Ihandle		*progress;
+	Ihandle		*status;
 
+	Ihandle		*butt_load;
 	Ihandle		*butt_run;
 	Ihandle		*butt_reset;
 	Ihandle		*butt_about;
+
+	Ihandle		*tick_search;
+	Ihandle		*entry_pattern;
+	Ihandle		*entry_substit;
+	Ihandle		*tick_icase;
+	Ihandle		*tick_replaced;
+	Ihandle		*entry_replaced;
+	Ihandle		*radio_simple_match;
+	Ihandle		*radio_back_match;
+	Ihandle		*radio_suffix;
+	Ihandle		*radio_exregex;
 
 	RNOPT		*ropt;
 } MMGUI;
@@ -68,6 +62,7 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height);
 static int mmgui_event_show(Ihandle *ih, int state);
 static int mmgui_event_close(Ihandle *ih);
 static int mmgui_reset(MMGUI *gui);
+static Ihandle *mmgui_search_box(MMGUI *gui);
 
 
 
@@ -94,47 +89,79 @@ void *mmgui_open(RNOPT *ropt, int *argcs, char ***argvs)
 	return gui;
 }
 
-int mmgui_close(void *gui)
+int mmgui_close(void *guiobj)
 {
-	if (gui) {
+	if (guiobj) {
 		IupClose();
-		smm_free(gui);
+		smm_free(guiobj);
 	}
 	return 0;
 }
 
-int mmgui_run(MMGUI *gui)
+int mmgui_run(void *guiobj)
 {
-	Ihandle	*vbox_fname;
+	MMGUI	*gui = guiobj;
+	Ihandle	*vbox_fname, *vbox_panel;
+	Ihandle *hbox;
 
+	/* create the controls of left side, the file list panel */
 	gui->list_oldname = IupList(NULL);
 	IupSetAttribute(gui->list_oldname, "EXPAND", "YES");
 	IupSetAttribute(gui->list_oldname, "MULTIPLE", "YES");
 	IupSetAttribute(gui->list_oldname, "SCROLLBAR", "YES");
 	IupSetAttribute(gui->list_oldname, "DROPFILESTARGET", "YES");
 	IupSetAttribute(gui->list_oldname, "ALIGNMENT", "ARIGHT");
+	
 	gui->list_newname = IupList(NULL);
 	IupSetAttribute(gui->list_newname, "EXPAND", "YES");
 	IupSetAttribute(gui->list_newname, "MULTIPLE", "YES");
 	IupSetAttribute(gui->list_newname, "SCROLLBAR", "YES");
 	IupSetAttribute(gui->list_newname, "ALIGNMENT", "ARIGHT");
 
-	vbox_fname = IupVbox(gui->list_oldname, gui->list_newname, NULL);
+	gui->progress = IupProgressBar();
+	IupSetAttribute(gui->progress, "EXPAND", "HORIZONTAL");
+	IupSetAttribute(gui->progress, "DASHED", "YES");
+	IupSetAttribute(gui->progress, "SIZE", "x10");
+	IupSetAttribute(gui->progress, "VISIBLE", "YES");
+	IupSetInt(gui->progress, "MIN", 0);
+	IupSetInt(gui->progress, "MAX", 100);
+	IupSetInt(gui->progress, "VALUE", 50);
+
+	gui->status = IupLabel("Status is fine");
+	IupSetAttribute(gui->status, "EXPAND", "HORIZONTAL");
+	
+	vbox_fname = IupVbox(gui->list_oldname, gui->list_newname, 
+			gui->progress, gui->status, NULL);
 	IupSetAttribute(vbox_fname, "NGAP", "8");
 	IupSetAttribute(vbox_fname, "NMARGIN", "16x16");
 
+	/* create the controls of right side, the operate panel */
+	gui->butt_load = IupButton("Open", NULL);
+	IupSetAttribute(gui->butt_load, "SIZE", "60");
+	gui->butt_run = IupButton("Run", NULL);
+	IupSetAttribute(gui->butt_run, "SIZE", "60");
+	gui->butt_reset = IupButton("Clear", NULL);
+	IupSetAttribute(gui->butt_reset, "SIZE", "60");
+	gui->butt_about = IupButton("About", NULL);
+	IupSetAttribute(gui->butt_about, "SIZE", "60");
 
-	/* create the Saveas-File dialog initially so it can be popup and hide 
+	vbox_panel = IupVbox(gui->butt_load, gui->butt_run, gui->butt_reset,
+			gui->butt_about, NULL);
+	IupSetAttribute(vbox_panel, "NGAP", "8");
+	IupSetAttribute(vbox_panel, "NMARGIN", "16x16");
+
+	IupAppend(vbox_panel, mmgui_search_box(gui));
+
+	/* create the Open-File dialog initially so it can be popup and hide 
 	 * without doing a real destory */
-	/*gui->dlg_saveas = IupFileDlg();
-	IupSetAttribute(gui->dlg_saveas, "PARENTDIALOG", gui->inst_id);
-	IupSetAttribute(gui->dlg_saveas, "TITLE", "Save As");
-	IupSetAttribute(gui->dlg_saveas, "EXTFILTER", 
-			"Image files|*.gif;*.jpg;*.png|All Files|*.*|");*/
+	gui->dlg_open = IupFileDlg();
+	IupSetAttribute(gui->dlg_open, "PARENTDIALOG", gui->inst_id);
+	IupSetAttribute(gui->dlg_open, "TITLE", "Open Files");
 
 	/* create the dialog window */
+	hbox = IupHbox(vbox_fname, vbox_panel, NULL);
 	//IupSetHandle("DLG_ICON", IupImageRGBA(128, 128, mmrc_icon_dialog));
-	gui->dlg_main = IupDialog(vbox_fname);
+	gui->dlg_main = IupDialog(hbox);
 	IupSetAttribute(gui->dlg_main, "TITLE", "Rename Extension");
 	//IupSetAttribute(gui->dlg_main, "ICON", "DLG_ICON");
 	IupSetAttribute(gui->dlg_main, "RASTERSIZE", "640");
@@ -219,5 +246,46 @@ static int mmgui_reset(MMGUI *gui)
 static int mmgui_notify(RNOPT *ropt, int msg, int cur, void *a, void *opt)
 {
 	return IUP_DEFAULT;
+}
+
+static Ihandle *mmgui_search_box(MMGUI *gui)
+{
+	Ihandle	*vbox, *vtmp, *title;
+	Ihandle	*tt_search, *tt_replace;
+
+	gui->tick_search = IupToggle("Search and Replace", NULL);
+	
+	tt_search = IupLabel("Search");
+	gui->entry_pattern = IupText(NULL);
+	IupSetAttribute(gui->entry_pattern, "SIZE", "32");
+	tt_replace = IupLabel("Replace");
+	gui->entry_substit = IupText(NULL);
+	IupSetAttribute(gui->entry_substit, "SIZE", "32");
+	vtmp = IupGridBox(tt_search, gui->entry_pattern, tt_replace, gui->entry_substit, NULL);
+	IupSetAttribute(vtmp, "ORIENTATION", "HORIZONTAL");
+	IupSetAttribute(vtmp, "NUMDIV", "2");
+
+	vbox = IupVbox(vtmp, NULL);
+	IupSetAttribute(vbox, "NGAP", "8");
+	IupSetAttribute(vbox, "NMARGIN", "16x16");
+
+	gui->tick_icase = IupToggle("Ignore Cases", NULL);
+	IupAppend(vbox, gui->tick_icase);
+
+	gui->tick_replaced = IupToggle("Replace All ", NULL);
+	gui->entry_replaced = IupText(NULL);
+	IupSetAttribute(gui->entry_replaced, "SIZE", "16");
+	IupAppend(vbox, IupHbox(gui->tick_replaced, gui->entry_replaced, NULL));
+
+	gui->radio_simple_match = IupToggle("Simple Matching", NULL);
+	gui->radio_back_match = IupToggle("Backward Matching", NULL);
+	gui->radio_suffix = IupToggle("Suffix Matching", NULL);
+	gui->radio_exregex = IupToggle("Regular Expression", NULL);
+	title = IupVbox(gui->radio_simple_match, gui->radio_back_match,
+			gui->radio_suffix, gui->radio_exregex, NULL);
+	IupAppend(vbox, IupRadio(title));
+
+	title = IupVbox(gui->tick_search, vbox, NULL);
+	return title;
 }
 

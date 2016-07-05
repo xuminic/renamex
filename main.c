@@ -193,6 +193,11 @@ int main(int argc, char **argv)
 		return rc;
 	}
 	if (!sysopt->oflags && !sysopt->action) { /* no operation specified */
+		/* if user request command like
+		 *   renamex oldname newname
+		 * the renamex will do the direct renaming for mv's sake.
+		 * However renamex is NOT mv so it won't check the crosslink
+		 * of devices or anything fancy */
 		if (optind + 2 == argc) {
 			rc = rename_executing(sysopt, argv[optind+1], argv[optind]);
 		} else {
@@ -236,6 +241,9 @@ static int rename_free_all(int sig)
 	if (sysopt->rtpath) {
 		smm_cwd_pop(sysopt->rtpath);
 	}
+#ifdef	CFG_GUI_ON
+	mmgui_close(sysopt->gui);
+#endif
 	free(sysopt);
 	return 0;
 }
@@ -369,28 +377,4 @@ static int cli_dump(RNOPT *opt)
 	printf("\n");
 	return 0;
 }
-
-static int csc_strinsert(char *buf, int len, char *ip, int del, char *s)
-{
-	int	acc, rc, slen, tlen;
-
-	slen = strlen(buf);
-	if ((ip < buf) || (ip > buf + slen)) {
-		return -1;
-	}
-
-	tlen = strlen(s);
-	acc = tlen - del;
-	if ((rc = slen + acc) >= len) {
-		return rc;	/* insertion overflow */
-	}
-
-	if (acc != 0) {
-		char *sour = ip + del;
-		memmove(sour + acc, sour, strlen(sour) + 1);
-	}
-	memcpy(ip, s, tlen);
-	return rc;
-}
-
 
