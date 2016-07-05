@@ -250,6 +250,11 @@ static int rename_free_all(int sig)
 
 static int rename_run_gui(RNOPT *opt, int argc, char **argv)
 {
+	int	i;
+
+	for (i = 0; i < argc; i++) {
+		puts(argv[i]);
+	}
 	mmgui_run(opt->gui);
 	return 0;
 }
