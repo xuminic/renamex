@@ -63,9 +63,9 @@ static	struct	cliopt	clist[] = {
 The SW could be:\n\
   [i] ignore case when searching\n\
   [b] backward searching and replacing\n\
-  [s] change file's suffix name\n\
+  [e] change file's extension name\n\
   [r] PATTERN is regular expression, see regex(7)\n\
-  [e] PATTERN is extended regular expression, see regex(7)\n\
+  [x] PATTERN is extended regular expression, see regex(7)\n\
   [g] replace all occurrences in the filename\n\
   [1-9] replace specified occurrences in the filename\n" },
 	{ 0, NULL, 0, NULL }
@@ -95,6 +95,7 @@ int main(int argc, char **argv)
 		return RNM_ERR_LOWMEM;
 	}
 	memset(sysopt, 0, sizeof(RNOPT));
+	sysopt->compare = strncmp;
 
 	if ((argp = csc_cli_getopt_open(clist)) == NULL) {
 		return -1;
@@ -167,7 +168,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-	sysopt->compare = strncmp;
 	sysopt->rtpath  = smm_cwd_push();
 	smm_signal_break(rename_free_all);
 
@@ -293,9 +293,9 @@ static int cli_set_pattern(RNOPT *opt, char *optarg)
 		case 'B':
 			opt->action = RNM_ACT_BACKWARD;
 			break;
-		case 's':
-		case 'S':
-	    		opt->action = RNM_ACT_SUFFIX;
+		case 'e':
+		case 'E':
+	    		opt->action = RNM_ACT_EXTENSION;
 	    		break;
 		case 'i':
 		case 'I':
@@ -306,8 +306,8 @@ static int cli_set_pattern(RNOPT *opt, char *optarg)
 		case 'R':
 			opt->action = RNM_ACT_REGEX;
 			break;
-		case 'e':
-		case 'E':
+		case 'x':
+		case 'X':
 			cflags |= REG_EXTENDED;
 	    		opt->action = RNM_ACT_REGEX;
 			break;
@@ -369,8 +369,8 @@ static int cli_dump(RNOPT *opt)
 	case RNM_ACT_REGEX:
 		strcat(buf, "[REGEX]");
 		break;
-	case RNM_ACT_SUFFIX:
-		strcat(buf, "[SUFFIX]");
+	case RNM_ACT_EXTENSION:
+		strcat(buf, "[EXT]");
 		break;
 	}
 

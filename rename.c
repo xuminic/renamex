@@ -92,7 +92,7 @@ static int rename_prompt(RNOPT *opt, char *fname);
 static int match_regexpr(RNOPT *opt, char *fname, int flen);
 static int match_forward(RNOPT *opt, char *fname, int flen);
 static int match_backward(RNOPT *opt, char *fname, int flen);
-static int match_suffix(RNOPT *opt, char *fname, int flen);
+static int match_extension(RNOPT *opt, char *fname, int flen);
 static int postproc_prefix(RNOPT *opt, char *fname, int flen);
 static int postproc_suffix(RNOPT *opt, char *fname, int flen);
 static int postproc_lowercase(unsigned char *s);
@@ -190,7 +190,6 @@ static int rename_recursive(RNOPT *opt, char *path)
 static int rename_recursive_cb(void *option, char *path, int type, void *info)
 {
 	RNOPT	*opt = option;
-	int	rc = RNM_ERR_NONE;
 
 	(void) info;
 	switch (type) {
@@ -201,10 +200,10 @@ static int rename_recursive_cb(void *option, char *path, int type, void *info)
 		rename_notify(opt, RNM_MSG_LEAVE_DIR, 0, path, NULL);
 		break;
 	case SMM_MSG_PATH_EXEC:
-		rc = rename_action(opt, path);
+		rename_action(opt, path);
 		break;
 	}
-	return rc;
+	return SMM_NTF_PATH_NONE;
 }
 
 static int rename_action(RNOPT *opt, char *oldname)
@@ -368,8 +367,8 @@ char *rename_alloc(RNOPT *opt, char *oldname)
 	case RNM_ACT_REGEX:
 		rc = match_regexpr(opt, fname, flen);
 		break;
-	case RNM_ACT_SUFFIX:
-		rc = match_suffix(opt, fname, flen);
+	case RNM_ACT_EXTENSION:
+		rc = match_extension(opt, fname, flen);
 		break;
 	}
 	if (rc < 0) {
@@ -505,7 +504,7 @@ static int match_backward(RNOPT *opt, char *fname, int flen)
 	return count;
 }
 
-static int match_suffix(RNOPT *opt, char *fname, int flen)
+static int match_extension(RNOPT *opt, char *fname, int flen)
 {
 	if (opt->pa_len < 1) {
 		return 0;
@@ -514,6 +513,7 @@ static int match_suffix(RNOPT *opt, char *fname, int flen)
 		return -1;	/* oversized */
 	}
 	fname += flen - opt->pa_len;
+
 	if (!opt->compare(fname, opt->pattern, opt->pa_len)) {
 		strcpy(fname, opt->substit);
 		return 1;
@@ -544,9 +544,9 @@ static int postproc_suffix(RNOPT *opt, char *fname, int flen)
 		return 0;
 	}
 
-	fname = csc_path_basename(fname, NULL, 0);
+	/* suffix goes to beween file name and extension name */
 	if ((tmp = strrchr(fname, '.')) == NULL) {
-		tmp = fname;
+		tmp = fname + strlen(fname);
 	}
 		
 	opt->room = inject(tmp, strlen(tmp), 0, opt->room, 

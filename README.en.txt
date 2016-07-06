@@ -47,12 +47,12 @@ renamex -u -s/abc/xyz/gi *.c
   Substitute all 'abc' substrings appeared in C  sources  files  with
   'xyz', ignoring the case, then uppercase the whole file name.
 
-renamex -v -s/.c/.cpp/s *
+renamex -v -s/.c/.cpp/e *
   Find all files with the '.c' suffix in the current directory and change 
   them to '.cpp' suffix. Print the verbose information.
 
 find . -name *.c > filename.lst
-renamex -s/.c/.cpp/s -f filename.lst
+renamex -s/.c/.cpp/e -f filename.lst
   Find all files with the '.c' suffix under the current directory and change
   them to '.cpp' suffix by the list file.
 
@@ -66,17 +66,11 @@ renamex -s/^[A-Z].*file/nofile/r *
   and 'file'. The substring, if encountered in filenames, will be replaced
   with 'nofile'.
   
-renamex -s/^[A-Z].+file/nofile/eg *
+renamex -s/^[A-Z].+file/nofile/xg *
   Similar to above, except it uses extended regular expression, such as
   the '+' metacharacter, and replaces all matching strings with 'nofile'.
 
-renamex -t -s/^[A-Z].+file/nofile/eg *
+renamex -t -s/^[A-Z].+file/nofile/xg *
   Test mode only. Simulate the rename process but no files would be 
   actually changed.
-
-renamex -o guest -R /home/custom
-  change the ownership of '/home/custom' to 'guest'. The 'guest' should be 
-  an effective user in the current system. If '/home/custom' is a directory,
-  all files' ownership in this directory tree will be changed to 'guest'.
-
 

@@ -67,7 +67,7 @@
 #define RNM_ACT_FORWARD		1	/* search and substitute simplely */
 #define RNM_ACT_BACKWARD	2	/* search and substitute backwardly */
 #define RNM_ACT_REGEX		3	/* enable regular expression */
-#define	RNM_ACT_SUFFIX		6	/* append the suffix */
+#define	RNM_ACT_EXTENSION	6	/* search and replace extension name*/
 
 #define RNM_REP_OK		0
 #define RNM_REP_SKIP		1
