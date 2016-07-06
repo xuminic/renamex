@@ -50,9 +50,8 @@ typedef	struct	{
 	Ihandle		*entry_prefix;
 	Ihandle		*tick_suffix;
 	Ihandle		*entry_suffix;
-	Ihandle		*radio_nocase;
-	Ihandle		*radio_lowcase;
-	Ihandle		*radio_upcase;
+	Ihandle		*tick_lowercase;
+	Ihandle		*tick_uppercase;
 	Ihandle		*tick_search;
 
 	/* search and replace box */
@@ -78,13 +77,15 @@ static int mmgui_event_show(Ihandle *ih, int state);
 static int mmgui_event_close(Ihandle *ih);
 static int mmgui_reset(MMGUI *gui);
 static Ihandle *mmgui_button_box(MMGUI *gui);
-static int mmgui_btn_event_load(Ihandle *ih);
-static int mmgui_btn_event_rename(Ihandle *ih);
-static int mmgui_btn_event_reset(Ihandle *ih);
-static int mmgui_btn_event_about(Ihandle *ih);
+static int mmgui_button_event_load(Ihandle *ih);
+static int mmgui_button_event_rename(Ihandle *ih);
+static int mmgui_button_event_reset(Ihandle *ih);
+static int mmgui_button_event_about(Ihandle *ih);
 static Ihandle *mmgui_option_box(MMGUI *gui);
 static int mmgui_option_event_tick_prefix(Ihandle* ih, int state);
 static int mmgui_option_event_tick_suffix(Ihandle* ih, int state);
+static int mmgui_option_event_tick_lowercase(Ihandle* ih, int state);
+static int mmgui_option_event_tick_uppercase(Ihandle* ih, int state);
 static int mmgui_option_event_tick_search(Ihandle* ih, int state);
 static Ihandle *mmgui_search_box(MMGUI *gui);
 static int mmgui_search_box_show(MMGUI *gui, int state);
@@ -157,22 +158,20 @@ int mmgui_run(void *guiobj)
 	
 	vbox_fname = IupVbox(gui->list_oldname, gui->list_newname, 
 			gui->progress, gui->status, NULL);
-	IupSetAttribute(vbox_fname, "NGAP", "8");
-	IupSetAttribute(vbox_fname, "NMARGIN", "16x16");
+	IupSetAttribute(vbox_fname, "NGAP", "4");
+	//IupSetAttribute(vbox_fname, "NMARGIN", "16x16");
 
 	/* create the controls of right side, the operate panel */
-	vbox_panel = mmgui_button_box(gui);
+	vbox_panel = IupVbox(NULL);
+	IupAppend(vbox_panel, mmgui_button_box(gui));
 	IupAppend(vbox_panel, mmgui_option_box(gui));
 	IupAppend(vbox_panel, mmgui_search_box(gui));
-
-	/* create the Open-File dialog initially so it can be popup and hide 
-	 * without doing a real destory */
-	gui->dlg_open = IupFileDlg();
-	IupSetAttribute(gui->dlg_open, "PARENTDIALOG", gui->inst_id);
-	IupSetAttribute(gui->dlg_open, "TITLE", "Open Files");
+	//IupSetAttribute(vbox_panel, "NMARGIN", "16x16");
 
 	/* create the dialog window */
 	hbox = IupHbox(vbox_fname, vbox_panel, NULL);
+	IupSetAttribute(hbox, "NGAP", "16");
+	IupSetAttribute(hbox, "NMARGIN", "16x16");
 	
 	IupSetHandle("DLG_ICON", IupImageRGBA(128, 128, mmrc_icon_dialog));
 	gui->dlg_main = IupDialog(hbox);
@@ -187,6 +186,12 @@ int mmgui_run(void *guiobj)
 			(Icallback) mmgui_event_show);
 	IupSetCallback(gui->dlg_main, "CLOSE_CB", 
 			(Icallback) mmgui_event_close);
+
+	/* create the Open-File dialog initially so it can be popup and hide 
+	 * without doing a real destory */
+	gui->dlg_open = IupFileDlg();
+	IupSetAttribute(gui->dlg_open, "PARENTDIALOG", gui->inst_id);
+	IupSetAttribute(gui->dlg_open, "TITLE", "Open Files");
 
 	/* show and run the interface */
 	IupShow(gui->dlg_main);
@@ -257,6 +262,7 @@ static int mmgui_reset(MMGUI *gui)
 	IupSetAttribute(gui->tick_prefix, "VALUE", "ON");
 	IupSetAttribute(gui->tick_suffix, "VALUE", "ON");
 	IupSetAttribute(gui->tick_search, "VALUE", "ON");
+	IupSetAttribute(gui->tick_replaced, "VALUE", "ON");
 	return IUP_DEFAULT;
 }
 
@@ -273,72 +279,72 @@ static Ihandle *mmgui_button_box(MMGUI *gui)
 	Ihandle	*vbox;
 
 	gui->butt_load = IupButton("Open", NULL);
-	IupSetAttribute(gui->butt_load, "SIZE", "60");
+	IupSetAttribute(gui->butt_load, "SIZE", "50");
 	gui->butt_run = IupButton("Rename", NULL);
-	IupSetAttribute(gui->butt_run, "SIZE", "60");
+	IupSetAttribute(gui->butt_run, "SIZE", "50");
 	gui->butt_reset = IupButton("Clear", NULL);
-	IupSetAttribute(gui->butt_reset, "SIZE", "60");
+	IupSetAttribute(gui->butt_reset, "SIZE", "50");
 	gui->butt_about = IupButton("About", NULL);
-	IupSetAttribute(gui->butt_about, "SIZE", "60");
+	IupSetAttribute(gui->butt_about, "SIZE", "50");
 
-	vbox = IupVbox(gui->butt_load, gui->butt_run, gui->butt_reset,
+	vbox = IupGridBox(gui->butt_load, gui->butt_run, gui->butt_reset,
 			gui->butt_about, NULL);
-	IupSetAttribute(vbox, "NGAP", "8");
-	IupSetAttribute(vbox, "NMARGIN", "16x16");
+	IupSetAttribute(vbox, "ORIENTATION", "HORIZONTAL");
+	IupSetAttribute(vbox, "NUMDIV", "2");
 
 	IupSetCallback(gui->butt_load, "ACTION",
-			(Icallback) mmgui_btn_event_load);
+			(Icallback) mmgui_button_event_load);
 	IupSetCallback(gui->butt_run, "ACTION",
-			(Icallback) mmgui_btn_event_rename);
+			(Icallback) mmgui_button_event_rename);
 	IupSetCallback(gui->butt_reset, "ACTION",
-			(Icallback) mmgui_btn_event_reset);
+			(Icallback) mmgui_button_event_reset);
 	IupSetCallback(gui->butt_about, "ACTION",
-			(Icallback) mmgui_btn_event_about);
+			(Icallback) mmgui_button_event_about);
 	return vbox;
 }
 
-static int mmgui_btn_event_load(Ihandle *ih)
+static int mmgui_button_event_load(Ihandle *ih)
 {
 	MMGUI	*gui;
 
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	printf("mmgui_btn_event_load: %p\n", gui);
+	printf("mmgui_button_event_load: %p\n", gui);
 	return IUP_DEFAULT;
 }
 
-static int mmgui_btn_event_rename(Ihandle *ih)
+static int mmgui_button_event_rename(Ihandle *ih)
 {
 	MMGUI	*gui;
 
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	printf("mmgui_btn_event_rename: %p\n", gui);
+	printf("mmgui_button_event_rename: %p\n", gui);
 	return IUP_DEFAULT;
 }
 
-static int mmgui_btn_event_reset(Ihandle *ih)
+static int mmgui_button_event_reset(Ihandle *ih)
 {
 	MMGUI	*gui;
 
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	printf("mmgui_btn_event_reset: %p\n", gui);
+	printf("mmgui_button_event_reset: %p\n", gui);
 	mmgui_reset(gui);
 	return IUP_DEFAULT;
 }
 
-static int mmgui_btn_event_about(Ihandle *ih)
+static int mmgui_button_event_about(Ihandle *ih)
 {
 	MMGUI	*gui;
 
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	printf("mmgui_btn_event_about: %p\n", gui);
+	printf("mmgui_button_event_about: %p\n", gui);
 	return IUP_DEFAULT;
 }
 
@@ -349,32 +355,37 @@ static Ihandle *mmgui_option_box(MMGUI *gui)
 {
 	Ihandle	*vbox, *hbox;
 
+	vbox = IupVbox(IupLabel(NULL), NULL);
+
 	gui->tick_prefix  = IupToggle("Prefix", NULL);
 	IupSetAttribute(gui->tick_prefix, "SIZE", "40");
 	IupSetCallback(gui->tick_prefix, "ACTION",
 			(Icallback) mmgui_option_event_tick_prefix);
 	gui->entry_prefix = IupText(NULL);
-	IupSetAttribute(gui->entry_prefix, "SIZE", "48");
+	IupSetAttribute(gui->entry_prefix, "SIZE", "60x10");
 	hbox = IupHbox(gui->tick_prefix, gui->entry_prefix, NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
-	vbox = IupVbox(hbox, NULL);
+	IupAppend(vbox, hbox);
 
 	gui->tick_suffix  = IupToggle("Suffix", NULL);
 	IupSetAttribute(gui->tick_suffix, "SIZE", "40");
 	IupSetCallback(gui->tick_suffix, "ACTION",
 			(Icallback) mmgui_option_event_tick_suffix);
 	gui->entry_suffix = IupText(NULL);
-	IupSetAttribute(gui->entry_suffix, "SIZE", "48");
+	IupSetAttribute(gui->entry_suffix, "SIZE", "60x10");
 	hbox = IupHbox(gui->tick_suffix, gui->entry_suffix, NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	IupAppend(vbox, hbox);
 
-	gui->radio_nocase = IupToggle("Disabled", NULL);
-	gui->radio_lowcase = IupToggle("Lowercase", NULL);
-	gui->radio_upcase = IupToggle("Uppercase", NULL);
-	hbox = IupVbox(gui->radio_nocase, gui->radio_lowcase, 
-			gui->radio_upcase, NULL);
-	IupAppend(vbox, IupRadio(hbox));
+	gui->tick_lowercase = IupToggle("Lowercase", NULL);
+	IupSetCallback(gui->tick_lowercase, "ACTION",
+			(Icallback) mmgui_option_event_tick_lowercase);
+	IupAppend(vbox, gui->tick_lowercase);
+
+	gui->tick_uppercase = IupToggle("Uppercase", NULL);
+	IupSetCallback(gui->tick_uppercase, "ACTION",
+			(Icallback) mmgui_option_event_tick_uppercase);
+	IupAppend(vbox, gui->tick_uppercase);
 
 	gui->tick_search = IupToggle("Search and Replace", NULL);
 	IupSetCallback(gui->tick_search, "ACTION",
@@ -415,6 +426,32 @@ static int mmgui_option_event_tick_suffix(Ihandle* ih, int state)
 	return IUP_DEFAULT;
 }
 
+static int mmgui_option_event_tick_lowercase(Ihandle* ih, int state)
+{
+	MMGUI	*gui;
+
+	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+	if (state) {
+		IupSetAttribute(gui->tick_uppercase, "VALUE", "OFF");
+	}
+	return IUP_DEFAULT;
+}
+
+static int mmgui_option_event_tick_uppercase(Ihandle* ih, int state)
+{
+	MMGUI	*gui;
+
+	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+	if (state) {
+		IupSetAttribute(gui->tick_lowercase, "VALUE", "OFF");
+	}
+	return IUP_DEFAULT;
+}
+
 static int mmgui_option_event_tick_search(Ihandle* ih, int state)
 {
 	MMGUI	*gui;
@@ -437,7 +474,7 @@ static Ihandle *mmgui_search_box(MMGUI *gui)
 	gui->lable_pattern = IupLabel("Search");
 	IupSetAttribute(gui->lable_pattern, "SIZE", "32");
 	gui->entry_pattern = IupText(NULL);
-	IupSetAttribute(gui->entry_pattern, "SIZE", "48");
+	IupSetAttribute(gui->entry_pattern, "SIZE", "60x10");
 	hbox = IupHbox(gui->lable_pattern, gui->entry_pattern, NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	vbox = IupVbox(hbox, NULL);
@@ -445,7 +482,7 @@ static Ihandle *mmgui_search_box(MMGUI *gui)
 	gui->lable_substit = IupLabel("Replace");
 	IupSetAttribute(gui->lable_substit, "SIZE", "32");
 	gui->entry_substit = IupText(NULL);
-	IupSetAttribute(gui->entry_substit, "SIZE", "48");
+	IupSetAttribute(gui->entry_substit, "SIZE", "60x10");
 	hbox = IupHbox(gui->lable_substit, gui->entry_substit, NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	IupAppend(vbox, hbox);
@@ -457,7 +494,7 @@ static Ihandle *mmgui_search_box(MMGUI *gui)
 	IupSetCallback(gui->tick_replaced, "ACTION",
 			(Icallback) mmgui_search_event_tick_replaced);
 	gui->entry_replaced = IupText(NULL);
-	IupSetAttribute(gui->entry_replaced, "SIZE", "24");
+	IupSetAttribute(gui->entry_replaced, "SIZE", "24x10");
 	hbox = IupHbox(gui->tick_replaced, gui->entry_replaced, NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	IupAppend(vbox, hbox);
@@ -469,8 +506,10 @@ static Ihandle *mmgui_search_box(MMGUI *gui)
 	hbox = IupVbox(gui->radio_simple_match, gui->radio_back_match,
 			gui->radio_suffix, gui->radio_exregex, NULL);
 	IupAppend(vbox, IupRadio(hbox));
-	IupSetAttribute(vbox, "NMARGIN", "20x4");
-	return vbox;
+
+	hbox = IupLabel("");
+	IupSetAttribute(hbox, "SIZE", "10");
+	return IupHbox(hbox, vbox, NULL);
 }
 
 static int mmgui_search_box_show(MMGUI *gui, int state)
