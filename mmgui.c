@@ -38,10 +38,12 @@ typedef	struct	{
 	Ihandle		*list_newname;
 	Ihandle		*progress;
 	Ihandle		*status;
+	Ihandle		*list_vbox;
 	int		fileno;		/* file's number in the list */
 
 	/* button box */
 	Ihandle		*butt_load;
+	Ihandle		*butt_del;
 	Ihandle		*butt_run;
 	Ihandle		*butt_reset;
 	Ihandle		*butt_about;
@@ -77,14 +79,18 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height);
 static int mmgui_event_show(Ihandle *ih, int state);
 static int mmgui_event_close(Ihandle *ih);
 static int mmgui_reset(MMGUI *gui);
+static int mmgui_notify(void *ropt, int msg, int cur, void *a, void *opt);
 static Ihandle *mmgui_fnlist_box(MMGUI *gui);
-static int mmgui_fnlist_event_dropfiles(Ihandle *, const char *, int,int,int);
+static int mmgui_fnlist_event_dropfiles(Ihandle *, char *, int,int,int);
 static int mmgui_fnlist_event_multi_select(Ihandle *ih, char *value);
 static int mmgui_fnlist_event_moused(Ihandle *ih, int, int, int, int, char *);
 static int mmgui_fnlist_event_run(Ihandle *ih, int item, char *text);
 static int mmgui_fnlist_append(MMGUI *gui, char *fname);
+static int mmgui_fnlist_remove(MMGUI *gui, int idx);
+static int mmgui_fnlist_rename(MMGUI *gui, int idx);
 static Ihandle *mmgui_button_box(MMGUI *gui);
 static int mmgui_button_event_load(Ihandle *ih);
+static int mmgui_button_event_delete(Ihandle *ih);
 static int mmgui_button_event_rename(Ihandle *ih);
 static int mmgui_button_event_reset(Ihandle *ih);
 static int mmgui_button_event_about(Ihandle *ih);
@@ -99,7 +105,7 @@ static Ihandle *mmgui_search_box(MMGUI *gui);
 static int mmgui_search_reset(MMGUI *gui);
 static int mmgui_search_box_show(MMGUI *gui, int state);
 static int mmgui_search_event_tick_replaced(Ihandle* ih, int state);
-
+static char *IupTool_FileDlgExtract(char *dfn, char **sp);
 
 
 void *mmgui_open(RNOPT *ropt, int *argcs, char ***argvs)
@@ -172,10 +178,12 @@ int mmgui_run(void *guiobj, int argc, char **argv)
 	gui->dlg_open = IupFileDlg();
 	IupSetAttribute(gui->dlg_open, "PARENTDIALOG", gui->inst_id);
 	IupSetAttribute(gui->dlg_open, "TITLE", "Open Files");
+	IupSetAttribute(gui->dlg_open, "MULTIPLEFILES", "YES");
 
 	/* show and run the interface */
 	IupShow(gui->dlg_main);
 	mmgui_reset(gui);
+	gui->ropt->notify = mmgui_notify;
 	for (i = 0; i < argc; i++) {
 		mmgui_fnlist_append(gui, argv[i]);
 	}
@@ -194,6 +202,7 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height)
 	//printf("mmgui_event_resize: %d x %d\n", width, height);
 	//printf("mmgui_event_resize: %s\n", IupGetAttribute(ih,"RASTERSIZE"));
 	IupSetAttribute(ih, "RASTERSIZE", IupGetAttribute(ih, "RASTERSIZE"));
+	printf("mmgui_event_resize: %s\n", IupGetAttribute(gui->list_vbox, "CLIENTSIZE"));
 	return IUP_DEFAULT;
 }
 
@@ -251,9 +260,9 @@ static int mmgui_reset(MMGUI *gui)
 	return IUP_DEFAULT;
 }
 
-static int mmgui_notify(RNOPT *ropt, int msg, int cur, void *a, void *opt)
+static int mmgui_notify(void *ropt, int msg, int cur, void *a, void *opt)
 {
-	return IUP_DEFAULT;
+	return RNM_ERR_EVENT;	/* pass through */
 }
 
 /****************************************************************************
@@ -261,8 +270,6 @@ static int mmgui_notify(RNOPT *ropt, int msg, int cur, void *a, void *opt)
  ****************************************************************************/
 static Ihandle *mmgui_fnlist_box(MMGUI *gui)
 {
-	Ihandle	*vbox;
-
 	/* create the controls of left side, the file list panel */
 	gui->list_oldname = IupList(NULL);
 	IupSetAttribute(gui->list_oldname, "EXPAND", "YES");
@@ -281,7 +288,6 @@ static Ihandle *mmgui_fnlist_box(MMGUI *gui)
 	
 	gui->list_newname = IupList(NULL);
 	IupSetAttribute(gui->list_newname, "EXPAND", "YES");
-	IupSetAttribute(gui->list_newname, "MULTIPLE", "YES");
 	IupSetAttribute(gui->list_newname, "SCROLLBAR", "YES");
 	IupSetAttribute(gui->list_newname, "ALIGNMENT", "ARIGHT");
 
@@ -297,14 +303,14 @@ static Ihandle *mmgui_fnlist_box(MMGUI *gui)
 	gui->status = IupLabel("Status is fine");
 	IupSetAttribute(gui->status, "EXPAND", "HORIZONTAL");
 	
-	vbox = IupVbox(gui->list_oldname, gui->list_newname, 
+	gui->list_vbox = IupVbox(gui->list_oldname, gui->list_newname, 
 			gui->progress, gui->status, NULL);
-	IupSetAttribute(vbox, "NGAP", "4");
-	return vbox;
+	IupSetAttribute(gui->list_vbox, "NGAP", "4");
+	return gui->list_vbox;
 }
 
 static int mmgui_fnlist_event_dropfiles(Ihandle *ih,
-		const char* filename, int num, int x, int y)
+		char* filename, int num, int x, int y)
 {
 	MMGUI	*gui;
 
@@ -320,22 +326,80 @@ static int mmgui_fnlist_event_dropfiles(Ihandle *ih,
 
 static int mmgui_fnlist_event_multi_select(Ihandle *ih, char *value)
 {
+	MMGUI	*gui;
+
+	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+	printf("mmgui_fnlist_event_multi_select: %s\n", value);
+	printf("List value=%s\n", IupGetAttribute(gui->list_oldname, "VALUE"));
+	return IUP_DEFAULT;
 }
 
 static int mmgui_fnlist_event_moused(Ihandle *ih,
 		int button, int pressed, int x, int y, char *status)
 {
+	MMGUI	*gui;
+
+	(void)x; (void)y; (void)status; /* stop compiler complains */
+
+	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+	if (pressed) {	/* only act when button is released */
+		return IUP_DEFAULT;
+	}
+	/* deselect every thing if the right button was released */
+	if (button == IUP_BUTTON3) {
+		IupSetAttribute(gui->list_oldname, "VALUE", "");
+	}
+	return IUP_DEFAULT;
 }
 
 static int mmgui_fnlist_event_run(Ihandle *ih, int item, char *text)
 {
+	MMGUI	*gui;
+
+	(void) text;
+
+	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+	
+	mmgui_fnlist_rename(gui, item);
+	return IUP_DEFAULT;
 }
 
 static int mmgui_fnlist_append(MMGUI *gui, char *fname)
 {
-	IupSetStrAttributeId(gui->list_oldname, "",  ++(gui->fileno), fname);
+	if (fname) {
+		IupSetStrAttributeId(gui->list_oldname, "",  
+				++(gui->fileno), fname);
+	}
 	return IUP_DEFAULT;
+}
 
+static int mmgui_fnlist_remove(MMGUI *gui, int idx)
+{
+	char	*fname;
+
+	fname = IupGetAttributeId(gui->list_oldname, "",  idx);
+	if (fname) {
+		IupSetInt(gui->list_oldname, "REMOVEITEM", idx);
+		gui->fileno--;
+	}
+	return IUP_DEFAULT;
+}
+
+static int mmgui_fnlist_rename(MMGUI *gui, int idx)
+{
+	char	*fname;
+
+	fname = IupGetAttributeId(gui->list_oldname, "",  idx);
+	if (fname) {
+		printf("RENAME: %s\n", fname);
+	}
+	return IUP_DEFAULT;
 }
 
 /****************************************************************************
@@ -347,20 +411,24 @@ static Ihandle *mmgui_button_box(MMGUI *gui)
 
 	gui->butt_load = IupButton("Open", NULL);
 	IupSetAttribute(gui->butt_load, "SIZE", "50");
+	gui->butt_del = IupButton("Del", NULL);
+	IupSetAttribute(gui->butt_del, "SIZE", "50");
 	gui->butt_run = IupButton("Rename", NULL);
 	IupSetAttribute(gui->butt_run, "SIZE", "50");
-	gui->butt_reset = IupButton("Clear", NULL);
+	gui->butt_reset = IupButton("Reset", NULL);
 	IupSetAttribute(gui->butt_reset, "SIZE", "50");
 	gui->butt_about = IupButton("About", NULL);
 	IupSetAttribute(gui->butt_about, "SIZE", "50");
 
-	vbox = IupGridBox(gui->butt_load, gui->butt_run, gui->butt_reset,
-			gui->butt_about, NULL);
+	vbox = IupGridBox(gui->butt_load, gui->butt_del, gui->butt_run, 
+			gui->butt_reset, gui->butt_about, NULL);
 	IupSetAttribute(vbox, "ORIENTATION", "HORIZONTAL");
 	IupSetAttribute(vbox, "NUMDIV", "2");
 
 	IupSetCallback(gui->butt_load, "ACTION",
 			(Icallback) mmgui_button_event_load);
+	IupSetCallback(gui->butt_del, "ACTION",
+			(Icallback) mmgui_button_event_delete);
 	IupSetCallback(gui->butt_run, "ACTION",
 			(Icallback) mmgui_button_event_rename);
 	IupSetCallback(gui->butt_reset, "ACTION",
@@ -373,11 +441,12 @@ static Ihandle *mmgui_button_box(MMGUI *gui)
 static int mmgui_button_event_load(Ihandle *ih)
 {
 	MMGUI	*gui;
+	char	*fname, *dlgrd, *sp = NULL;
 
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	printf("mmgui_button_event_load: %p\n", gui);
+
 	IupPopup(gui->dlg_open, IUP_CENTERPARENT, IUP_CENTERPARENT);
 	if (IupGetInt(gui->dlg_open, "STATUS") < 0) {
 		return IUP_DEFAULT;	/* cancelled */
@@ -385,17 +454,62 @@ static int mmgui_button_event_load(Ihandle *ih)
 
 	printf("Open File VALUE: %s\n", IupGetAttribute(gui->dlg_open, "VALUE"));
 	printf("Last  DIRECTORY: %s\n", IupGetAttribute(gui->dlg_open, "DIRECTORY"));
+	dlgrd = IupGetAttribute(gui->dlg_open, "VALUE");
+	while ((fname = IupTool_FileDlgExtract(dlgrd, &sp)) != NULL) {
+		mmgui_fnlist_append(gui, fname);
+		smm_free(fname);
+	}
+	return IUP_DEFAULT;
+}
+
+static int mmgui_button_event_delete(Ihandle *ih)
+{
+	MMGUI	*gui;
+	char	*value;
+	int	i;
+
+	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
+	while (1) {
+		value = IupGetAttribute(gui->list_oldname, "VALUE");
+		//printf("mmgui_button_event_delete: %s\n", value);
+		for (i = 0; value[i]; i++) {
+			if (value[i] == '+') {
+				mmgui_fnlist_remove(gui, i+1);
+				break;
+			}
+		}
+		if (!value[i]) {
+			break;
+		}
+	}
 	return IUP_DEFAULT;
 }
 
 static int mmgui_button_event_rename(Ihandle *ih)
 {
 	MMGUI	*gui;
+	char	*value;
+	int	i, n;
 
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	printf("mmgui_button_event_rename: %p\n", gui);
+	
+	value = IupGetAttribute(gui->list_oldname, "VALUE");
+	for (i = n = 0; value[i]; i++) {
+		if (value[i] == '+') {
+			mmgui_fnlist_rename(gui, i+1);
+			n++;
+		}
+	}
+	if (n == 0) {
+		for (i = 0; i < gui->fileno; i++) {
+			mmgui_fnlist_rename(gui, i+1);
+		}
+	}
 	return IUP_DEFAULT;
 }
 
@@ -408,6 +522,9 @@ static int mmgui_button_event_reset(Ihandle *ih)
 	}
 	printf("mmgui_button_event_reset: %p\n", gui);
 	mmgui_reset(gui);
+	while (gui->fileno) {
+		mmgui_fnlist_remove(gui, 1);
+	}
 	return IUP_DEFAULT;
 }
 
@@ -718,51 +835,74 @@ static int mmgui_search_event_tick_replaced(Ihandle* ih, int state)
  *
  * IupPopup(dlg_open, IUP_CENTERPARENT, IUP_CENTERPARENT);
  * if (IupGetInt(dlg_open, "STATUS") >= 0) {
- *     fdlg = IupGetAttribute(dlg_open, "VALUE");
- *     sp = NULL;
+ *     char *sp = NULL;
+ *     dfn = IupGetAttribute(dlg_open, "VALUE");
  *     do {
- *         sp = IupTool_FileDlgExtract(fdlg, sp, buf, sizeof(buf));
- *     } while (sp);
+ *         result = IupTool_FileDlgExtract(dfn, &sp);
+ *         smm_free(result);
+ *     } while (result);
  */
 static char *IupTool_FileDlgExtract(char *dfn, char **sp)
 {
-	char	*p;
-	int	tlen, path_len, sp_len;
+	char	*p, *rtn;
+	int	path_len, sp_len;
 
-	if ((p = strchr(dfn, '|')) != NULL) {
+	if ((p = strchr(dfn, '|')) != NULL) {	/* multi-file open */
 		path_len = (int)(p - dfn);
-	} else if (sp == NULL) {
-		strlcpy(buf, dfn, blen);
-		return dfn + strlen(dfn);
-	} else {
+	} else if (*sp == NULL) {	/* single file open first read */
+		*sp = dfn + strlen(dfn);
+		return csc_strcpy_alloc(dfn, 0);
+	} else {	/* single file open more read */
 		return NULL;
 	}
 
-	if (sp == NULL) {
-		sp = p + 1;
+	if (*sp == NULL) {	/* multi-file open first read */
+		*sp = p + 1;
 	}
-	if (*sp == 0) {
+	if (**sp == 0) {
 		return NULL;
 	}
 
-	if ((p = strchr(sp, '|')) != NULL) {
-		sp_len = (int)(p - sp);
+	if ((p = strchr(*sp, '|')) != NULL) {
+		sp_len = (int)(p - *sp);
 	} else {
-		sp_len = strlen(sp);
+		sp_len = strlen(*sp);
 	}
 	
-	if (path_len + sp_len + 2 > blen) {	/* receive buffer too small */
+	if ((rtn = smm_alloc(path_len + sp_len + 4)) == NULL) {
 		return NULL;
 	}
-
-	memcpy(buf, dfn, path_len);
-	*(buf + path_len + 1) = SMM_DEF_DELIM[0];
-	memcpy(buf + path_len + 1, sp, sp_len);
-	*(buf + path_len + sp_len + 2) = 0;
+	strncpy(rtn, dfn, path_len);
+	rtn[path_len] = 0;
+	strcat(rtn, SMM_DEF_DELIM);
+	strncat(rtn, *sp, sp_len);
 
 	if (p == NULL) {
-		return sp + strlen(sp);
+		*sp += strlen(*sp);
+	} else {
+		*sp += sp_len + 1;
 	}
-	return sp + sp_len + 1;
+	return rtn;
 }
+
+
+#if 0
+/* IupTool_FileDlgExtract_Test("/home/xum1/dwhelper/lan_ke_er.flv");
+ * IupTool_FileDlgExtract_Test("/home/xum1/dwhelper|lan_ke_er.flv");
+ * IupTool_FileDlgExtract_Test("/home/xum1/dwhelper|file-62.flv|lan_ke_er.flv|Discuz.flv|");
+ * IupTool_FileDlgExtract_Test("/home/xum1/dwhelper|file-62.flv|lan_ke_er.flv|Discuz.flv");
+ */	
+static void IupTool_FileDlgExtract_Test(char *dfn)
+{
+	char	*sp = NULL, *tmp;
+
+	do {
+		tmp = IupTool_FileDlgExtract(dfn, &sp);
+		if (tmp) {
+			printf("Extracted: %s\n", tmp);
+			smm_free(tmp);
+		}
+	} while (tmp);
+}
+#endif
 
