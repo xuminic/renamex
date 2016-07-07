@@ -38,6 +38,7 @@ typedef	struct	{
 	Ihandle		*list_newname;
 	Ihandle		*progress;
 	Ihandle		*status;
+	int		fileno;		/* file's number in the list */
 
 	/* button box */
 	Ihandle		*butt_load;
@@ -65,7 +66,7 @@ typedef	struct	{
 	int		state_replaced;
 	Ihandle		*radio_simple_match;
 	Ihandle		*radio_back_match;
-	Ihandle		*radio_suffix;
+	Ihandle		*radio_extension;
 	Ihandle		*radio_exregex;
 
 	RNOPT		*ropt;
@@ -76,18 +77,26 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height);
 static int mmgui_event_show(Ihandle *ih, int state);
 static int mmgui_event_close(Ihandle *ih);
 static int mmgui_reset(MMGUI *gui);
+static Ihandle *mmgui_fnlist_box(MMGUI *gui);
+static int mmgui_fnlist_event_dropfiles(Ihandle *, const char *, int,int,int);
+static int mmgui_fnlist_event_multi_select(Ihandle *ih, char *value);
+static int mmgui_fnlist_event_moused(Ihandle *ih, int, int, int, int, char *);
+static int mmgui_fnlist_event_run(Ihandle *ih, int item, char *text);
+static int mmgui_fnlist_append(MMGUI *gui, char *fname);
 static Ihandle *mmgui_button_box(MMGUI *gui);
 static int mmgui_button_event_load(Ihandle *ih);
 static int mmgui_button_event_rename(Ihandle *ih);
 static int mmgui_button_event_reset(Ihandle *ih);
 static int mmgui_button_event_about(Ihandle *ih);
 static Ihandle *mmgui_option_box(MMGUI *gui);
+static int mmgui_option_reset(MMGUI *gui);
 static int mmgui_option_event_tick_prefix(Ihandle* ih, int state);
 static int mmgui_option_event_tick_suffix(Ihandle* ih, int state);
 static int mmgui_option_event_tick_lowercase(Ihandle* ih, int state);
 static int mmgui_option_event_tick_uppercase(Ihandle* ih, int state);
 static int mmgui_option_event_tick_search(Ihandle* ih, int state);
 static Ihandle *mmgui_search_box(MMGUI *gui);
+static int mmgui_search_reset(MMGUI *gui);
 static int mmgui_search_box_show(MMGUI *gui, int state);
 static int mmgui_search_event_tick_replaced(Ihandle* ih, int state);
 
@@ -124,49 +133,20 @@ int mmgui_close(void *guiobj)
 	return 0;
 }
 
-int mmgui_run(void *guiobj)
+int mmgui_run(void *guiobj, int argc, char **argv)
 {
 	MMGUI	*gui = guiobj;
-	Ihandle	*vbox_fname, *vbox_panel;
-	Ihandle *hbox;
+	Ihandle	*vbox_fname, *vbox_panel, *hbox;
+	int	i;
 
 	/* create the controls of left side, the file list panel */
-	gui->list_oldname = IupList(NULL);
-	IupSetAttribute(gui->list_oldname, "EXPAND", "YES");
-	IupSetAttribute(gui->list_oldname, "MULTIPLE", "YES");
-	IupSetAttribute(gui->list_oldname, "SCROLLBAR", "YES");
-	IupSetAttribute(gui->list_oldname, "DROPFILESTARGET", "YES");
-	IupSetAttribute(gui->list_oldname, "ALIGNMENT", "ARIGHT");
-	
-	gui->list_newname = IupList(NULL);
-	IupSetAttribute(gui->list_newname, "EXPAND", "YES");
-	IupSetAttribute(gui->list_newname, "MULTIPLE", "YES");
-	IupSetAttribute(gui->list_newname, "SCROLLBAR", "YES");
-	IupSetAttribute(gui->list_newname, "ALIGNMENT", "ARIGHT");
-
-	gui->progress = IupProgressBar();
-	IupSetAttribute(gui->progress, "EXPAND", "HORIZONTAL");
-	IupSetAttribute(gui->progress, "DASHED", "YES");
-	IupSetAttribute(gui->progress, "SIZE", "x10");
-	IupSetAttribute(gui->progress, "VISIBLE", "YES");
-	IupSetInt(gui->progress, "MIN", 0);
-	IupSetInt(gui->progress, "MAX", 100);
-	IupSetInt(gui->progress, "VALUE", 50);
-
-	gui->status = IupLabel("Status is fine");
-	IupSetAttribute(gui->status, "EXPAND", "HORIZONTAL");
-	
-	vbox_fname = IupVbox(gui->list_oldname, gui->list_newname, 
-			gui->progress, gui->status, NULL);
-	IupSetAttribute(vbox_fname, "NGAP", "4");
-	//IupSetAttribute(vbox_fname, "NMARGIN", "16x16");
+	vbox_fname = mmgui_fnlist_box(gui);
 
 	/* create the controls of right side, the operate panel */
 	vbox_panel = IupVbox(NULL);
 	IupAppend(vbox_panel, mmgui_button_box(gui));
 	IupAppend(vbox_panel, mmgui_option_box(gui));
 	IupAppend(vbox_panel, mmgui_search_box(gui));
-	//IupSetAttribute(vbox_panel, "NMARGIN", "16x16");
 
 	/* create the dialog window */
 	hbox = IupHbox(vbox_fname, vbox_panel, NULL);
@@ -196,6 +176,9 @@ int mmgui_run(void *guiobj)
 	/* show and run the interface */
 	IupShow(gui->dlg_main);
 	mmgui_reset(gui);
+	for (i = 0; i < argc; i++) {
+		mmgui_fnlist_append(gui, argv[i]);
+	}
 	IupMainLoop();
 	return 0;
 }
@@ -259,16 +242,100 @@ static int mmgui_event_close(Ihandle *ih)
 
 static int mmgui_reset(MMGUI *gui)
 {
-	IupSetAttribute(gui->tick_prefix, "VALUE", "ON");
+	/*IupSetAttribute(gui->tick_prefix, "VALUE", "ON");
 	IupSetAttribute(gui->tick_suffix, "VALUE", "ON");
 	IupSetAttribute(gui->tick_search, "VALUE", "ON");
-	IupSetAttribute(gui->tick_replaced, "VALUE", "ON");
+	IupSetAttribute(gui->tick_replaced, "VALUE", "ON");*/
+	mmgui_option_reset(gui);
+	mmgui_search_reset(gui);
 	return IUP_DEFAULT;
 }
 
 static int mmgui_notify(RNOPT *ropt, int msg, int cur, void *a, void *opt)
 {
 	return IUP_DEFAULT;
+}
+
+/****************************************************************************
+ * file name list box
+ ****************************************************************************/
+static Ihandle *mmgui_fnlist_box(MMGUI *gui)
+{
+	Ihandle	*vbox;
+
+	/* create the controls of left side, the file list panel */
+	gui->list_oldname = IupList(NULL);
+	IupSetAttribute(gui->list_oldname, "EXPAND", "YES");
+	IupSetAttribute(gui->list_oldname, "MULTIPLE", "YES");
+	IupSetAttribute(gui->list_oldname, "SCROLLBAR", "YES");
+	IupSetAttribute(gui->list_oldname, "DROPFILESTARGET", "YES");
+	IupSetAttribute(gui->list_oldname, "ALIGNMENT", "ARIGHT");
+	IupSetCallback(gui->list_oldname, "DROPFILES_CB",
+			(Icallback) mmgui_fnlist_event_dropfiles);
+	IupSetCallback(gui->list_oldname, "MULTISELECT_CB",
+			(Icallback) mmgui_fnlist_event_multi_select);
+	IupSetCallback(gui->list_oldname, "BUTTON_CB",
+			(Icallback) mmgui_fnlist_event_moused);
+	IupSetCallback(gui->list_oldname, "DBLCLICK_CB",
+			(Icallback) mmgui_fnlist_event_run);
+	
+	gui->list_newname = IupList(NULL);
+	IupSetAttribute(gui->list_newname, "EXPAND", "YES");
+	IupSetAttribute(gui->list_newname, "MULTIPLE", "YES");
+	IupSetAttribute(gui->list_newname, "SCROLLBAR", "YES");
+	IupSetAttribute(gui->list_newname, "ALIGNMENT", "ARIGHT");
+
+	gui->progress = IupProgressBar();
+	IupSetAttribute(gui->progress, "EXPAND", "HORIZONTAL");
+	IupSetAttribute(gui->progress, "DASHED", "YES");
+	IupSetAttribute(gui->progress, "SIZE", "x10");
+	IupSetAttribute(gui->progress, "VISIBLE", "YES");
+	IupSetInt(gui->progress, "MIN", 0);
+	IupSetInt(gui->progress, "MAX", 100);
+	IupSetInt(gui->progress, "VALUE", 50);
+
+	gui->status = IupLabel("Status is fine");
+	IupSetAttribute(gui->status, "EXPAND", "HORIZONTAL");
+	
+	vbox = IupVbox(gui->list_oldname, gui->list_newname, 
+			gui->progress, gui->status, NULL);
+	IupSetAttribute(vbox, "NGAP", "4");
+	return vbox;
+}
+
+static int mmgui_fnlist_event_dropfiles(Ihandle *ih,
+		const char* filename, int num, int x, int y)
+{
+	MMGUI	*gui;
+
+	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+	printf("mmgui_fnlist_event_dropfiles: fname=%s number=%d %dx%d\n",
+			filename, num, x, y);
+
+	mmgui_fnlist_append(gui, filename);
+	return IUP_DEFAULT;
+}
+
+static int mmgui_fnlist_event_multi_select(Ihandle *ih, char *value)
+{
+}
+
+static int mmgui_fnlist_event_moused(Ihandle *ih,
+		int button, int pressed, int x, int y, char *status)
+{
+}
+
+static int mmgui_fnlist_event_run(Ihandle *ih, int item, char *text)
+{
+}
+
+static int mmgui_fnlist_append(MMGUI *gui, char *fname)
+{
+	IupSetStrAttributeId(gui->list_oldname, "",  ++(gui->fileno), fname);
+	return IUP_DEFAULT;
+
 }
 
 /****************************************************************************
@@ -311,6 +378,13 @@ static int mmgui_button_event_load(Ihandle *ih)
 		return IUP_DEFAULT;
 	}
 	printf("mmgui_button_event_load: %p\n", gui);
+	IupPopup(gui->dlg_open, IUP_CENTERPARENT, IUP_CENTERPARENT);
+	if (IupGetInt(gui->dlg_open, "STATUS") < 0) {
+		return IUP_DEFAULT;	/* cancelled */
+	}
+
+	printf("Open File VALUE: %s\n", IupGetAttribute(gui->dlg_open, "VALUE"));
+	printf("Last  DIRECTORY: %s\n", IupGetAttribute(gui->dlg_open, "DIRECTORY"));
 	return IUP_DEFAULT;
 }
 
@@ -392,6 +466,41 @@ static Ihandle *mmgui_option_box(MMGUI *gui)
 			(Icallback) mmgui_option_event_tick_search);
 	IupAppend(vbox, gui->tick_search);
 	return vbox;
+}
+
+static int mmgui_option_reset(MMGUI *gui)
+{
+	RNOPT	*opt = gui->ropt;
+
+	if (opt->oflags & RNM_OFLAG_PREFIX) {
+		IupSetAttribute(gui->tick_prefix, "VALUE", "ON");
+		IupSetAttribute(gui->entry_prefix, "VALUE", opt->prefix);
+		IupSetAttribute(gui->entry_prefix, "VISIBLE", "YES");
+	} else {
+		IupSetAttribute(gui->tick_prefix, "VALUE", "OFF");
+		IupSetAttribute(gui->entry_prefix, "VALUE", "");
+		IupSetAttribute(gui->entry_prefix, "VISIBLE", "NO");
+	}
+	if (opt->oflags & RNM_OFLAG_SUFFIX) {
+		IupSetAttribute(gui->tick_suffix, "VALUE", "ON");
+		IupSetAttribute(gui->entry_suffix, "VALUE", opt->suffix);
+		IupSetAttribute(gui->entry_suffix, "VISIBLE", "YES");
+	} else {
+		IupSetAttribute(gui->tick_suffix, "VALUE", "OFF");
+		IupSetAttribute(gui->entry_suffix, "VALUE", "");
+		IupSetAttribute(gui->entry_suffix, "VISIBLE", "NO");
+	}
+	if ((opt->oflags & RNM_OFLAG_MASKCASE) == RNM_OFLAG_LOWERCASE) {
+		IupSetAttribute(gui->tick_lowercase, "VALUE", "ON");
+		IupSetAttribute(gui->tick_uppercase, "VALUE", "OFF");
+	} else if ((opt->oflags & RNM_OFLAG_MASKCASE) == RNM_OFLAG_UPPERCASE) {
+		IupSetAttribute(gui->tick_lowercase, "VALUE", "OFF");
+		IupSetAttribute(gui->tick_uppercase, "VALUE", "ON");
+	} else {
+		IupSetAttribute(gui->tick_lowercase, "VALUE", "OFF");
+		IupSetAttribute(gui->tick_uppercase, "VALUE", "OFF");
+	}
+	return 0;
 }
 
 static int mmgui_option_event_tick_prefix(Ihandle* ih, int state)
@@ -501,15 +610,61 @@ static Ihandle *mmgui_search_box(MMGUI *gui)
 
 	gui->radio_simple_match = IupToggle("Simple Matching", NULL);
 	gui->radio_back_match = IupToggle("Backward Matching", NULL);
-	gui->radio_suffix = IupToggle("Suffix Matching", NULL);
+	gui->radio_extension = IupToggle("Extension Matching", NULL);
 	gui->radio_exregex = IupToggle("Regular Expression", NULL);
 	hbox = IupVbox(gui->radio_simple_match, gui->radio_back_match,
-			gui->radio_suffix, gui->radio_exregex, NULL);
+			gui->radio_extension, gui->radio_exregex, NULL);
 	IupAppend(vbox, IupRadio(hbox));
 
 	hbox = IupLabel("");
 	IupSetAttribute(hbox, "SIZE", "10");
 	return IupHbox(hbox, vbox, NULL);
+}
+
+static int mmgui_search_reset(MMGUI *gui)
+{
+	RNOPT	*opt = gui->ropt;
+
+	if (opt->action) {
+		IupSetAttribute(gui->tick_search, "VALUE", "ON");
+		IupSetAttribute(gui->entry_pattern, "VALUE", opt->pattern);
+		IupSetAttribute(gui->entry_substit, "VALUE", opt->substit);
+		mmgui_search_box_show(gui, 1);
+	} else {
+		IupSetAttribute(gui->tick_search, "VALUE", "OFF");
+		IupSetAttribute(gui->entry_pattern, "VALUE", "");
+		IupSetAttribute(gui->entry_substit, "VALUE", "");
+		mmgui_search_box_show(gui, 0);
+	}
+	if (opt->regflag & REG_ICASE) {
+		IupSetAttribute(gui->tick_icase, "VALUE", "ON");
+	} else {
+		IupSetAttribute(gui->tick_icase, "VALUE", "OFF");
+	}
+	if (opt->rpnum == 0) {
+		IupSetAttribute(gui->tick_replaced, "VALUE", "OFF");
+		IupSetAttribute(gui->entry_replaced, "VALUE", "");
+		IupSetAttribute(gui->entry_replaced, "VISIBLE", "NO");
+	} else {
+		IupSetAttribute(gui->tick_replaced, "VALUE", "ON");
+		IupSetInt(gui->entry_replaced, "VALUE", opt->rpnum);
+		IupSetAttribute(gui->entry_replaced, "VISIBLE", "YES");
+	}
+	switch (opt->action) {
+	case RNM_ACT_FORWARD:
+		IupSetAttribute(gui->radio_simple_match, "VALUE", "ON");
+		break;
+	case RNM_ACT_BACKWARD:
+		IupSetAttribute(gui->radio_back_match, "VALUE", "ON");
+		break;
+	case RNM_ACT_EXTENSION:
+		IupSetAttribute(gui->radio_extension, "VALUE", "ON");
+		break;
+	case RNM_ACT_REGEX:
+		IupSetAttribute(gui->radio_exregex, "VALUE", "ON");
+		break;
+	}
+	return 0;
 }
 
 static int mmgui_search_box_show(MMGUI *gui, int state)
@@ -525,7 +680,7 @@ static int mmgui_search_box_show(MMGUI *gui, int state)
 	IupSetAttribute(gui->tick_replaced, "VISIBLE", stbuf[state]);
 	IupSetAttribute(gui->radio_simple_match, "VISIBLE", stbuf[state]);
 	IupSetAttribute(gui->radio_back_match, "VISIBLE", stbuf[state]);
-	IupSetAttribute(gui->radio_suffix, "VISIBLE", stbuf[state]);
+	IupSetAttribute(gui->radio_extension, "VISIBLE", stbuf[state]);
 	IupSetAttribute(gui->radio_exregex, "VISIBLE", stbuf[state]);
 
 	if (state == 0) {
@@ -552,5 +707,62 @@ static int mmgui_search_event_tick_replaced(Ihandle* ih, int state)
 		IupSetAttribute(gui->entry_replaced, "VISIBLE", "NO");
 	}	
 	return IUP_DEFAULT;
+}
+
+/* IUP generate different file list between one file and more files:
+ * Open File VALUE: /home/xum1/dwhelper/lan_ke_er.flv
+ * Last  DIRECTORY: /home/xum1/dwhelper/
+ * Open File VALUE: /home/xum1/dwhelper|file-602303262.flv|
+ *                      lan_ke_er.flv|Powered_by_Discuz.flv|
+ * Last  DIRECTORY: /home/xum1/dwhelper0 
+ *
+ * IupPopup(dlg_open, IUP_CENTERPARENT, IUP_CENTERPARENT);
+ * if (IupGetInt(dlg_open, "STATUS") >= 0) {
+ *     fdlg = IupGetAttribute(dlg_open, "VALUE");
+ *     sp = NULL;
+ *     do {
+ *         sp = IupTool_FileDlgExtract(fdlg, sp, buf, sizeof(buf));
+ *     } while (sp);
+ */
+static char *IupTool_FileDlgExtract(char *dfn, char **sp)
+{
+	char	*p;
+	int	tlen, path_len, sp_len;
+
+	if ((p = strchr(dfn, '|')) != NULL) {
+		path_len = (int)(p - dfn);
+	} else if (sp == NULL) {
+		strlcpy(buf, dfn, blen);
+		return dfn + strlen(dfn);
+	} else {
+		return NULL;
+	}
+
+	if (sp == NULL) {
+		sp = p + 1;
+	}
+	if (*sp == 0) {
+		return NULL;
+	}
+
+	if ((p = strchr(sp, '|')) != NULL) {
+		sp_len = (int)(p - sp);
+	} else {
+		sp_len = strlen(sp);
+	}
+	
+	if (path_len + sp_len + 2 > blen) {	/* receive buffer too small */
+		return NULL;
+	}
+
+	memcpy(buf, dfn, path_len);
+	*(buf + path_len + 1) = SMM_DEF_DELIM[0];
+	memcpy(buf + path_len + 1, sp, sp_len);
+	*(buf + path_len + sp_len + 2) = 0;
+
+	if (p == NULL) {
+		return sp + strlen(sp);
+	}
+	return sp + sp_len + 1;
 }
 

@@ -56,6 +56,7 @@
 #define RNM_CFLAG_TEST		0x400	/* test mode only */
 #define RNM_CFLAG_GUI		0x800	/* GUI mode */
 
+
 #define	RNM_OFLAG_NONE		0	/* do not change output filename */
 #define RNM_OFLAG_LOWERCASE	1	/* lowercase the output filename */
 #define RNM_OFLAG_UPPERCASE	2	/* uppercase the output filename */
@@ -101,6 +102,7 @@ typedef	struct	{
 
 	char	*patbuf;	/* buffer for patterns */
 	regex_t	preg[1];	/* buffer for regular expression */
+	int	regflag;
 
 	char	*pattern;	/* pattern for search */
 	int	pa_len;
@@ -134,7 +136,7 @@ int rename_executing(RNOPT *opt, char *dest, char *sour);
 /* mmgui.c */
 void *mmgui_open(RNOPT *ropt, int *argcs, char ***argvs);
 int mmgui_close(void *gui);
-int mmgui_run(void *guiobj);
+int mmgui_run(void *guiobj, int argc, char **argv);
 
 #endif
 

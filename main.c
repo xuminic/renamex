@@ -80,7 +80,6 @@ This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n";
 
 static int rename_free_all(int sig);
-static int rename_run_gui(RNOPT *opt, int argc, char **argv);
 static int cli_set_pattern(RNOPT *opt, char *optarg);
 static int cli_dump(RNOPT *opt);
 
@@ -177,14 +176,14 @@ int main(int argc, char **argv)
 
 #ifdef	CFG_GUI_ON
 	if (sysopt->cflags & RNM_CFLAG_GUI) {
-		rc = rename_run_gui(sysopt, argc - optind, &argv[optind]);
+		rc = mmgui_run(sysopt->gui, argc - optind, &argv[optind]);
 		rename_free_all(0);
 		return rc;
 	}
 #endif
 	if (optind >= argc) {	/* no file name offered */
 #ifdef	CFG_GUI_ON
-		rc = rename_run_gui(sysopt, 0, NULL);
+		rc = mmgui_run(sysopt->gui, 0, NULL);
 #else
 		printf("%s: missing file operand\n", argv[0]);
 		rc = RNM_ERR_PARAM;
@@ -202,7 +201,7 @@ int main(int argc, char **argv)
 			rc = rename_executing(sysopt, argv[optind+1], argv[optind]);
 		} else {
 #ifdef	CFG_GUI_ON
-			rc = rename_run_gui(sysopt, argc - optind, &argv[optind]);
+			rc = mmgui_run(sysopt->gui, argc - optind, &argv[optind]);
 #else
 			printf("%s: missing rename operand\n", argv[0]);
 			rc = RNM_ERR_PARAM;
@@ -248,21 +247,9 @@ static int rename_free_all(int sig)
 	return 0;
 }
 
-static int rename_run_gui(RNOPT *opt, int argc, char **argv)
-{
-	int	i;
-
-	for (i = 0; i < argc; i++) {
-		puts(argv[i]);
-	}
-	mmgui_run(opt->gui);
-	return 0;
-}
-
 static int cli_set_pattern(RNOPT *opt, char *optarg)
 {
 	char	*idx[4], *p;
-	int	cflags = 0;
 
 	/* skip the first separater */
 	if ((*optarg == '/') || (*optarg == ':')) {
@@ -282,6 +269,7 @@ static int cli_set_pattern(RNOPT *opt, char *optarg)
 	opt->pa_len = strlen(opt->pattern);
 	opt->su_len = strlen(opt->substit);
 	opt->action = RNM_ACT_FORWARD;
+	opt->regflag = 0;
 	opt->rpnum = 1;		/* default replace once */
     	for (p = idx[2]; p && *p; p++)  {
 		switch (*p)  {
@@ -299,7 +287,7 @@ static int cli_set_pattern(RNOPT *opt, char *optarg)
 	    		break;
 		case 'i':
 		case 'I':
-			cflags |= REG_ICASE;
+			opt->regflag |= REG_ICASE;
 			opt->compare = strncasecmp;
 			break;
 		case 'r':
@@ -308,7 +296,7 @@ static int cli_set_pattern(RNOPT *opt, char *optarg)
 			break;
 		case 'x':
 		case 'X':
-			cflags |= REG_EXTENDED;
+			opt->regflag |= REG_EXTENDED;
 	    		opt->action = RNM_ACT_REGEX;
 			break;
 		default:
@@ -319,7 +307,7 @@ static int cli_set_pattern(RNOPT *opt, char *optarg)
 		}
 	}
 	if ((opt->action == RNM_ACT_REGEX) &&
-			regcomp(opt->preg, opt->pattern, cflags))  {
+			regcomp(opt->preg, opt->pattern, opt->regflag))  {
 		printf("Wrong regular expression. [%s]\n", opt->pattern);
 		return RNM_ERR_REGPAT;
 	}
