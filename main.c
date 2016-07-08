@@ -81,7 +81,6 @@ There is NO WARRANTY, to the extent permitted by law.\n";
 
 static int rename_free_all(int sig);
 static int cli_set_pattern(RNOPT *opt, char *optarg);
-static int cli_dump(RNOPT *opt);
 
 int main(int argc, char **argv)
 {
@@ -171,7 +170,7 @@ int main(int argc, char **argv)
 	smm_signal_break(rename_free_all);
 
 	if (sysopt->cflags & RNM_CFLAG_TEST) {
-		cli_dump(sysopt);
+		rename_option_dump(sysopt);
 	}
 
 #ifdef	CFG_GUI_ON
@@ -211,6 +210,11 @@ int main(int argc, char **argv)
 		return rc;
 	}
 
+	if ((sysopt->action == RNM_ACT_REGEX) && regcomp(sysopt->preg, 
+				sysopt->pattern, sysopt->regflag)) {
+		printf("Regular Expression Error: [%s]\n", sysopt->pattern);
+		return RNM_ERR_REGPAT;
+	}
 	for (c = optind; (c < argc) && (rc == RNM_ERR_NONE); c++) {
 		if (infile) {
 			rc = rename_enfile(sysopt, argv[c]);
@@ -301,73 +305,13 @@ static int cli_set_pattern(RNOPT *opt, char *optarg)
 			break;
 		default:
 			if (isdigit(*p)) {
-				opt->rpnum = *p - '0';
+				opt->rpnum = (int) strtol(p, &p, 10);
+				p--;
 			}
 			break;
 		}
 	}
-	if ((opt->action == RNM_ACT_REGEX) &&
-			regcomp(opt->preg, opt->pattern, opt->regflag))  {
-		printf("Wrong regular expression. [%s]\n", opt->pattern);
-		return RNM_ERR_REGPAT;
-	}
 	return RNM_ERR_NONE;
 }
 
-static int cli_dump(RNOPT *opt)
-{
-	char	buf[80];
-
-	switch (opt->cflags & RNM_CFLAG_PROMPT_MASK) {
-	case RNM_CFLAG_NEVER:
-		strcpy(buf, "[SKIP");
-		break;
-	case RNM_CFLAG_ALWAYS:
-		strcpy(buf, "[OVERWT");
-		break;
-	default:
-		strcpy(buf, "[AUTO");
-		break;
-	}
-	if (opt->cflags & RNM_CFLAG_RECUR) {
-		strcat(buf, "|RECUR");
-	}
-	if (opt->cflags & RNM_CFLAG_VERBOSE) {
-		strcat(buf, "|VERBOSE");
-	}
-	if (opt->cflags & RNM_CFLAG_TEST) {
-		strcat(buf, "|TEST");
-	}
-	strcat(buf, "]");
-	switch (opt->oflags & RNM_OFLAG_MASKCASE) {
-	case RNM_OFLAG_LOWERCASE:
-		strcat(buf, "[LOWCASE]");
-		break;
-	case RNM_OFLAG_UPPERCASE:
-		strcat(buf, "[UPCASE]");
-		break;
-	}
-	switch (opt->action) {
-	case RNM_ACT_FORWARD:
-		strcat(buf, "[FORWARD]");
-		break;
-	case RNM_ACT_BACKWARD:
-		strcat(buf, "[BACKWARD]");
-		break;
-	case RNM_ACT_REGEX:
-		strcat(buf, "[REGEX]");
-		break;
-	case RNM_ACT_EXTENSION:
-		strcat(buf, "[EXT]");
-		break;
-	}
-
-	printf("Flags:          %s\n", buf);
-	printf("Pattern:        %s (%d)\n", opt->pattern, opt->pa_len);
-	printf("Substituter:    %s (%d)(x %d)\n", 
-			opt->substit, opt->su_len, opt->rpnum);
-	printf("Name Buffer:    %d\n", opt->room);
-	printf("\n");
-	return 0;
-}
 

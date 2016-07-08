@@ -181,6 +181,89 @@ int rename_executing(RNOPT *opt, char *dest, char *sour)
 	return rc;
 }
 
+int rename_option_dump(RNOPT *opt)
+{
+	char	buf[80];
+
+	switch (opt->cflags & RNM_CFLAG_PROMPT_MASK) {
+	case RNM_CFLAG_NEVER:
+		strcpy(buf, "[SKIP");
+		break;
+	case RNM_CFLAG_ALWAYS:
+		strcpy(buf, "[OVERWT");
+		break;
+	default:
+		strcpy(buf, "[AUTO");
+		break;
+	}
+	if (opt->cflags & RNM_CFLAG_RECUR) {
+		strcat(buf, "|RECUR");
+	}
+	if (opt->cflags & RNM_CFLAG_VERBOSE) {
+		strcat(buf, "|VERBOSE");
+	}
+	if (opt->cflags & RNM_CFLAG_TEST) {
+		strcat(buf, "|TEST");
+	}
+	if (opt->cflags & RNM_CFLAG_GUI) {
+		strcat(buf, "|GUI");
+	}
+	printf("Control Flags:  %s]\n", buf);
+
+	strcpy(buf, "[");
+	switch (opt->oflags & RNM_OFLAG_MASKCASE) {
+	case RNM_OFLAG_LOWERCASE:
+		strcat(buf, "LOWCASE");
+		break;
+	case RNM_OFLAG_UPPERCASE:
+		strcat(buf, "UPCASE");
+		break;
+	}
+	if (opt->oflags & RNM_OFLAG_PREFIX) {
+		strcat(buf, "|PREFIX");
+	}
+	if (opt->oflags & RNM_OFLAG_SUFFIX) {
+		strcat(buf, "|SUFFIX");
+	}
+	switch (opt->action) {
+	case RNM_ACT_FORWARD:
+		strcat(buf, "][FORWARD");
+		break;
+	case RNM_ACT_BACKWARD:
+		strcat(buf, "][BACKWARD");
+		break;
+	case RNM_ACT_REGEX:
+		strcat(buf, "][REGEX");
+		break;
+	case RNM_ACT_EXTENSION:
+		strcat(buf, "][EXT");
+		break;
+	default:
+		strcat(buf, "][NONE");
+		break;
+	}
+	if (opt->regflag & REG_ICASE) {
+		strcat(buf, "|ICASE");
+	}
+	if (opt->regflag & REG_EXTENDED) {
+		strcat(buf, "|XREGEX");
+	}
+	strcat(buf, "]");
+	printf("Process Flags:  %s\n", buf);
+
+	printf("Pattern:        %s (%d)\n", opt->pattern, opt->pa_len);
+	printf("Substituter:    %s (%d)(x %d)\n", 
+			opt->substit, opt->su_len, opt->rpnum);
+	if (opt->oflags & RNM_OFLAG_PREFIX) {
+		printf("Prefix:         %s (%d)\n", opt->prefix, opt->pre_len);
+	}
+	if (opt->oflags & RNM_OFLAG_SUFFIX) {
+		printf("Suffix:         %s (%d)\n", opt->suffix, opt->suf_len);
+	}
+	printf("\n");
+	return 0;
+}
+
 	
 static int rename_recursive(RNOPT *opt, char *path)
 {
@@ -210,7 +293,7 @@ static int rename_action(RNOPT *opt, char *oldname)
 {
 	int	rc;
 
-	if ((opt->buffer = rename_alloc(opt, oldname)) == NULL) {
+	if ((opt->buffer = rename_alloc(opt, oldname, NULL)) == NULL) {
 		return RNM_ERR_RENAME;
 	}
 	rc = rename_executing(opt, opt->buffer, oldname);
@@ -340,7 +423,7 @@ static int console_notify(RNOPT *opt, int msg, int v, void *a1, void *a2)
 /****************************************************************************
  * Core functions of Rename
  ****************************************************************************/
-char *rename_alloc(RNOPT *opt, char *oldname)
+char *rename_alloc(RNOPT *opt, char *oldname, int *errcode)
 {
 	char	buffer[RNM_PATH_MAX];
 	char	*fname;
@@ -353,6 +436,9 @@ char *rename_alloc(RNOPT *opt, char *oldname)
 
 	/* ignore the "." and ".." system path */
 	if (!strcmp(fname, ".") || !strcmp(fname, "..")) {
+		if (errcode) {
+			*errcode = RNM_ERR_OPENFILE;
+		}
 		return NULL;	/* invalided file name */
 	}
     
@@ -372,6 +458,9 @@ char *rename_alloc(RNOPT *opt, char *oldname)
 		break;
 	}
 	if (rc < 0) {
+		if (errcode) {
+			*errcode = RNM_ERR_LONGPATH;
+		}
 		return NULL;	/* file name truncated */
 	}
 	
@@ -382,16 +471,25 @@ char *rename_alloc(RNOPT *opt, char *oldname)
 	}
 	if (opt->oflags & RNM_OFLAG_PREFIX) {
 		if (postproc_prefix(opt, fname, flen) < 0) {
+			if (errcode) {
+				*errcode = RNM_ERR_LONGPATH;
+			}
 			return NULL;	/* file name truncated */
 		}
 	}
 	if (opt->oflags & RNM_OFLAG_SUFFIX) {
 		if (postproc_suffix(opt, fname, flen) < 0) {
+			if (errcode) {
+				*errcode = RNM_ERR_LONGPATH;
+			}
 			return NULL;	/* file name truncated */
 		}
 	}
 
 	if (!strcmp(buffer, oldname)) {
+		if (errcode) {
+			*errcode = RNM_ERR_SKIP;
+		}
 		return NULL;	/* same name after renaming */
 	}
 
@@ -404,6 +502,9 @@ char *rename_alloc(RNOPT *opt, char *oldname)
 		csc_strlcat(buffer, SMM_DEF_DELIM, sizeof(buffer));
 		csc_strlcat(buffer, oldname, sizeof(buffer));
 	}*/
+	if (errcode) {
+		*errcode = RNM_ERR_NONE;
+	}
 	return csc_strcpy_alloc(buffer, 0);
 }
 
