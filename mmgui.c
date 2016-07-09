@@ -33,9 +33,10 @@ typedef	struct	{
 	Ihandle		*dlg_main;
 	Ihandle		*dlg_open;
 	char		inst_id[32];
+	int		magic_width;	/* the width except the list panel */
 
 	Ihandle		*list_oldname;
-	Ihandle		*list_newname;
+	Ihandle		*list_preview;
 	Ihandle		*progress;
 	Ihandle		*status;
 	Ihandle		*list_vbox;
@@ -45,7 +46,6 @@ typedef	struct	{
 	Ihandle		*butt_load;
 	Ihandle		*butt_del;
 	Ihandle		*butt_run;
-	Ihandle		*butt_reset;
 	Ihandle		*butt_about;
 
 	/* option box */
@@ -79,7 +79,6 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height);
 static int mmgui_event_show(Ihandle *ih, int state);
 static int mmgui_event_close(Ihandle *ih);
 static int mmgui_reset(MMGUI *gui);
-static int mmgui_notify(void *ropt, int msg, int cur, void *a, void *opt);
 static Ihandle *mmgui_fnlist_box(MMGUI *gui);
 static int mmgui_fnlist_event_dropfiles(Ihandle *, char *, int,int,int);
 static int mmgui_fnlist_event_multi_select(Ihandle *ih, char *value);
@@ -93,12 +92,12 @@ static Ihandle *mmgui_button_box(MMGUI *gui);
 static int mmgui_button_event_load(Ihandle *ih);
 static int mmgui_button_event_delete(Ihandle *ih);
 static int mmgui_button_event_rename(Ihandle *ih);
-static int mmgui_button_event_reset(Ihandle *ih);
 static int mmgui_button_event_about(Ihandle *ih);
 static int mmgui_button_status_update(MMGUI *gui);
 static Ihandle *mmgui_option_box(MMGUI *gui);
 static int mmgui_option_reset(MMGUI *gui);
 static int mmgui_option_event_tick_prefix(Ihandle* ih, int state);
+static int mmgui_option_event_entry_prefix(Ihandle* ih);
 static int mmgui_option_event_tick_suffix(Ihandle* ih, int state);
 static int mmgui_option_event_tick_lowercase(Ihandle* ih, int state);
 static int mmgui_option_event_tick_uppercase(Ihandle* ih, int state);
@@ -187,7 +186,6 @@ int mmgui_run(void *guiobj, int argc, char **argv)
 	/* show and run the interface */
 	IupShow(gui->dlg_main);
 	mmgui_reset(gui);
-	gui->ropt->notify = mmgui_notify;
 	for (i = 0; i < argc; i++) {
 		mmgui_fnlist_append(gui, argv[i]);
 	}
@@ -198,15 +196,26 @@ int mmgui_run(void *guiobj, int argc, char **argv)
 static int mmgui_event_resize(Ihandle *ih, int width, int height)
 {
 	MMGUI	*gui;
+	char	buf[32], *value;
 
-	(void) width; (void) height;
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
 	//printf("mmgui_event_resize: %d x %d\n", width, height);
 	//printf("mmgui_event_resize: %s\n", IupGetAttribute(ih,"RASTERSIZE"));
 	IupSetAttribute(ih, "RASTERSIZE", IupGetAttribute(ih, "RASTERSIZE"));
-	printf("mmgui_event_resize: %s\n", IupGetAttribute(gui->list_vbox, "CLIENTSIZE"));
+
+	/* resize the list panel to make sure it won't growth unexpectly */
+	value = IupGetAttribute(ih, "CLIENTSIZE");
+	width = (int) strtol(value, NULL, 10);
+	if (gui->magic_width == 0) {
+		value = IupGetAttribute(gui->list_oldname, "RASTERSIZE");
+		height = (int) strtol(value, NULL, 10);
+		gui->magic_width = width - height;
+	}
+	sprintf(buf, "%d", width - gui->magic_width);
+	IupSetAttribute(gui->list_oldname, "RASTERSIZE", buf);
+	IupSetAttribute(gui->list_preview, "RASTERSIZE", buf);
 	return IUP_DEFAULT;
 }
 
@@ -255,20 +264,12 @@ static int mmgui_event_close(Ihandle *ih)
 
 static int mmgui_reset(MMGUI *gui)
 {
-	/*IupSetAttribute(gui->tick_prefix, "VALUE", "ON");
-	IupSetAttribute(gui->tick_suffix, "VALUE", "ON");
-	IupSetAttribute(gui->tick_search, "VALUE", "ON");
-	IupSetAttribute(gui->tick_replaced, "VALUE", "ON");*/
 	mmgui_option_reset(gui);
 	mmgui_search_reset(gui);
 	mmgui_button_status_update(gui);
 	return IUP_DEFAULT;
 }
 
-static int mmgui_notify(void *ropt, int msg, int cur, void *a, void *opt)
-{
-	return RNM_ERR_EVENT;	/* pass through */
-}
 
 /****************************************************************************
  * file name list box
@@ -291,10 +292,12 @@ static Ihandle *mmgui_fnlist_box(MMGUI *gui)
 	IupSetCallback(gui->list_oldname, "DBLCLICK_CB",
 			(Icallback) mmgui_fnlist_event_run);
 	
-	gui->list_newname = IupList(NULL);
-	IupSetAttribute(gui->list_newname, "EXPAND", "YES");
-	IupSetAttribute(gui->list_newname, "SCROLLBAR", "YES");
-	IupSetAttribute(gui->list_newname, "ALIGNMENT", "ARIGHT");
+	gui->list_preview = IupList(NULL);
+	IupSetAttribute(gui->list_preview, "EXPAND", "YES");
+	IupSetAttribute(gui->list_preview, "SCROLLBAR", "YES");
+	IupSetAttribute(gui->list_preview, "ALIGNMENT", "ARIGHT");
+	IupSetAttribute(gui->list_preview, "CANFOCUS", "NO");
+	IupSetAttribute(gui->list_preview, "FGCOLOR", IUPCOLOR_BLUE);
 
 	gui->progress = IupProgressBar();
 	IupSetAttribute(gui->progress, "EXPAND", "HORIZONTAL");
@@ -308,7 +311,7 @@ static Ihandle *mmgui_fnlist_box(MMGUI *gui)
 	gui->status = IupLabel("Status is fine");
 	IupSetAttribute(gui->status, "EXPAND", "HORIZONTAL");
 	
-	gui->list_vbox = IupVbox(gui->list_oldname, gui->list_newname, 
+	gui->list_vbox = IupVbox(gui->list_oldname, gui->list_preview, 
 			gui->progress, gui->status, NULL);
 	IupSetAttribute(gui->list_vbox, "NGAP", "4");
 	return gui->list_vbox;
@@ -399,6 +402,10 @@ static int mmgui_fnlist_remove(MMGUI *gui, int idx)
 		IupSetInt(gui->list_oldname, "REMOVEITEM", idx);
 		gui->fileno--;
 	}
+	fname = IupGetAttributeId(gui->list_preview, "",  idx);
+	if (fname) {
+		IupSetInt(gui->list_preview, "REMOVEITEM", idx);
+	}
 	return IUP_DEFAULT;
 }
 
@@ -419,8 +426,8 @@ static int mmgui_fnlist_update_preview(MMGUI *gui)
 	int	i, rc;
 
 	if (mmgui_option_collection(gui) == 0) {	/* option not ready */
-		while (IupGetAttributeId(gui->list_newname, "", 1)) {
-			IupSetInt(gui->list_newname, "REMOVEITEM", 1);
+		while (IupGetAttributeId(gui->list_preview, "", 1)) {
+			IupSetInt(gui->list_preview, "REMOVEITEM", 1);
 		}
 		return mmgui_option_free(gui);
 	}
@@ -428,11 +435,11 @@ static int mmgui_fnlist_update_preview(MMGUI *gui)
 	for (i = 0; i < gui->fileno; i++) {
 		fname = IupGetAttributeId(gui->list_oldname, "",  i+1);
 		if ((preview = rename_alloc(gui->ropt, fname, &rc)) != NULL) {
-			IupSetStrAttributeId(gui->list_newname, 
+			IupSetStrAttributeId(gui->list_preview, 
 					"",  i+1, preview);
 			smm_free(preview);
 		} else if (rc == RNM_ERR_SKIP) { /* same to old name */
-			IupSetStrAttributeId(gui->list_newname, 
+			IupSetStrAttributeId(gui->list_preview, 
 					"",  i+1, fname);
 		}
 	}
@@ -452,13 +459,11 @@ static Ihandle *mmgui_button_box(MMGUI *gui)
 	IupSetAttribute(gui->butt_del, "SIZE", "50");
 	gui->butt_run = IupButton("Rename", NULL);
 	IupSetAttribute(gui->butt_run, "SIZE", "50");
-	gui->butt_reset = IupButton("Reset", NULL);
-	IupSetAttribute(gui->butt_reset, "SIZE", "50");
 	gui->butt_about = IupButton("About", NULL);
 	IupSetAttribute(gui->butt_about, "SIZE", "50");
 
 	vbox = IupGridBox(gui->butt_load, gui->butt_del, gui->butt_run, 
-			gui->butt_reset, gui->butt_about, NULL);
+			gui->butt_about, NULL);
 	IupSetAttribute(vbox, "ORIENTATION", "HORIZONTAL");
 	IupSetAttribute(vbox, "NUMDIV", "2");
 
@@ -468,8 +473,6 @@ static Ihandle *mmgui_button_box(MMGUI *gui)
 			(Icallback) mmgui_button_event_delete);
 	IupSetCallback(gui->butt_run, "ACTION",
 			(Icallback) mmgui_button_event_rename);
-	IupSetCallback(gui->butt_reset, "ACTION",
-			(Icallback) mmgui_button_event_reset);
 	IupSetCallback(gui->butt_about, "ACTION",
 			(Icallback) mmgui_button_event_about);
 	return vbox;
@@ -568,21 +571,6 @@ static int mmgui_button_event_rename(Ihandle *ih)
 	return mmgui_option_free(gui);
 }
 
-static int mmgui_button_event_reset(Ihandle *ih)
-{
-	MMGUI	*gui;
-
-	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
-		return IUP_DEFAULT;
-	}
-	printf("mmgui_button_event_reset: %p\n", gui);
-	mmgui_reset(gui);
-	while (gui->fileno) {
-		mmgui_fnlist_remove(gui, 1);
-	}
-	return IUP_DEFAULT;
-}
-
 static int mmgui_button_event_about(Ihandle *ih)
 {
 	MMGUI	*gui;
@@ -628,6 +616,8 @@ static Ihandle *mmgui_option_box(MMGUI *gui)
 			(Icallback) mmgui_option_event_tick_prefix);
 	gui->entry_prefix = IupText(NULL);
 	IupSetAttribute(gui->entry_prefix, "SIZE", "60x10");
+	IupSetCallback(gui->entry_prefix, "KILLFOCUS_CB",
+			(Icallback) mmgui_option_event_entry_prefix);
 	hbox = IupHbox(gui->tick_prefix, gui->entry_prefix, NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	IupAppend(vbox, hbox);
@@ -638,6 +628,8 @@ static Ihandle *mmgui_option_box(MMGUI *gui)
 			(Icallback) mmgui_option_event_tick_suffix);
 	gui->entry_suffix = IupText(NULL);
 	IupSetAttribute(gui->entry_suffix, "SIZE", "60x10");
+	IupSetCallback(gui->entry_suffix, "KILLFOCUS_CB", /* use the prefix */
+			(Icallback) mmgui_option_event_entry_prefix);
 	hbox = IupHbox(gui->tick_suffix, gui->entry_suffix, NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	IupAppend(vbox, hbox);
@@ -711,6 +703,17 @@ static int mmgui_option_event_tick_prefix(Ihandle* ih, int state)
 	return IUP_DEFAULT;
 }
 
+static int mmgui_option_event_entry_prefix(Ihandle* ih)
+{
+	MMGUI	*gui;
+
+	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+	mmgui_fnlist_update_preview(gui);
+	return IUP_DEFAULT;
+}
+
 static int mmgui_option_event_tick_suffix(Ihandle* ih, int state)
 {
 	MMGUI	*gui;
@@ -778,40 +781,33 @@ static int mmgui_option_collection(MMGUI *gui)
 	value = IupGetAttribute(gui->tick_lowercase, "VALUE");
 	if (!strcmp(value, "ON")) {
 		opt->oflags = RNM_OFLAG_LOWERCASE;
-	}
+	} 
 	value = IupGetAttribute(gui->tick_uppercase, "VALUE");
 	if (!strcmp(value, "ON")) {
 		opt->oflags = RNM_OFLAG_UPPERCASE;
 	}
 	value = IupGetAttribute(gui->tick_prefix, "VALUE");
 	if (!strcmp(value, "ON")) {
-		opt->oflags |= RNM_OFLAG_PREFIX;
 		opt->prefix = IupGetAttribute(gui->entry_prefix, "VALUE");
-		if (opt->prefix) {
-			opt->pre_len = strlen(opt->prefix);
+		if ((opt->pre_len = strlen(opt->prefix)) > 0) {
+			opt->oflags |= RNM_OFLAG_PREFIX;
 		}
 	}
 	value = IupGetAttribute(gui->tick_suffix, "VALUE");
 	if (!strcmp(value, "ON")) {
-		opt->oflags |= RNM_OFLAG_SUFFIX;
 		opt->suffix = IupGetAttribute(gui->entry_suffix, "VALUE");
-		if (opt->suffix) {
-			opt->suf_len = strlen(opt->suffix);
+		if ((opt->suf_len = strlen(opt->suffix)) > 0) {
+			opt->oflags |= RNM_OFLAG_SUFFIX;
 		}
 	}
 
+	opt->action = 0; 
 	value = IupGetAttribute(gui->tick_search, "VALUE");
 	if (!strcmp(value, "ON")) {
 		opt->patbuf  = NULL;
 		opt->regflag = 0;
-		opt->pattern = IupGetAttribute(gui->entry_pattern, "VALUE");
-		if (opt->pattern) {
-			opt->pa_len = strlen(opt->pattern);
-		}
 		opt->substit = IupGetAttribute(gui->entry_substit, "VALUE");
-		if (opt->substit) {
-			opt->su_len = strlen(opt->substit);
-		}
+		opt->su_len = strlen(opt->substit);
 		value = IupGetAttribute(gui->tick_icase, "VALUE");
 		if (!strcmp(value, "OFF")) {
 			opt->compare = strncmp;
@@ -850,6 +846,13 @@ static int mmgui_option_collection(MMGUI *gui)
 				return 0;	/* invalid options */
 			}
 		}
+		opt->pattern = IupGetAttribute(gui->entry_pattern, "VALUE");
+		if ((opt->pa_len = strlen(opt->pattern)) == 0) {
+			opt->action = 0;	/* empty pattern */
+		} else if ((opt->action == RNM_ACT_REGEX) &&
+				regcomp(opt->preg, opt->pattern, opt->regflag)) {
+			opt->action = 0;
+		}
 	}
 	rename_option_dump(opt);
 	if ((opt->action == 0) && (opt->oflags == 0)) {
@@ -881,6 +884,8 @@ static Ihandle *mmgui_search_box(MMGUI *gui)
 	IupSetAttribute(gui->lable_pattern, "SIZE", "32");
 	gui->entry_pattern = IupText(NULL);
 	IupSetAttribute(gui->entry_pattern, "SIZE", "60x10");
+	IupSetCallback(gui->entry_pattern, "KILLFOCUS_CB",
+			(Icallback) mmgui_option_event_entry_prefix);
 	hbox = IupHbox(gui->lable_pattern, gui->entry_pattern, NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	vbox = IupVbox(hbox, NULL);
@@ -889,6 +894,8 @@ static Ihandle *mmgui_search_box(MMGUI *gui)
 	IupSetAttribute(gui->lable_substit, "SIZE", "32");
 	gui->entry_substit = IupText(NULL);
 	IupSetAttribute(gui->entry_substit, "SIZE", "60x10");
+	IupSetCallback(gui->entry_substit, "KILLFOCUS_CB",
+			(Icallback) mmgui_option_event_entry_prefix);
 	hbox = IupHbox(gui->lable_substit, gui->entry_substit, NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	IupAppend(vbox, hbox);
@@ -896,11 +903,13 @@ static Ihandle *mmgui_search_box(MMGUI *gui)
 	gui->tick_icase = IupToggle("Ignore Cases", NULL);
 	IupAppend(vbox, gui->tick_icase);
 
-	gui->tick_replaced = IupToggle("Replace No. ", NULL);
+	gui->tick_replaced = IupToggle("Repeat No.  ", NULL);
 	IupSetCallback(gui->tick_replaced, "ACTION",
 			(Icallback) mmgui_search_event_tick_replaced);
 	gui->entry_replaced = IupText(NULL);
 	IupSetAttribute(gui->entry_replaced, "SIZE", "24x10");
+	IupSetCallback(gui->entry_replaced, "KILLFOCUS_CB",
+			(Icallback) mmgui_option_event_entry_prefix);
 	hbox = IupHbox(gui->tick_replaced, gui->entry_replaced, NULL);
 	IupSetAttribute(hbox, "ALIGNMENT", "ACENTER");
 	IupAppend(vbox, hbox);
