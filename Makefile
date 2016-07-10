@@ -85,7 +85,7 @@ OBJS	+= mmgui.o
 ifeq	($(SYSTOOL),mingw)
 OBJS	+= rename_icon.o
 endif
-LIBS	+= -liup
+LIBS	+= -liup -liupimglib
 endif
 LIBS	+= $(SYSLIB)
 
