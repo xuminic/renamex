@@ -1,10 +1,14 @@
+20160710: move to 2.0
+	* rename: the whole project will be based on IUP and libcsoup
+	to support the Win32 and Linux/Unix with both GUI and CLI.
+
 20110320: v1.99.2
-  - baseline version released
+	* baseline version released
 
 20110312: v1.99.1
-  - almost rewrote the whole thing
-  - copyright license update to GPL v3
-  - primary site moved to sourceforge.net
+	* almost rewrote the whole thing
+	* copyright license update to GPL v3
+	* primary site moved to sourceforge.net
 
 20110309: reopen the rename programming
 

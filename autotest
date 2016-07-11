@@ -185,4 +185,13 @@ verify dir1/paganini/Caprice/no.5.mlst
 verify dir1/mozart/poison.list
 rm -rf dir1
 
+echo "[Test019]"
+echo Test the space inside the pattern
+mkdir dir1
+mkdir dir1/rename
+echo > dir1/rename/"My Rename Name.ext Name"
+renamex -v -s"/me Name/abc/1" dir1/rename/*
+verify "dir1/rename/My Renaabc.ext Name"
+rm -rf dir1
+
 echo "Total $success successful and $failure failed"

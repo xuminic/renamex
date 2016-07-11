@@ -9,9 +9,7 @@ renamex \- file rename tool
 .SH DESCRIPTION
 .BR Renamex 
 is a small and quick tool written in C to rename files. 
-It can change, lowercase and uppercase the names of a batch of files, or 
-change the files' 
-.I ownership. 
+It can change, lowercase and uppercase the names of a batch of files.
 .BR Renamex 
 is powered by the 
 .I extended regular expression 
@@ -20,11 +18,25 @@ for searching and substituting string patterns in the names.
 .SH OPTIONS
 .TP
 .BR \-l , " \-\-lowercase"
-Lowercase specified filenames.
+Lowercase the specified file names.
 
 .TP
 .BR \-u , " \-\-uppercase"
-Uppercase specified filenames.
+Uppercase the specified file names.
+
+.TP
+.BR \-p , "\-\-prefix"
+Add prefix to the file names.
+
+.TP
+.BR \-x , "\-\-suffix"
+Add suffix to the file name. If there is an 
+.I extension name ,
+the
+.B suffix
+will be inserted before the 
+.I extension name ,
+otherwise it will be simply appended to the tail of the name.
 
 .TP
 .BR \-R , " \-\-recursive"
@@ -32,21 +44,21 @@ Perform on the specified files and all subdirectories.
 
 .TP
 .BR \-t , " \-\-test"
-Test only mode. It won't change anything, just test the result of 
-searching and substituting.
+Test only mode. It won't change anything, just display the output of 
+renaming.
 
 .TP
 .BR \-f , " \-\-file"
-Load file names from the specified files.
-
-.TP
-.BR \-o , " \-\-owner  \fIOWNER\fP"
-Change the ownership of the specified files to OWNER. 
-.B (superuser only)
+Load file names from a file.
 
 .TP
 .BR \-v , " \-\-verbose"
 verbose display.
+
+.TP
+.BR \-G , " \-\-gui"
+Start this program with a graphic user interface. The command line
+options and arguments will be passed to the GUI frontend.
 
 .TP
 .BR \-A, " \-\-always"
@@ -64,11 +76,11 @@ will searching the
 .I PATTERN
 in the names. If the 
 .I PATTERN
-matches, it would be replaced by the specified
+matches, it will be replaced by the 
 .I STRING
-and then call the system call to change the file's name.
+and then use the system call to change the file name.
 .B SW
-can be combined by the following switches:
+is the combination of the following switches:
 .RS
 .TP
 .B g
@@ -78,20 +90,23 @@ replace all occurrences in the filename.
 ignore case when searching.
 .TP
 .B b
-backward searching and substituting. This does not support regular expression.
-.TP
-.B s
-change file's suffix. In this case, the PATTERN should be some kind of
-filename suffix.
-.TP
-.B r
-declare that PATTERN is a regular expression.
+backward searching and substituting. It does NOT support regular expression.
 .TP
 .B e
-declare that PATTERN is an extended regular expression.
+search and replace in the file's extension name. 
+.TP
+.B r
+claim the PATTERN is a regular expression.
+.TP
+.B x
+claim the PATTERN is an extended regular expression.
 .TP
 .B 1-9
-replace 1 to 9 occurrences in the filename.
+replace 1 to 9 occurrences in the filename. Note that
+.B 0
+is actually the same to the
+.B g
+switch.
 
 .SH "REGULAR EXPRESSION"
 This section about extended regular expression is digisted from the 
@@ -297,22 +312,22 @@ substrings appeared in C  sources  files  with
 ignoring the case, then uppercase the whole file name.
 
 .TP
-.B renamex "\-v \-s/.c/.cpp/s" *
-Find all files with the 
+.B renamex "\-v \-s/.c/.cpp/e" *
+Find all files which have the
 .I '.c' 
-suffix in the current directory and change them to 
+extension name in the current directory and change them to 
 .I '.cpp' 
-suffix. Print the verbose information.
+extension name. Print the verbose information.
 
 .TP
 .B "find . \-name *.c > filename.lst"
 .TP
-.B renamex "\-s/.c/.cpp/s \-f" filename.lst
-Find all files with the 
+.B renamex "\-s/.c/.cpp/e \-f" filename.lst
+Find all files which have the
 .I '.c' 
-suffix under the current directory and change them to 
+extension name in the current directory and change them to 
 .I '.cpp' 
-suffix by the list file.
+extension name by the list file.
 
 .TP
 .B renamex "\-s/abc/12345/bi" *
@@ -334,28 +349,16 @@ The substring, if encountered in filenames, will be replaced with
 .I 'nofile'.
 
 .TP
-.B renamex "\-s/^[A\-Z].+file/nofile/eg" *
+.B renamex "\-s/^[A\-Z].+file/nofile/xg" *
 Similar to above, except it uses extended regular expression, such as the 
 .I '+' 
 metacharacter, and replaces all matching strings with 
 .I 'nofile'.
 
 .TP
-.B renamex "\-t \-s/^[A\-Z].+file/nofile/eg" *
+.B renamex "\-t \-s/^[A\-Z].+file/nofile/xg" *
 .BR Test mode 
 only. Simulate the rename process but no files would be actually changed.
 
-.TP
-.B renamex "\-o guest \-R" /home/custom
-change the ownership of 
-.I '/home/custom' 
-to 
-.I 'guest' . 
-The 
-.I 'guest' 
-should be an effective user in the current system. If 
-.I '/home/custom' 
-is a directory, all files' ownership in this directory tree will be changed to
-.I 'guest' .
 
 
