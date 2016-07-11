@@ -1,4 +1,4 @@
 renamex
 version.mk
-*.[oa]
+*.[o]
 *.swp
