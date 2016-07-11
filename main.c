@@ -28,11 +28,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <pwd.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <regex.h>
 
 #include "libcsoup.h"
 #include "rename.h"
@@ -251,6 +249,15 @@ static int rename_free_all(int sig)
 	return 0;
 }
 
+/* the pattern accept the vi style, like
+ *   -s/pattern/destination/g
+ * or colon because MinGW would auto expand the path like
+ *   -s/pattern/destination/g
+ * in MinGW it will turned into something like
+ *   -s/C:/MinGW/msys/1.0/pattern/destination/g
+ * so instead we can use
+ *   -s:pattern:destination:g
+ */
 static int cli_set_pattern(RNOPT *opt, char *optarg)
 {
 	char	*idx[4], *p;

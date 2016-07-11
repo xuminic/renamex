@@ -14,7 +14,6 @@ verify()
   fi
 }
 
-
 echo "[Test001]"
 echo Testing direct rename mode with quoted file names
 echo > "Plan your trip.txt"

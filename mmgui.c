@@ -529,10 +529,10 @@ static int mmgui_button_event_load(Ihandle *ih)
 	}
 
 	/* FIXME: What would the path look like in Win32? */
-	//printf("Open File VALUE: %s\n", 
-	//		IupGetAttribute(gui->dlg_open, "VALUE"));
-	//printf("Last  DIRECTORY: %s\n", 
-	//		IupGetAttribute(gui->dlg_open, "DIRECTORY"));
+	printf("Open File VALUE: %s\n", 
+			IupGetAttribute(gui->dlg_open, "VALUE"));
+	printf("Last  DIRECTORY: %s\n", 
+			IupGetAttribute(gui->dlg_open, "DIRECTORY"));
 	dlgrd = IupGetAttribute(gui->dlg_open, "VALUE");
 	while ((fname = IupTool_FileDlgExtract(dlgrd, &sp)) != NULL) {
 		mmgui_fnlist_append(gui, fname);

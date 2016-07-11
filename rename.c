@@ -24,11 +24,9 @@
 #endif
 
 #include <ctype.h>
-#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <termios.h>
 #include <sys/stat.h>
 
 #if HAVE_UNISTD_H
@@ -61,12 +59,6 @@
   #if HAVE_NDIR_H
     #include <ndir.h>
   #endif
-#endif
-
-#if HAVE_REGEX_H
-  #include <regex.h>
-#else
-  #include "regex.h"
 #endif
 
 #include "libcsoup.h"
@@ -158,8 +150,10 @@ int rename_executing(RNOPT *opt, char *dest, char *sour)
 
 	/* if the destination is directory, which means we must move the
 	 * original file into this directory, just like mv(1) does */
-	/* mv abc dir/
-	 * mv home/path/file home/path/dir == home/path/dir/file */
+	/*   mv abc dir/
+	 *   mv home/path/file home/path/dir == home/path/dir/file 
+	 * This process must be explicitly in manipulating the path
+	 * because the system call rename(2) won't do as mv(1) */
 	if (smm_fstat(dest) != SMM_FSTAT_DIR) {
 		return rename_execute_stage2(opt, dest, sour);
 	}
@@ -305,10 +299,11 @@ static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour)
 {
 	int	rc;
 
-	if (smm_fstat(dest) >= 0) {	/* the target file has existed already */
+	if (smm_fstat(dest) >= 0) {	
+		/* the target file has existed already */
 		switch (opt->cflags & RNM_CFLAG_PROMPT_MASK) {
 		case RNM_CFLAG_NEVER:
-			rename_notify(opt, RNM_MSG_SKIP_EXISTED, 0, dest, sour);
+			rename_notify(opt, RNM_MSG_SKIP_EXISTED, 0, dest,sour);
 			return RNM_ERR_NONE;
 		case RNM_CFLAG_ALWAYS:
 			rename_notify(opt, RNM_MSG_OVERWRITE, 0, dest, sour);
@@ -461,6 +456,7 @@ char *rename_alloc(RNOPT *opt, char *oldname, int *errcode)
 		if (errcode) {
 			*errcode = RNM_ERR_LONGPATH;
 		}
+		printf("rename_alloc: file name truncated\n");
 		return NULL;	/* file name truncated */
 	}
 	
@@ -474,6 +470,7 @@ char *rename_alloc(RNOPT *opt, char *oldname, int *errcode)
 			if (errcode) {
 				*errcode = RNM_ERR_LONGPATH;
 			}
+			printf("rename_alloc: file name truncated\n");
 			return NULL;	/* file name truncated */
 		}
 	}
@@ -482,6 +479,7 @@ char *rename_alloc(RNOPT *opt, char *oldname, int *errcode)
 			if (errcode) {
 				*errcode = RNM_ERR_LONGPATH;
 			}
+			printf("rename_alloc: file name truncated\n");
 			return NULL;	/* file name truncated */
 		}
 	}
@@ -493,15 +491,6 @@ char *rename_alloc(RNOPT *opt, char *oldname, int *errcode)
 		return NULL;	/* same name after renaming */
 	}
 
-	/* if the destination is directory, which means we must move the
-	 * original file into this directory, just like mv(1) does */
-	/* mv abc dir/
-	 * mv home/path/file home/path/dir == home/path/dir/file */
-	//FIXME: DO I need to explicitly write dest path, or system can do itself?
-	/*if (smm_fstat(buffer) == SMM_FSTAT_DIR) {
-		csc_strlcat(buffer, SMM_DEF_DELIM, sizeof(buffer));
-		csc_strlcat(buffer, oldname, sizeof(buffer));
-	}*/
 	if (errcode) {
 		*errcode = RNM_ERR_NONE;
 	}

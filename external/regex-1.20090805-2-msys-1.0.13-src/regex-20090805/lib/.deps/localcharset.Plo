@@ -1,0 +1,86 @@
+localcharset.lo: localcharset.c ../config.h localcharset.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/include/stddef.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/stdio.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/_mingw.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/include/stdarg.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/sys/types.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/string.h \
+ stdlib.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/stdlib.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/include/stdint.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/stdint.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/windows.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/windef.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winnt.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winerror.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/basetsd.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/pshpack4.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/poppack.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/wincon.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winbase.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/wingdi.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winuser.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winnls.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winver.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winnetwk.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winreg.h \
+ c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winsvc.h \
+ configmake.h
+
+../config.h:
+
+localcharset.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/include/stddef.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/stdio.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/_mingw.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/include/stdarg.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/sys/types.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/string.h:
+
+stdlib.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/stdlib.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/include/stdint.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/stdint.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/windows.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/windef.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winnt.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winerror.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/basetsd.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/pshpack4.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/poppack.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/wincon.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winbase.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/wingdi.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winuser.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winnls.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winver.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winnetwk.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winreg.h:
+
+c:\mingw\bin\../lib/gcc/mingw32/4.6.1/../../../../include/winsvc.h:
+
+configmake.h:

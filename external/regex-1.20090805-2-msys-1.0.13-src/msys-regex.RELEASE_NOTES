@@ -1,0 +1,141 @@
+msys regex
+========================================================================
+This package provides a library exposing the GNULIB implementation
+of the regex module, which provides implementations of the POSIX,
+GNU, and BSD regular expression functions. It is intended as an
+update to the venerable GNU regex library, from 1993:
+   http://ftp.gnu.org/pub/old-gnu/regex/regex-0.12.tar.gz
+
+The purpose of this library is to support MSYS applications that
+require POSIX regex functionality not supplied by that system's
+runtime library.  Therefore, this package is tailored for building
+the library for win32 platforms (e.g. it uses an explicit DEF file
+to control exported symbols, and so would need modification for use
+on non-win32 platforms).
+
+The library provided by this package differs from the old GNU
+regex library in two significant ways:
+  1) Clients that need the declarations of the BSD regular
+     expression functions re_comp and re_exec must #define
+     _REGEX_RE_COMP before #including <regex.h>. This is #_
+     acceptable, because the known MSYS clients require only
+     the POSIX, not BSD, functions.
+  2) the obsolete re_max_failures variable is not exported by
+     the new library.
+Because of these changes, this implementation uses a new SONAME
+based on -version-info 1:0:0 instead of 0:0:0. However, it is
+assumed that these issues are an acceptable price to pay in order
+to use a modern, well-maintained regex implementation rather than
+a fifteen year old, unmaintained one.
+
+Runtime requirements:
+  msysCORE-1.0.13-2-msys-1.0.13-bin
+
+Build requirements (these, or newer)
+  MSYS toolchain
+    binutils-2.19.51-3-msys-1.0.13-bin
+    gcc-3.4.4-3-msys-1.0.13-bin
+    w32api-3.14-3-msys-1.0.12-dev
+    msysCORE-1.0.13-2-msys-1.0.13-dev
+ 
+  Devel Tools and Dependent Libraries 
+    autoconf-2.65-1-msys-1.0.13-bin
+    automake-1.11.1-1-msys-1.0.13-bin
+    libtool-2.2.7a-2-msys-1.0.13-bin
+ 
+  MSYS Environment
+    coreutils-5.97-2-msys-1.0.11-bin
+    perl-5.6.1_2-2-msys-1.0.13-bin
+    libcrypt-1.1_1-3-msys-1.0.13-dll-0
+    libgdbm-1.8.3-3-msys-1.0.13-dll-3
+    zlib-1.2.3-2-msys-1.0.13-dll
+    bash-3.1.17-2-msys-1.0.11-bin
+    make-3.81-2-msys-1.0.11-bin
+    gawk-3.1.7-1-msys-1.0.11-bin
+    sed-4.2.1-1-msys-1.0.11-bin
+    m4-1.4.13-1-msys-1.0.11-bin
+    texinfo-4.13a-1-msys-1.0.11-bin
+    tar-1.22-1-msys-1.0.11-bin
+    xz-4.999.9beta_20100131-1-msys-1.0.13-bin
+    liblzma-4.999.9beta_20100131-1-msys-1.0.13-dll-1
+ 
+Canonical homepage:
+  http://www.gnu.org/software/gnulib/
+
+Canonical download:
+  n/a
+  GNULIB: git clone git://git.savannah.gnu.org/gnulib.git
+
+License:
+  LGPLv2
+
+Language:
+  C
+
+========================================================================
+
+Build instructions:
+  unpack regex-1.20090805-2-msys-1.0.13-src.tar.gz
+  ./msys-build-regex regex-20090805.tar.xz
+
+This will create:
+  regex-1.20090805-2-msys-1.0.13-src.tar.gz
+  regex-1.20090805-2-msys-1.0.13-doc.tar.gz
+  regex-1.20090805-2-msys-1.0.13-lic.tar.gz
+  libregex-1.20090805-2-msys-1.0.13-dll-1.tar.gz
+  libregex-1.20090805-2-msys-1.0.13-dev.tar.gz
+
+========================================================================
+
+Test suite results
+This section of this document is updated with each new release.
+No history is maintained here.
+
+PASS, but the tests (which derive from GNULIB) don't
+actually test regex. They test some of the other functionality
+pulled in from GNULIB to support the regex module. Sigh.
+
+make  check-TESTS
+make[4]: Entering directory `/usr/src/regex/_build/tests'
+PASS: test-alloca-opt.exe
+Skipping test: no traditional french locale is supported
+SKIP: test-btowc1.sh
+Skipping test: no french Unicode locale is supported
+SKIP: test-btowc2.sh
+Skipping test: no traditional french locale is supported
+SKIP: test-mbrtowc1.sh
+Skipping test: no french Unicode locale is supported
+SKIP: test-mbrtowc2.sh
+Skipping test: no traditional japanese locale is supported
+SKIP: test-mbrtowc3.sh
+Skipping test: no transitional chinese locale is supported
+SKIP: test-mbrtowc4.sh
+Skipping test: no french Unicode locale is supported
+SKIP: test-mbsinit.sh
+PASS: test-stdbool.exe
+PASS: test-stdint.exe
+PASS: test-stdlib.exe
+PASS: test-unistd.exe
+PASS: test-wchar.exe
+PASS: test-wcrtomb.sh
+PASS: test-wctype.exe
+======================
+All 8 tests passed
+(7 tests were not run)
+======================
+
+
+========================================================================
+
+Port Notes:
+----------  regex-1.20090805-2 -- 2010 Feb 01 -----------
+* Rebuild against msys-1.0.13, using (msys)gcc-3.4.4
+  and (msys)binutils-2.19.51.
+* Use -O3 -fno-unit-at-a-time to avoid optimization bug
+  in latest msys-gcc. Also, don't use -mms-bitfields
+  when compiling msys binaries.
+
+----------  regex-1.20090805-1 -- 2009 Aug 05 -----------
+* First release of *updated* regex for msys using new packaging
+  standard. 
+

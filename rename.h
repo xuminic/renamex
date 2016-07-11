@@ -22,7 +22,8 @@
 #define _RENAME_H_
 
 #if HAVE_REGEX_H
-  #include <regex.h>
+  //#include <regex.h>
+  #include "regex.h"
 #else
   #include "regex.h"
 #endif

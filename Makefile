@@ -8,7 +8,7 @@ endif
 endif
 
 ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF
-SYSGUI	= CFG_GUI_ON
+SYSGUI	= CFG_GUI_OFF
 endif
 
 ifeq	($(SYSTOOL),mingw)
@@ -22,7 +22,7 @@ SYSLDD  = -L./libmingw/lib
 SYSFLAG	= -DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 \
 	  -DNONDLL -DCURL_STATICLIB #For linking static libgd and libcurl
 # Options: -mwindows, -mconsole -mwindows, -Wl,--subsystem,windows
-SYSLIB	= -ljpeg -lpng -lz -lwsock32 -lwldap32
+SYSLIB	= -ljpeg -lpng -lz -lwsock32 -lwldap32 -lregex
 ifeq	($(SYSGUI),CFG_GUI_ON)
 SYSLIB	+= -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
 	   -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
