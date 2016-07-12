@@ -509,6 +509,25 @@ char *rename_alloc(RNOPT *opt, char *oldname, int *errcode)
 	return csc_strcpy_alloc(buffer, 0);
 }
 
+/* 20160712: testing or compiling error: 
+ *   "-s *sfdg/dfg/x"  or "-s/\(sfdg/dfg/x"
+ * Note that extended RE only. */
+int rename_compile_regex(RNOPT *opt)
+{
+	char	errmsg[8192];
+	int	rcode;
+
+	if (opt->action != RNM_ACT_REGEX) {
+		return 0; /* it's ok being not regular expression */
+	}
+	rcode = regcomp(opt->preg, opt->pattern, opt->regflag);
+	if (rcode != 0) {
+		regerror(rcode, opt->preg, errmsg, sizeof(errmsg));
+		printf("Regular Expression '%s': %s\n", opt->pattern, errmsg);
+	}
+	return rcode;
+}
+
 /* to match a null-terminated string against the precompiled pattern buffer.
    When successed, it substitutes matches with the second parameter so
    the original string with enough buffer will be modified.
@@ -521,7 +540,22 @@ static int match_regexpr(RNOPT *opt, char *fname, int flen)
 	int		count = 0;
 
 	while (!regexec(opt->preg, fname, 1, pmatch, 0))  {
-		opt->room = inject(fname + pmatch->rm_so, flen - pmatch->rm_so,
+		{	//debugging
+			int	i;
+			printf("match_regexpr[%d-%d]: ", 
+					pmatch->rm_so, pmatch->rm_eo);
+			for (i = pmatch->rm_so; i < pmatch->rm_eo; i++) {
+				putchar(fname[i]);
+			}
+			puts("");
+		}
+		/* 20160712 for unknown reason the '-s/e?/-/xg' option crash
+		 * the regexec() by rm_so == rm_eo == 0 */
+		if (pmatch->rm_so >= pmatch->rm_eo) {
+			break;
+		}
+
+		opt->room = inject(fname+pmatch->rm_so, flen - pmatch->rm_so,
 				pmatch->rm_eo - pmatch->rm_so, opt->room,
 				opt->substit, opt->su_len);
 		if (opt->room < 0) {

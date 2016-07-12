@@ -89,7 +89,6 @@ make_scenario()
   ln -s "Downloads/PDF_GPS/CH_KOONDROOK.pdf" "$ATROOT/link_to_koondrook"
 }
 
-
 echo "[Test001]: direct rename mode with quoted file names"
 make_scenario
 $RENAME "$ATROOT/Westlife - You Raise Me Up.mp4" "$ATROOT/Westlife.mp4"
@@ -160,25 +159,21 @@ make_scenario
 $RENAME -s/.pdf/.ps/e "$ATROOT/Documents/doxygen_manual-1.8.7.pdf"
 verify "$ATROOT/Documents/doxygen_manual-1.8.7.ps"
 
-#echo "[Test015]: changing part of extension name"
-#make_scenario
-#$RENAME -ts/local/remote/eig "$ATROOT/Desktop/kde/cache-localhost.localdomain"
-#verify "$ATROOT/Desktop/kde/cache-localhost.remotedomain"
+echo "[Test015]: changing tail part of extension name"
+make_scenario
+$RENAME -s/domain/field/eig "$ATROOT/Desktop/kde/cache-localhost.localdomain"
+verify "$ATROOT/Desktop/kde/cache-localhost.localfield"
 
 echo "[Test016]: the regular expression testing"
 make_scenario
-$RENAME -s/.?o//r "$ATROOT/Desktop/kde/cache-localhost.localdomain"
+$RENAME -s/.o//rg "$ATROOT/Desktop/kde/cache-localhost.localdomain"
 verify "$ATROOT/Desktop/kde/cache-calst.calmain"
-exit
-
-echo "[Test017]"
-echo Test the extended regular expression
-mkdir dir1
-mkdir dir1/rename
-echo > dir1/rename/MyRenameName.extName
-renamex -v -s/[A-Z].+name/abc/xg dir1/rename/MyRenameName.extName
-verify dir1/rename/abcName.extName
-rm -rf dir1
+$RENAME -s/^[A-Z].*cal/heatpump/r "$ATROOT/Documents/LibreCAD/Electrical1-LCAD.zip"
+verify "$ATROOT/Documents/LibreCAD/heatpump1-LCAD.zip"
+$RENAME -s/^[A-Z].+[0-9]/builder/xg "$ATROOT/Documents/LibreCAD/Architect3-LCAD.zip"
+verify "$ATROOT/Documents/LibreCAD/builder-LCAD.zip"
+$RENAME -s/e.*e/-/rig "$ATROOT/Downloads/installation/FreeBSD-10.1-RELEASE-amd64-bootonly.iso"
+verify "$ATROOT/Downloads/installation/Fr--amd64-bootonly.iso"
 
 echo "[Test018]"
 echo Test the recursive operation
