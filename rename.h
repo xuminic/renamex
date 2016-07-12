@@ -128,6 +128,10 @@ typedef	struct	{
 } RNOPT;
 
 
+extern	const	char	*help_version;
+extern	const	char	*help_descript;
+extern	const	char	*help_credits;
+
 int rename_enfile(RNOPT *opt, char *filename);
 int rename_entry(RNOPT *opt, char *filename);
 int rename_notify(RNOPT *opt, int msg, int v, void *dest, void *sour);

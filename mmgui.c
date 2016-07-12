@@ -569,7 +569,8 @@ static int mmgui_button_event_delete(Ihandle *ih)
 		}
 	}
 	mmgui_button_status_update(gui);
-	mmgui_fnlist_update_preview(gui);	//FIXME: it should be removed without proper view
+	mmgui_fnlist_update_preview(gui);	
+		//FIXME: it should be removed without proper view
 	return IUP_DEFAULT;
 }
 
@@ -619,12 +620,43 @@ static int mmgui_button_event_rename(Ihandle *ih)
 
 static int mmgui_button_event_about(Ihandle *ih)
 {
-	MMGUI	*gui;
+	Ihandle	*widget, *vbox, *sbox;
 
-	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
-		return IUP_DEFAULT;
-	}
-	printf("mmgui_button_event_about: %p\n", gui);
+	/* show the icon */
+	widget = IupLabel(NULL);
+	IupSetAttribute(widget, "IMAGE", "DLG_ICON");
+
+	vbox = IupVbox(widget, NULL);
+	IupSetAttribute(vbox, "NGAP", "8");
+	IupSetAttribute(vbox, "NMARGIN", "16x16");
+	IupSetAttribute(vbox, "ALIGNMENT", "ACENTER");
+
+	/* show name and the version */
+	widget = IupLabel(help_version);
+	IupSetAttribute(widget, "FONTSIZE", "20");
+	IupSetAttribute(widget, "FONTSTYLE", "Bold");
+	IupAppend(vbox, widget);
+
+	/* show the simple description */
+	widget = IupLabel(help_descript);
+	IupSetAttribute(widget, "ALIGNMENT", "ACENTER:ACENTER");
+	IupAppend(vbox, widget);
+
+	/* show the credits */
+	widget = IupLabel(help_credits);
+	IupSetAttribute(widget, "ALIGNMENT", "ACENTER:ACENTER");
+	IupAppend(vbox, widget);
+
+	/* fill the right side of the veritcal box with blank and pack
+	 * into a scrollbox */
+	sbox = IupScrollBox(vbox);
+	IupSetAttribute(sbox, "SCROLLBAR", "VERTICAL");
+
+	ih = IupDialog(sbox);
+	IupSetAttribute(ih, "TITLE", "About");
+	IupSetAttribute(ih, "ICON", "DLG_ICON");
+	IupSetAttribute(ih, "RASTERSIZE", "560x480");
+	IupPopup(ih, IUP_CENTER, IUP_CENTER);
 	return IUP_DEFAULT;
 }
 
@@ -890,8 +922,8 @@ static int mmgui_option_collection(MMGUI *gui)
 		opt->pattern = IupGetAttribute(gui->entry_pattern, "VALUE");
 		if ((opt->pa_len = strlen(opt->pattern)) == 0) {
 			opt->action = 0;	/* empty pattern */
-		} else if ((opt->action == RNM_ACT_REGEX) &&
-				regcomp(opt->preg, opt->pattern, opt->regflag)) {
+		} else if ((opt->action == RNM_ACT_REGEX) && regcomp(
+				opt->preg, opt->pattern, opt->regflag)) {
 			opt->action = 0;	/* wrong regular expression */
 		}
 	}
@@ -1132,8 +1164,10 @@ static char *IupTool_FileDlgExtract(char *dfn, char **sp)
 #if 0
 /* IupTool_FileDlgExtract_Test("/home/xum1/dwhelper/lan_ke_er.flv");
  * IupTool_FileDlgExtract_Test("/home/xum1/dwhelper|lan_ke_er.flv");
- * IupTool_FileDlgExtract_Test("/home/xum1/dwhelper|file-62.flv|lan_ke_er.flv|Discuz.flv|");
- * IupTool_FileDlgExtract_Test("/home/xum1/dwhelper|file-62.flv|lan_ke_er.flv|Discuz.flv");
+ * IupTool_FileDlgExtract_Test("/home/xum1/dwhelper|
+ * 		file-62.flv|lan_ke_er.flv|Discuz.flv|");
+ * IupTool_FileDlgExtract_Test("/home/xum1/dwhelper|
+ * 		file-62.flv|lan_ke_er.flv|Discuz.flv");
  */	
 static void IupTool_FileDlgExtract_Test(char *dfn)
 {

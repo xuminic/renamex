@@ -49,12 +49,12 @@ static	struct	cliopt	clist[] = {
 #ifdef	CFG_GUI_ON
 	{ 'G', "gui",       0, "start the GUI mode" },
 #endif
-	{ 'R', "recursive", 0, "Operate on files and directories recursively" },
+	{ 'R', "recursive", 0, "Work on files and directories recursively" },
 	{ 'v', "verbose",   0, "Display verbose information" },
 	{ 't', "test",      0, "Test only mode. Nothing will be changed" },
 	{ 'A', "always",    0, "Always overwrite the existing files" },
 	{ 'N', "never",     0, "Never overwrite the existing files" },
-	{   1, "help",      0, "Display the help message" },
+	{   1, "help",      2, "Display the help message" },
 	{   2, "version",   0, "Display the version message" },
 	{ 0, NULL, 0, "\nSEARCH SETTING:\n\
   -s /PATTERN/STRING[/SW]  Replace the matching PATTERN by STRING.\n\
@@ -70,12 +70,25 @@ The SW could be:\n\
 };
 
 
-static	char	*version = "renamex " RENAME_VERSION
-", Rename files by substituting the specified patterns.\n\
+const	char	*help_version = "Rename Extension " RENAME_VERSION;
+
+const	char	*help_descript = "\
+Rename files by substituting the specified patterns.\n\n\
 Copyright (C) 1998-2016 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n";
+
+const	char	*help_credits = "\
+The libregex was compiled from source code in MSYS 1.0:\n\
+https://sourceforge.net/projects/mingw/files/MSYS/Base/regex\n\
+\n\
+The icon came from Wikimedia Commons, the free media repository:\n\
+https://commons.wikimedia.org/wiki/File:1328101993_Rename.png\n\
+\n\
+The GUI frontend is based on IUP, a multi-platform toolkit for building\n\
+graphical user interfaces.\n\
+http://webserver2.tecgraf.puc-rio.br/iup\n";
 
 static int rename_free_all(int sig);
 static int cli_set_pattern(RNOPT *opt, char *optarg);
@@ -105,11 +118,16 @@ int main(int argc, char **argv)
 	while ((c = csc_cli_getopt(argc, argv, argp)) > 0) {
 		switch (c) {
 		case 1:
-			csc_cli_print(clist, NULL);
+			if (optarg == NULL) {
+				csc_cli_print(clist, NULL);
+			} else if (!strcmp(optarg, "credit")) {
+				puts(help_credits);
+			}
 			rename_free_all(0);
 			return RNM_ERR_HELP;
 		case 2:
-			puts(version);
+			printf("%s, ", help_version);
+			puts(help_descript);
 			rename_free_all(0);
 			return RNM_ERR_HELP;
 		case 'f':
@@ -195,10 +213,12 @@ int main(int argc, char **argv)
 		 * However renamex is NOT mv so it won't check the crosslink
 		 * of devices or anything fancy */
 		if (optind + 2 == argc) {
-			rc = rename_executing(sysopt, argv[optind+1], argv[optind]);
+			rc = rename_executing(sysopt, 
+					argv[optind+1], argv[optind]);
 		} else {
 #ifdef	CFG_GUI_ON
-			rc = mmgui_run(sysopt->gui, argc - optind, &argv[optind]);
+			rc = mmgui_run(sysopt->gui, 
+					argc - optind, &argv[optind]);
 #else
 			printf("%s: missing rename operand\n", argv[0]);
 			rc = RNM_ERR_PARAM;
