@@ -81,6 +81,8 @@ static int rename_recursive_cb(void *option, char *path, int type, void *info);
 static int rename_action(RNOPT *opt, char *oldname);
 static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour);
 static int rename_prompt(RNOPT *opt, char *fname);
+static int rename_show(char *dest, char *sour, char *action);
+static int console_notify(RNOPT *opt, int msg, int v, void *dest, void *sour);
 static int match_regexpr(RNOPT *opt, char *fname, int flen);
 static int match_forward(RNOPT *opt, char *fname, int flen);
 static int match_backward(RNOPT *opt, char *fname, int flen);
@@ -90,7 +92,6 @@ static int postproc_suffix(RNOPT *opt, char *fname, int flen);
 static int postproc_lowercase(unsigned char *s);
 static int postproc_uppercase(unsigned char *s);
 static int inject(char *rec, int rlen, int del, int room, char *in, int ilen);
-static int console_notify(RNOPT *opt, int msg, int v, void *dest, void *sour);
 
 
 
@@ -359,6 +360,13 @@ static int rename_prompt(RNOPT *opt, char *fname)
 	return 0;
 }
 
+static int rename_show(char *dest, char *sour, char *action)
+{
+	printf("renaming: %s\n", sour);
+	printf("     -->  %s : %s\n", dest, action);  
+	return 0;
+}
+
 static int console_notify(RNOPT *opt, int msg, int v, void *a1, void *a2)
 {
 	char	*dest = a1, *sour = a2;
@@ -387,24 +395,28 @@ static int console_notify(RNOPT *opt, int msg, int v, void *a1, void *a2)
 	case RNM_MSG_PPRO_UPCASE:
 		break;
 	case RNM_MSG_SKIP_EXISTED:
-		printf("%s\n  -> %s : skipped\n", sour, dest);
+		if (opt->cflags & RNM_CFLAG_VERBOSE) {
+			rename_show(dest, sour, "skipped");
+		}
 		break;
 	case RNM_MSG_OVERWRITE:
 		break;
 	case RNM_MSG_PROMPT:
 		if (rename_prompt(opt, dest) == 0) {
-			printf("%s\n  -> %s : skipped\n", sour, dest);
+			rename_show(dest, sour, "skipped");
 			return RNM_ERR_SKIP;
 		}
 		break;
 	case RNM_MSG_SIMULATION:
-		printf("%s\n  -> %s : tested\n", sour, dest);
+		rename_show(dest, sour, "tested");
 		break;
 	case RNM_MSG_SYS_FAIL:
 		perror("rename");
 		break;
 	case RNM_MSG_RENAME:
-		printf("%s\n  -> %s : successful\n", sour, dest);
+		if (opt->cflags & RNM_CFLAG_VERBOSE) {
+			rename_show(dest, sour, "successful");
+		}
 		break;
 	default:
 		printf("Unknown message [%d]\n", msg);
