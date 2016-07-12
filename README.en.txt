@@ -1,12 +1,13 @@
 
-Rename 1.99
------------
+Rename Extension
+----------------
 
-Rename is a tool to rename files. It can change, lowercase and uppercase
-a batch of files, or modify their ownership. It's a small and quick tool 
+Rename Extension is a tool to rename files. It can change, lowercase and 
+uppercase a batch of files, or modify their ownership. It's a small tool 
 written in C so it's quicker than most rename tools written in shell scripts.
 Rename is powered by the extended regular expression for searching and 
-substituting string patterns in the file names.
+substituting string patterns in the file names. It supports MS Windows and
+Linux/Unix system with a portable GUI frontend.
 
 
 Features
@@ -18,8 +19,9 @@ Features
  * support batch renaming
  * recursively processing directories and subdirectories
  * support to read the filename list from a file
- * change ownership of files
  * safe mode: test before you go
+ * support MS Windows and Linux/Unix system'
+ * integrated a GUI frontend
 
 
 Install

@@ -136,20 +136,26 @@ endif
 ifeq	($(SYSTOOL),unix)
 release: extclean
 else
-release: release-win extclean
+release: extclean installer_win
 endif
 	-if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
 	-mkdir $(RELDIR)
-	-$(CP) *.c *.h *.1 Make* *.txt *.rc *.ico *.lsm $(RELDIR)
-	-$(CP) COPYING autotest $(RELDIR)
+	-$(CP) *.c *.h *.pdf *.1 *.txt *.rc *.ico *.lsm *.png $(RELDIR)
+	-$(CP) COPYING Makefile autotest.sh $(RELDIR)
 	-$(CP) -a libmingw $(RELDIR)
 	-$(CP) -a external $(RELDIR)
 	-7z a -tzip $(RELDIR).zip $(RELDIR)
+	-$(RM) -r $(RELDIR)
+
+installer_win: release-win
+	-echo "OutFile \"$(RELDIR)-setup.exe\"" > nsis_version.outfile
+	makensis rename.nsi
+	-$(RM) nsis_version.outfile
 
 release-win: 
 	-if [ -d $(RELWIN) ]; then $(RM) -r $(RELWIN); fi
 	-mkdir $(RELWIN)
-	-$(CP) COPYING *.pdf *.1 *.txt autotest $(RELWIN)
+	-$(CP) COPYING *.pdf *.1 *.txt *.ico autotest.sh $(RELWIN)
 	SYSGUI=CFG_GUI_OFF make clean
 	SYSGUI=CFG_GUI_OFF make
 	-$(CP) $(PROJECT).exe $(RELWIN)
@@ -158,5 +164,15 @@ release-win:
 	-$(CP) $(PROJECT)_win.exe $(RELWIN)
 	-7z a -tzip $(RELWIN).zip $(RELWIN)
 	-$(RM) -r $(RELWIN)
+
+showdll:
+	@if [ -f $(PROJECT).exe ]; then \
+		echo "[$(PROJECT).exe]:"; \
+		objdump -p $(PROJECT).exe | grep 'DLL Name:'; \
+	fi
+	@if [ -f $(PROJECT)_win.exe ]; then \
+		echo "[$(PROJECT)_win.exe]:"; \
+		objdump -p $(PROJECT)_win.exe | grep 'DLL Name:'; \
+	fi
 
 
