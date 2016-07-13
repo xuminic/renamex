@@ -1,3 +1,7 @@
+20160713:
+	* main.c: fixed the argument problem when loading names from a file
+	* autotest.sh: basic form workable.
+
 20160710: move to 2.0
 	* rename: the whole project will be based on IUP and libcsoup
 	to support the Win32 and Linux/Unix with both GUI and CLI.

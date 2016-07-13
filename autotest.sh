@@ -11,6 +11,9 @@ verify()
   if [ -f "$1" ]; then
     echo successful
     success=`expr $success + 1`
+  elif [ -d "$1" ]; then
+    echo successful
+    success=`expr $success + 1`
   else
     echo failed
     failure=`expr $failure + 1`
@@ -175,32 +178,41 @@ verify "$ATROOT/Documents/LibreCAD/builder-LCAD.zip"
 $RENAME -s/e.*e/-/rig "$ATROOT/Downloads/installation/FreeBSD-10.1-RELEASE-amd64-bootonly.iso"
 verify "$ATROOT/Downloads/installation/Fr--amd64-bootonly.iso"
 
-echo "[Test018]"
-echo Test the recursive operation
-mkdir dir1 dir1/rename dir1/paganini dir1/mozart
-mkdir dir1/paganini/Caprice dir1/mozart/concerto
-echo > dir1/rename/MyRenameName.extName
-echo > dir1/paganini/DevilMusic.list
-echo > dir1/paganini/Caprice/No.24.mlst
-echo > dir1/paganini/Caprice/No.5.mlst
-echo > dir1/mozart/Poison.list
-echo > dir1/mozart/concerto/flute_and_harp.mlst
-renamex -v -lR dir1
-verify dir1/rename/myrenamename.extname
-verify dir1/paganini/devilmusic.list
-verify dir1/paganini/Caprice/no.24.mlst
-verify dir1/paganini/Caprice/no.5.mlst
-verify dir1/mozart/poison.list
-rm -rf dir1
+echo "[Test017]: Test the space inside the pattern"
+make_scenario
+$RENAME -s"/lin con/hello/1" "$ATROOT/Musics/Mozart/Concerto/violin concerto nº 3.mp4"
+verify "$ATROOT/Musics/Mozart/Concerto/viohellocerto nº 3.mp4"
 
-echo "[Test019]"
-echo Test the space inside the pattern
-mkdir dir1
-mkdir dir1/rename
-echo > dir1/rename/"My Rename Name.ext Name"
-renamex -v -s"/me Name/abc/1" dir1/rename/*
-verify "dir1/rename/My Renaabc.ext Name"
-rm -rf dir1
+echo "[Test018]: Test the recursive operation"
+echo Note the difference between \"$ATROOT/Documents/\" and \"$ATROOT/Documents\"
+echo The former won\'t change the \"Documents\"
+make_scenario
+$RENAME -lR "$ATROOT/Documents/"
+verify "$ATROOT/Documents/stb release notes .pdf"
+verify "$ATROOT/Documents/train_timetable.txt"
+verify "$ATROOT/Documents/Datasheets/st3160023as.pdf"
+verify "$ATROOT/Documents/Datasheets/seagatesmartexternal 04 24 06.rtf"
+verify "$ATROOT/Documents/Datasheets/signal integrity design guidelines.pdf"
+verify "$ATROOT/Documents/LibreCAD/architect3-lcad.zip"
+verify "$ATROOT/Documents/LibreCAD/electrical1-lcad.zip"
+
+echo "[Test020]: rename a directory"
+make_scenario
+$RENAME -s/ents/ains/1 "$ATROOT/Documents"
+verify "$ATROOT/Documains"
+
+echo "[Test021]: rename from a file"
+make_scenario
+find "$ATROOT" -name *.mp4 > "$ATROOT/filename.lst"
+$RENAME -s/mp4/utube/e -f "$ATROOT/filename.lst"
+verify "$ATROOT/Musics/Mozart/Concerto/violin concerto nº 3.utube"
+verify "$ATROOT/Musics/Mozart/Concerto/Concerto for Flute Harp and Orchestra in C major K299.utube"
+verify "$ATROOT/Musics/Niccolò Paganini/Caprice/Caprice no. 5.utube"
+verify "$ATROOT/Musics/Niccolò Paganini/Caprice/Caprice no. 24 - with piano accompaniment.utube"
+verify "$ATROOT/Musics/Niccolò Paganini/Concerto/La Campanella.utube"
+verify "$ATROOT/Musics/平原綾香 ふたたび 千と千尋.utube"
+verify "$ATROOT/Musics/（小苹果）- 健身舞蹈教学版.utube"
+verify "$ATROOT/Westlife - You Raise Me Up.utube"
 
 echo "Total $success successful and $failure failed"
 clean_scenario

@@ -40,7 +40,7 @@ RNOPT	*sysopt = NULL;
 static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, "Usage: renamex [OPTIONS] filename ..." },
 	{ 0, NULL, 0, "OPTIONS:" },
-	{ 'f', "file",      1, "Load file names from the file" },
+	{ 'f', "file",      0, "Load file names from the file" },
 	{ 'l', "lowercase", 0, "Lowercase the file name" },
 	{ 'u', "uppercase", 0, "Uppercase the file name" },
 	{ 'p', "prefix",    1, "Add prefix to the file name" },
