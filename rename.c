@@ -533,6 +533,8 @@ int rename_compile_regex(RNOPT *opt)
    the original string with enough buffer will be modified.
    Note: precompiled pattern buffer be set to globel.
    If no matches in the string, return 0.
+   A good start of regex: 8 Regular Expressions You Should Know
+   http://code.tutsplus.com/tutorials/8-regular-expressions-you-should-know--net-6149
 */
 static int match_regexpr(RNOPT *opt, char *fname, int flen)
 {
