@@ -9,6 +9,7 @@
 #include "libcsoup.h"
 #include "rename.h"
 #include "mmrc_icon_dialog.h"
+#include "mmrc_icon_warning.h"
 
 #define RENAME_MAIN		"RENAMEGUIOBJ"
 
@@ -544,31 +545,33 @@ static int mmgui_fexist_popup(MMGUI *gui, char *fname)
 	widget = IupLabel(title);
 	IupSetAttribute(widget, "FONTSIZE", "16");
 	IupSetAttribute(widget, "FONTSTYLE", "Bold");
+	IupSetAttribute(widget, "ALIGNMENT", "ALEFT");
 	IupSetAttribute(widget, "WORDWRAP", "YES");
 	vbox = IupVbox(widget, NULL);
 
 	widget = IupLabel("Replacing it will overwrite its contents");
 	IupAppend(vbox, widget);
 
+	IupSetHandle("WARN_ICON", IupImageRGBA(64, 64, mmrc_icon_warning));
 	widget = IupLabel("");
-	IupSetAttribute(widget, "IMAGE", "IUP_IconMessageWarning");
+	IupSetAttribute(widget, "IMAGE", "WARN_ICON");
 	hbox = IupHbox(widget, vbox, NULL);
 
 	vbox = IupVbox(hbox, IupFill(), NULL);
 
 	butt_yes = IupButton("Yes", NULL);
-	IupSetAttribute(butt_yes, "SIZE", "50");
+	IupSetAttribute(butt_yes, "SIZE", "60");
 	IupSetAttribute(butt_yes, "IMAGE", "IUP_ActionOk");
 	butt_no = IupButton("No", NULL);
-	IupSetAttribute(butt_no, "SIZE", "50");
+	IupSetAttribute(butt_no, "SIZE", "60");
 	IupSetAttribute(butt_no, "IMAGE", "IUP_ActionCancel");
 	butt_always = IupButton("Replace All", NULL);
-	IupSetAttribute(butt_always, "SIZE", "50");
-	IupSetAttribute(butt_always, "IMAGE", "IUP_ArrowRight");
+	IupSetAttribute(butt_always, "SIZE", "60");
+	IupSetAttribute(butt_always, "IMAGE", "IUP_NavigateRefresh");
 	butt_never = IupButton("Skip All", NULL);
-	IupSetAttribute(butt_never, "SIZE", "50");
+	IupSetAttribute(butt_never, "SIZE", "60");
 	IupSetAttribute(butt_never, "IMAGE", "IUP_EditUndo");
-	widget = IupHbox(butt_yes, butt_no, butt_always, butt_never, NULL);
+	widget = IupHbox(IupFill(), butt_yes, butt_no, butt_always, butt_never, NULL);
 	IupSetAttribute(widget, "NGAP", "4");
 	IupAppend(vbox, widget);
 
