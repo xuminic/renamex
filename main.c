@@ -228,9 +228,7 @@ int main(int argc, char **argv)
 		return rc;
 	}
 
-	if ((sysopt->action == RNM_ACT_REGEX) && regcomp(sysopt->preg, 
-				sysopt->pattern, sysopt->regflag)) {
-		printf("Regular Expression Error: [%s]\n", sysopt->pattern);
+	if (rename_compile_regex(sysopt)) {
 		return RNM_ERR_REGPAT;
 	}
 	for (c = optind; (c < argc) && (rc == RNM_ERR_NONE); c++) {

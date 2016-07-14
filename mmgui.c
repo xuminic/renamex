@@ -1008,8 +1008,7 @@ static int mmgui_option_collection(MMGUI *gui)
 		opt->pattern = IupGetAttribute(gui->entry_pattern, "VALUE");
 		if ((opt->pa_len = strlen(opt->pattern)) == 0) {
 			opt->action = 0;	/* empty pattern */
-		} else if ((opt->action == RNM_ACT_REGEX) && regcomp(
-				opt->preg, opt->pattern, opt->regflag)) {
+		} else if (rename_compile_regex(opt)) {
 			opt->action = 0;	/* wrong regular expression */
 		}
 	}
