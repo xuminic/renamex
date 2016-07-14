@@ -96,7 +96,8 @@ static int mmgui_fnlist_remove(MMGUI *gui, int idx);
 static int mmgui_fnlist_rename(MMGUI *gui, int idx);
 static int mmgui_fnlist_status(MMGUI *gui, char *color, char *fmt, ...);
 static int mmgui_fnlist_update_preview(MMGUI *gui, int action);
-static int mmgui_fexist_popup(MMGUI *gui, char *fname);
+static int mmgui_conflict_popup(MMGUI *gui, char *fname);
+static int mmgui_conflict_event(Ihandle* ih);
 static Ihandle *mmgui_button_box(MMGUI *gui);
 static int mmgui_button_event_load(Ihandle *ih);
 static int mmgui_button_event_delete(Ihandle *ih);
@@ -527,59 +528,112 @@ static int mmgui_fnlist_update_preview(MMGUI *gui, int action)
 }
 
 /****************************************************************************
- * File Exist Popup
+ * File Conflict Popup
  ****************************************************************************/
-static int mmgui_fexist_popup(MMGUI *gui, char *fname)
+static int mmgui_conflict_popup(MMGUI *gui, char *fname)
 {
 	Ihandle	*widget, *vbox, *hbox;
-	Ihandle	*butt_yes, *butt_no, *butt_always, *butt_never;
-	char	*title;
+	Ihandle	*butt_yes, *butt_no, *butt_cancel, *tick_always;
+	char	*title, *p;
+	int	tlen;
 
-	if ((title = csc_strcpy_alloc(fname, 128)) == NULL) {
+	tlen = strlen(fname) + 128;
+	if ((title = smm_alloc(tlen)) == NULL) {
 		return RNM_ERR_LOWMEM;
 	}
 	strcpy(title, "A file name \"");
 	strcat(title, fname);
-	strcat(title, "\" is already exists. Do you want to replace it?");
+	strcat(title, "\" is already exists. Do you want to replace it?\n");
+	
+	/* IupLabel() can not wrap the line so I have to do it manually */
+	for (p = title + 48; p < title + strlen(title); p += 48) {
+		for ( ; *p; p++) {
+			if (csc_isdelim(" -/\\", *p)) {
+				csc_strinsert(title, tlen, p+1, 0, "\n");
+				break;
+			}
+		}
+	}
 
 	widget = IupLabel(title);
-	IupSetAttribute(widget, "FONTSIZE", "16");
+	IupSetAttribute(widget, "FONTSIZE", "14");
 	IupSetAttribute(widget, "FONTSTYLE", "Bold");
 	IupSetAttribute(widget, "ALIGNMENT", "ALEFT");
-	IupSetAttribute(widget, "WORDWRAP", "YES");
+	//IupSetAttribute(widget, "WORDWRAP", "YES");
 	vbox = IupVbox(widget, NULL);
 
-	widget = IupLabel("Replacing it will overwrite its contents");
+	widget = IupLabel("Replacing it will overwrite its content.\n\n\n");
 	IupAppend(vbox, widget);
+
+	tick_always = IupToggle("Apply this action to all files", NULL);
+	IupAppend(vbox, tick_always);
 
 	IupSetHandle("WARN_ICON", IupImageRGBA(64, 64, mmrc_icon_warning));
 	widget = IupLabel("");
 	IupSetAttribute(widget, "IMAGE", "WARN_ICON");
 	hbox = IupHbox(widget, vbox, NULL);
+	IupSetAttribute(hbox, "NGAP", "8");
 
 	vbox = IupVbox(hbox, IupFill(), NULL);
+	IupSetAttribute(vbox, "NGAP", "8");
+	IupSetAttribute(vbox, "NMARGIN", "16x16");
 
-	butt_yes = IupButton("Yes", NULL);
-	IupSetAttribute(butt_yes, "SIZE", "60");
+	butt_yes = IupButton("Replace", NULL);
+	IupSetAttribute(butt_yes, "SIZE", "50");
 	IupSetAttribute(butt_yes, "IMAGE", "IUP_ActionOk");
-	butt_no = IupButton("No", NULL);
-	IupSetAttribute(butt_no, "SIZE", "60");
-	IupSetAttribute(butt_no, "IMAGE", "IUP_ActionCancel");
-	butt_always = IupButton("Replace All", NULL);
-	IupSetAttribute(butt_always, "SIZE", "60");
-	IupSetAttribute(butt_always, "IMAGE", "IUP_NavigateRefresh");
-	butt_never = IupButton("Skip All", NULL);
-	IupSetAttribute(butt_never, "SIZE", "60");
-	IupSetAttribute(butt_never, "IMAGE", "IUP_EditUndo");
-	widget = IupHbox(IupFill(), butt_yes, butt_no, butt_always, butt_never, NULL);
+	IupSetCallback(butt_yes, "ACTION", (Icallback) mmgui_conflict_event);
+
+	butt_no = IupButton("Skip", NULL);
+	IupSetAttribute(butt_no, "SIZE", "50");
+	IupSetAttribute(butt_no, "IMAGE", "IUP_EditUndo");
+	IupSetCallback(butt_no, "ACTION", (Icallback) mmgui_conflict_event);
+
+	butt_cancel = IupButton("Cancel", NULL);
+	IupSetAttribute(butt_cancel, "SIZE", "50");
+	IupSetAttribute(butt_cancel, "IMAGE", "IUP_ActionCancel");
+	IupSetCallback(butt_cancel, "ACTION", (Icallback)mmgui_conflict_event);
+
+	widget = IupHbox(IupFill(), butt_cancel, butt_no, butt_yes, NULL);
 	IupSetAttribute(widget, "NGAP", "4");
 	IupAppend(vbox, widget);
 
 	widget = IupDialog(vbox);
-	//IupPopup(widget, IUP_CENTER, IUP_CENTER);
-	IupShow(widget);
-	return IUP_DEFAULT;
+	IupSetAttribute(widget, "TITLE", "File Conflict");
+	IupSetAttribute(widget, "RESIZE", "NO");
+	IupSetAttribute(widget, "MAXBOX", "NO");
+	IupSetAttribute(widget, "MINBOX", "NO");
+	IupSetAttribute(widget, "HIDETASKBAR", "YES");
+	IupSetAttribute(widget, "PARENTDIALOG", gui->inst_id);
+	IupPopup(widget, IUP_CENTER, IUP_CENTER);
+	smm_free(title);
+
+	if ((p = IupGetAttribute(butt_yes, "FCDLGCLICK")) != NULL) {
+		tlen = 1;
+	} else if ((p = IupGetAttribute(butt_no, "FCDLGCLICK")) != NULL) {
+		tlen = 0;
+	} else {
+		return 0;	/* cancel and no */
+	}
+	
+	p = IupGetAttribute(tick_always, "VALUE");
+	if (p && !strcmp(p, "ON")) {
+		gui->ropt->cflags &= ~RNM_CFLAG_PROMPT_MASK;
+		if (tlen) {
+			gui->ropt->cflags |= RNM_CFLAG_ALWAYS;
+		} else {
+			gui->ropt->cflags |= RNM_CFLAG_NEVER;
+		}
+		rename_option_dump(gui->ropt);
+	}
+	return tlen;
 }
+
+static int mmgui_conflict_event(Ihandle* ih)
+{
+	IupSetAttribute(ih, "FCDLGCLICK", "YES");
+	return IUP_CLOSE;
+}
+
 
 /****************************************************************************
  * Button box group
@@ -717,13 +771,18 @@ static int mmgui_button_event_rename(Ihandle *ih)
 	}
 
 	mmgui_fnlist_status(gui, NULL, "%d Files renamed", gui->ropt->rpcnt);
-	mmgui_fexist_popup(gui, "asdf/asdf/asdf/asdf");
+	mmgui_conflict_popup(gui, "asdf/asdf/asdf/asdf");
 	return mmgui_option_free(gui);
 }
 
 static int mmgui_button_event_about(Ihandle *ih)
 {
+	MMGUI	*gui;
 	Ihandle	*widget, *vbox;
+
+	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
 
 	/* show the icon */
 	widget = IupLabel(NULL);
@@ -753,7 +812,11 @@ static int mmgui_button_event_about(Ihandle *ih)
 
 	ih = IupDialog(vbox);
 	IupSetAttribute(ih, "TITLE", "About");
-	IupSetAttribute(ih, "ICON", "DLG_ICON");
+	IupSetAttribute(ih, "RESIZE", "NO");
+	IupSetAttribute(ih, "MAXBOX", "NO");
+	IupSetAttribute(ih, "MINBOX", "NO");
+	IupSetAttribute(ih, "HIDETASKBAR", "YES");
+	IupSetAttribute(ih, "PARENTDIALOG", gui->inst_id);
 	IupPopup(ih, IUP_CENTER, IUP_CENTER);
 	return IUP_DEFAULT;
 }
