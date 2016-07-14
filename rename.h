@@ -134,11 +134,12 @@ extern	const	char	*help_credits;
 
 int rename_enfile(RNOPT *opt, char *filename);
 int rename_entry(RNOPT *opt, char *filename);
-int rename_notify(RNOPT *opt, int msg, int v, void *dest, void *sour);
+int rename_action(RNOPT *opt, char *oldname);
+int rename_executing(RNOPT *opt, char *dest, char *sour);
 char *rename_alloc(RNOPT *opt, char *oldname, int *errcode);
 int rename_compile_regex(RNOPT *opt);
-int rename_executing(RNOPT *opt, char *dest, char *sour);
 int rename_option_dump(RNOPT *opt);
+int rename_notify(RNOPT *opt, int msg, int v, void *dest, void *sour);
 
 /* mmgui.c */
 void *mmgui_open(RNOPT *ropt, int *argcs, char ***argvs);

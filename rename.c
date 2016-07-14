@@ -78,7 +78,6 @@
 
 static int rename_recursive(RNOPT *opt, char *path);
 static int rename_recursive_cb(void *option, char *path, int type, void *info);
-static int rename_action(RNOPT *opt, char *oldname);
 static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour);
 static int rename_prompt(RNOPT *opt, char *fname);
 static int rename_show(char *dest, char *sour, char *action);
@@ -130,17 +129,15 @@ int rename_entry(RNOPT *opt, char *filename)
 	return rename_action(opt, filename);
 }
 
-int rename_notify(RNOPT *opt, int msg, int v, void *dest, void *sour)
+int rename_action(RNOPT *opt, char *oldname)
 {
 	int	rc;
 
-	if ((opt == NULL) || (opt->notify == NULL)) {
-		return console_notify(opt, msg, v, dest, sour);
+	if ((opt->buffer = rename_alloc(opt, oldname, NULL)) == NULL) {
+		return RNM_ERR_RENAME;
 	}
-	rc = opt->notify(opt, msg, v, dest, sour);
-	if (rc == RNM_ERR_EVENT) {
-		return console_notify(opt, msg, v, dest, sour);
-	}
+	rc = rename_executing(opt, opt->buffer, oldname);
+	opt->buffer = smm_free(opt->buffer);
 	return rc;
 }
 
@@ -259,6 +256,20 @@ int rename_option_dump(RNOPT *opt)
 	return 0;
 }
 
+int rename_notify(RNOPT *opt, int msg, int v, void *dest, void *sour)
+{
+	int	rc;
+
+	if ((opt == NULL) || (opt->notify == NULL)) {
+		return console_notify(opt, msg, v, dest, sour);
+	}
+	rc = opt->notify(opt, msg, v, dest, sour);
+	if (rc == RNM_ERR_EVENT) {
+		return console_notify(opt, msg, v, dest, sour);
+	}
+	return rc;
+}
+
 	
 static int rename_recursive(RNOPT *opt, char *path)
 {
@@ -282,18 +293,6 @@ static int rename_recursive_cb(void *option, char *path, int type, void *info)
 		break;
 	}
 	return SMM_NTF_PATH_NONE;
-}
-
-static int rename_action(RNOPT *opt, char *oldname)
-{
-	int	rc;
-
-	if ((opt->buffer = rename_alloc(opt, oldname, NULL)) == NULL) {
-		return RNM_ERR_RENAME;
-	}
-	rc = rename_executing(opt, opt->buffer, oldname);
-	opt->buffer = smm_free(opt->buffer);
-	return rc;
 }
 
 static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour)

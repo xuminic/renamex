@@ -86,6 +86,7 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height);
 //static int mmgui_event_show(Ihandle *ih, int state);
 static int mmgui_event_close(Ihandle *ih);
 static int mmgui_event_update(Ihandle *ih, ...);
+static int mmgui_notify(void *opobj, int msg, int v, void *a1, void *a2);
 static Ihandle *mmgui_fnlist_box(MMGUI *gui);
 static int mmgui_fnlist_event_dropfiles(Ihandle *, char *, int,int,int);
 static int mmgui_fnlist_event_multi_select(Ihandle *ih, char *value);
@@ -198,6 +199,7 @@ int mmgui_run(void *guiobj, int argc, char **argv)
 
 	/* show and run the interface */
 	mmgui_reset(gui);
+	gui->ropt->notify = mmgui_notify;
 	IupShow(gui->dlg_main);
 	for (i = 0; i < argc; i++) {
 		mmgui_fnlist_append(gui, argv[i]);
@@ -300,6 +302,21 @@ static int mmgui_event_update(Ihandle *ih, ...)
 	return mmgui_option_free(gui);
 }
 
+static int mmgui_notify(void *opobj, int msg, int v, void *a1, void *a2)
+{
+	RNOPT	*opt = opobj;
+
+	(void) v; (void) a2;
+
+	switch (msg) {
+	case RNM_MSG_PROMPT:
+		if (!mmgui_conflict_popup(opt->gui, (char*) a1)) {
+			return RNM_ERR_SKIP;
+		}
+		return RNM_ERR_NONE;
+	}
+	return RNM_ERR_EVENT;	/* pass through */
+}
 
 /****************************************************************************
  * file name list box
@@ -469,14 +486,39 @@ static int mmgui_fnlist_remove(MMGUI *gui, int idx)
 
 static int mmgui_fnlist_rename(MMGUI *gui, int idx)
 {
-	char	*fname;
+	RNOPT	*opt = gui->ropt;
+	char	*srcname, *dstname;
+	int	rc;
 
-	fname = IupGetAttributeId(gui->list_oldname, "",  idx);
-	if (fname) {
-		printf("RENAME: %s\n", fname);
-		gui->ropt->rpcnt++;
+	srcname = IupGetAttributeId(gui->list_oldname, "", idx);
+	if (srcname == NULL) {
+		printf("mmgui_fnlist_rename: out of range. [%d]\n", idx);
+		return IUP_DEFAULT;
 	}
-	return IUP_DEFAULT;
+	
+	dstname = IupGetAttributeId(gui->list_preview, "", idx);
+	if (dstname == NULL) {
+		printf("mmgui_fnlist_rename: lost preview.\n");
+		return IUP_DEFAULT;
+	}
+
+	//printf("RENAME: %s\n", srcname);
+	if (!strcmp(dstname, srcname)) {
+		return RNM_ERR_SKIP;
+	}
+
+	/* set the codepage to utf-8 before calling rename core. 
+	 * In Win32 version, the rename uses the default codepage to process
+	 * file name. However the GTK converted the file name to UTF-8 so 
+	 * the Windows version could not find the file. */
+	smm_codepage_set(65001);  /* set the codepage to utf-8 */
+	rc = rename_executing(opt, dstname, srcname);
+	smm_codepage_reset();
+
+	if (rc == RNM_ERR_NONE) {
+		IupSetAttributeId(gui->list_oldname, "", idx, dstname);
+	}
+	return rc;
 }
 
 static int mmgui_fnlist_status(MMGUI *gui, char *color, char *fmt, ...)
@@ -498,7 +540,8 @@ static int mmgui_fnlist_status(MMGUI *gui, char *color, char *fmt, ...)
 
 static int mmgui_fnlist_update_preview(MMGUI *gui, int action)
 {
-	char	*fname, *preview;
+	RNOPT	*opt = gui->ropt;
+	char	*fname;
 	int	i;
 
 	if (action == 0) {
@@ -514,14 +557,16 @@ static int mmgui_fnlist_update_preview(MMGUI *gui, int action)
 		if (fname == NULL) {
 			break;
 		}
-		preview = rename_alloc(gui->ropt, fname, NULL);
-		if (preview == NULL) {
+		smm_codepage_set(65001);   /* set the codepage to utf-8 */
+		opt->buffer = rename_alloc(gui->ropt, fname, NULL);
+		smm_codepage_reset();
+		if (opt->buffer == NULL) {
 			IupSetStrAttributeId(
-					gui->list_preview, "",  i, fname);
+				gui->list_preview, "",  i, fname);
 		} else {
 			IupSetStrAttributeId(
-					gui->list_preview, "",  i, preview);
-			smm_free(preview);
+				gui->list_preview, "",  i, opt->buffer);
+			opt->buffer = smm_free(opt->buffer);
 		}
 	}
 	return IUP_DEFAULT;
@@ -740,7 +785,7 @@ static int mmgui_button_event_rename(Ihandle *ih)
 	if (mmgui_option_collection(gui) == 0) {	/* option not ready */
 		return mmgui_option_free(gui);
 	}
-	rename_option_dump(gui->ropt);
+	//rename_option_dump(gui->ropt);
 	gui->ropt->rpcnt = 0;
 
 	/* run rename one by one */
@@ -762,7 +807,7 @@ static int mmgui_button_event_rename(Ihandle *ih)
 		IupFlush();
 	}
 	IupSetInt(gui->progress, "VALUE",gui->fileno);
-	smm_sleep(1, 0);
+	smm_sleep(0, 200000);
 	
 	IupSetAttribute(gui->progress, "VISIBLE", "NO");
 	value = IupGetAttribute(gui->tick_search, "VALUE");
@@ -771,7 +816,7 @@ static int mmgui_button_event_rename(Ihandle *ih)
 	}
 
 	mmgui_fnlist_status(gui, NULL, "%d Files renamed", gui->ropt->rpcnt);
-	mmgui_conflict_popup(gui, "asdf/asdf/asdf/asdf");
+	//mmgui_conflict_popup(gui, "asdf/asdf/asdf/asdf");
 	return mmgui_option_free(gui);
 }
 
