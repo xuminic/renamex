@@ -39,7 +39,7 @@ iupweb:
 iuptuio:
 	@$(MAKE) --no-print-directory -C ./srctuio/
 iupimglib:
-	@$(MAKE) --no-print-directory -C ./srcimglib/
+	@$(MAKE) USE_IUP_IMGLIB_LARGE=1 --no-print-directory -C ./srcimglib/
 iuplua3:
 	@$(MAKE) --no-print-directory -C ./srclua3/
 iuplua5:

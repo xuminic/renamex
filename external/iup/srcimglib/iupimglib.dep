@@ -1,21 +1,16 @@
 $(OBJDIR)/iup_image_library.o: iup_image_library.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../src/iup_image.h iup_imglib.h
+$(OBJDIR)/iup_imglib_circleprogress.o: iup_imglib_circleprogress.c ../include/iup.h \
  ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
- ../src/iup_image.h iup_imglib.h
-$(OBJDIR)/iup_imglib_bitmapsgtk.o: iup_imglib_bitmapsgtk.c ../include/iup.h \
- ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
- ../src/iup_image.h iup_imglib.h iup_imglib_bitmapsgtk.h
-$(OBJDIR)/iup_imglib_icons.o: iup_imglib_icons.c ../include/iup.h \
- ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
- ../src/iup_image.h iup_imglib.h iup_imglib_icons.h
-$(OBJDIR)/iup_imglib_logos.o: iup_imglib_logos.c ../include/iup.h \
- ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
- ../src/iup_image.h iup_imglib.h
-$(OBJDIR)/iup_imglib_bitmaps8.o: iup_imglib_bitmaps8.c ../include/iup.h \
- ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
- ../src/iup_image.h iup_imglib.h iup_imglib_bitmaps8.h
-$(OBJDIR)/iup_imglib_icons8.o: iup_imglib_icons8.c ../include/iup.h \
- ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
- ../src/iup_image.h iup_imglib.h iup_imglib_icons8.h
-$(OBJDIR)/iup_imglib_logos8.o: iup_imglib_logos8.c ../include/iup.h \
- ../include/iupkey.h ../include/iupdef.h ../src/iup_str.h \
- ../src/iup_image.h iup_imglib.h
+ ../src/iup_image.h iup_imglib.h iup_imglib_circleprogress.h
+$(OBJDIR)/iup_imglib_basegtk16x16.o: iup_imglib_basegtk16x16.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../src/iup_image.h iup_imglib.h \
+ iup_imglib_basegtk16x16.h
+$(OBJDIR)/iup_imglib_logos48x48.o: iup_imglib_logos48x48.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../src/iup_image.h iup_imglib.h \
+ iup_imglib_logos48x48.h
+$(OBJDIR)/iup_imglib_logos32x32.o: iup_imglib_logos32x32.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../src/iup_image.h iup_imglib.h \
+ iup_imglib_logos32x32.h
+$(OBJDIR)/iup_imglib_iconsgtk48x48.o: iup_imglib_iconsgtk48x48.c ../include/iup.h \
+ ../include/iupkey.h ../include/iupdef.h ../src/iup_image.h iup_imglib.h
