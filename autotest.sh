@@ -1,5 +1,14 @@
 #!/bin/sh
 
+# The MSYS_NO_PATHCONV doesn't work at all in my MinGW so I figured out 
+# another workaround. Since this problem only happen on, .e.g,
+#   -s/domain/field/eig
+# which turned out by Posix path conversion to be something like
+#   -s/C:\MinGW\msys\1.0\home\user\domain/field/eig
+# The harmless approach is topping every "-s" option with 'v', .i.e "-vs/..."
+
+export MSYS_NO_PATHCONV=1
+
 success=0
 failure=0
 
@@ -38,7 +47,7 @@ make_scenario()
   echo > "$ATROOT/Foundation_drop2.pdf"
   echo > "$ATROOT/Westlife - You Raise Me Up.mp4"
 
-  echo > "$ATROOT/Desktop/Screenshot at 2016-06-15 12:58:08.png"
+  echo > "$ATROOT/Desktop/Screenshot at 2016-06-15 12-58-08.png"
   mkdir  "$ATROOT/Desktop/gnome" "$ATROOT/Desktop/kde"
   echo > "$ATROOT/Desktop/MyRenameTest.txt"
   echo > "$ATROOT/Desktop/gnome/backgrounds.xml"
@@ -78,8 +87,8 @@ make_scenario()
   mkdir  "$ATROOT/Musics/Niccolò Paganini" 
   mkdir  "$ATROOT/Musics/Niccolò Paganini/Caprice" "$ATROOT/Musics/Niccolò Paganini/Concerto"
   mkdir  "$ATROOT/Musics/Mozart" "$ATROOT/Musics/Mozart/Concerto"
-  echo > "$ATROOT/Musics/平原綾香 ふたたび 千と千尋.mp4"
-  echo > "$ATROOT/Musics/（小苹果）- 健身舞蹈教学版.mp4"
+  #echo > "$ATROOT/Musics/平原綾香 ふたたび 千と千尋.mp4"
+  #echo > "$ATROOT/Musics/（小苹果）- 健身舞蹈教学版.mp4"
   echo > "$ATROOT/Musics/Niccolò Paganini/DevilMusic.m3u"
   echo > "$ATROOT/Musics/Niccolò Paganini/Caprice/Caprice no. 24 - with piano accompaniment.mp4"
   echo > "$ATROOT/Musics/Niccolò Paganini/Caprice/Caprice no. 5.mp4"
@@ -134,53 +143,53 @@ verify "$ATROOT/Documents/Datasheets/Thisst3160023asHappen.pdf"
 
 echo "[Test009]: simple search and replace"
 make_scenario
-$RENAME -s/1600/---- "$ATROOT/Documents/Datasheets/ST3160023AS.pdf"
+$RENAME -vs/1600/---- "$ATROOT/Documents/Datasheets/ST3160023AS.pdf"
 verify "$ATROOT/Documents/Datasheets/ST3----23AS.pdf"
 
 echo "[Test010]: search and replace with specified occurances"
 make_scenario
-$RENAME -s/./^/3 "$ATROOT/Downloads/installation/VirtualBox-4.3-4.3.20_96996_el7-1.x86_64.rpm"
+$RENAME -vs/./^/3 "$ATROOT/Downloads/installation/VirtualBox-4.3-4.3.20_96996_el7-1.x86_64.rpm"
 verify "$ATROOT/Downloads/installation/VirtualBox-4^3-4^3^20_96996_el7-1.x86_64.rpm"
 
 echo "[Test011]: search and replace with specified occurances and ignore cases"
 make_scenario
-$RENAME -s/E/#/4i "$ATROOT/Downloads/installation/FreeBSD-10.1-RELEASE-amd64-bootonly.iso"
+$RENAME -vs/E/#/4i "$ATROOT/Downloads/installation/FreeBSD-10.1-RELEASE-amd64-bootonly.iso"
 verify "$ATROOT/Downloads/installation/Fr##BSD-10.1-R#L#ASE-amd64-bootonly.iso"
 
 echo "[Test012]: backward search and replace once and ignore cases"
 make_scenario
-$RENAME -s/i/1/bi "$ATROOT/Downloads/mushroom_picking.pdf"
+$RENAME -vs/i/1/bi "$ATROOT/Downloads/mushroom_picking.pdf"
 verify "$ATROOT/Downloads/mushroom_pick1ng.pdf"
 
 echo "[Test013]: backward search and replace some occurance and ignore cases"
 make_scenario
-$RENAME -s/e/-E-/bi4 "$ATROOT/Downloads/installation/FreeBSD-10.1-RELEASE-amd64-bootonly.iso"
+$RENAME -vs/e/-E-/bi4 "$ATROOT/Downloads/installation/FreeBSD-10.1-RELEASE-amd64-bootonly.iso"
 verify "$ATROOT/Downloads/installation/Fre-E-BSD-10.1-R-E-L-E-AS-E--amd64-bootonly.iso"
 
 echo "[Test014]: changing extension name"
 make_scenario
-$RENAME -s/.pdf/.ps/e "$ATROOT/Documents/doxygen_manual-1.8.7.pdf"
+$RENAME -vs/.pdf/.ps/e "$ATROOT/Documents/doxygen_manual-1.8.7.pdf"
 verify "$ATROOT/Documents/doxygen_manual-1.8.7.ps"
 
 echo "[Test015]: changing tail part of extension name"
 make_scenario
-$RENAME -s/domain/field/eig "$ATROOT/Desktop/kde/cache-localhost.localdomain"
+$RENAME -vs/domain/field/eig "$ATROOT/Desktop/kde/cache-localhost.localdomain"
 verify "$ATROOT/Desktop/kde/cache-localhost.localfield"
 
 echo "[Test016]: the regular expression testing"
 make_scenario
-$RENAME -s/.o//rg "$ATROOT/Desktop/kde/cache-localhost.localdomain"
+$RENAME -vs/.o//rg "$ATROOT/Desktop/kde/cache-localhost.localdomain"
 verify "$ATROOT/Desktop/kde/cache-calst.calmain"
-$RENAME -s/^[A-Z].*cal/heatpump/r "$ATROOT/Documents/LibreCAD/Electrical1-LCAD.zip"
+$RENAME -vs/^[A-Z].*cal/heatpump/r "$ATROOT/Documents/LibreCAD/Electrical1-LCAD.zip"
 verify "$ATROOT/Documents/LibreCAD/heatpump1-LCAD.zip"
-$RENAME -s/^[A-Z].+[0-9]/builder/xg "$ATROOT/Documents/LibreCAD/Architect3-LCAD.zip"
+$RENAME -vs/^[A-Z].+[0-9]/builder/xg "$ATROOT/Documents/LibreCAD/Architect3-LCAD.zip"
 verify "$ATROOT/Documents/LibreCAD/builder-LCAD.zip"
-$RENAME -s/e.*e/-/rig "$ATROOT/Downloads/installation/FreeBSD-10.1-RELEASE-amd64-bootonly.iso"
+$RENAME -vs/e.*e/-/rig "$ATROOT/Downloads/installation/FreeBSD-10.1-RELEASE-amd64-bootonly.iso"
 verify "$ATROOT/Downloads/installation/Fr--amd64-bootonly.iso"
 
 echo "[Test017]: Test the space inside the pattern"
 make_scenario
-$RENAME -s"/lin con/hello/1" "$ATROOT/Musics/Mozart/Concerto/violin concerto nº 3.mp4"
+$RENAME -vs"/lin con/hello/1" "$ATROOT/Musics/Mozart/Concerto/violin concerto nº 3.mp4"
 verify "$ATROOT/Musics/Mozart/Concerto/viohellocerto nº 3.mp4"
 
 echo "[Test018]: Test the recursive operation"
@@ -198,22 +207,21 @@ verify "$ATROOT/Documents/LibreCAD/electrical1-lcad.zip"
 
 echo "[Test020]: rename a directory"
 make_scenario
-$RENAME -s/ents/ains/1 "$ATROOT/Documents"
+$RENAME -vs/ents/ains/1 "$ATROOT/Documents"
 verify "$ATROOT/Documains"
 
 echo "[Test021]: rename from a file"
 make_scenario
 find "$ATROOT" -name *.mp4 > "$ATROOT/filename.lst"
-$RENAME -s/mp4/utube/e -f "$ATROOT/filename.lst"
+$RENAME -vs/mp4/utube/e -f "$ATROOT/filename.lst"
 verify "$ATROOT/Musics/Mozart/Concerto/violin concerto nº 3.utube"
 verify "$ATROOT/Musics/Mozart/Concerto/Concerto for Flute Harp and Orchestra in C major K299.utube"
 verify "$ATROOT/Musics/Niccolò Paganini/Caprice/Caprice no. 5.utube"
 verify "$ATROOT/Musics/Niccolò Paganini/Caprice/Caprice no. 24 - with piano accompaniment.utube"
 verify "$ATROOT/Musics/Niccolò Paganini/Concerto/La Campanella.utube"
-verify "$ATROOT/Musics/平原綾香 ふたたび 千と千尋.utube"
-verify "$ATROOT/Musics/（小苹果）- 健身舞蹈教学版.utube"
 verify "$ATROOT/Westlife - You Raise Me Up.utube"
 
 echo "Total $success successful and $failure failed"
 clean_scenario
 exit $failure
+
