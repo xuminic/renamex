@@ -29,6 +29,23 @@ verify()
   fi
 }
 
+unicreate()
+{
+  renamex --debug=create "$1"
+}
+
+univerify()
+{
+  renamex --debug=verify "$1"
+  if [ "$?" = "1" ]; then
+    echo successful
+    success=`expr $success + 1`
+  else
+    echo failed
+    failure=`expr $failure + 1`
+  fi
+}
+
 clean_scenario()
 {
   if [ -d "$ATROOT" ]; then
@@ -84,22 +101,28 @@ make_scenario()
   echo > "$ATROOT/Downloads/PDF_GPS/CH_KOONDROOK.pdf"
 
   echo > "$ATROOT/Musics/Sample Music.lnk"
-  mkdir  "$ATROOT/Musics/Niccolò Paganini" 
-  mkdir  "$ATROOT/Musics/Niccolò Paganini/Caprice" "$ATROOT/Musics/Niccolò Paganini/Concerto"
+  mkdir  "$ATROOT/Musics/Paganini"
+  mkdir  "$ATROOT/Musics/Paganini/Caprice" "$ATROOT/Musics/Paganini/Concerto"
   mkdir  "$ATROOT/Musics/Mozart" "$ATROOT/Musics/Mozart/Concerto"
-  #echo > "$ATROOT/Musics/平原綾香 ふたたび 千と千尋.mp4"
-  #echo > "$ATROOT/Musics/（小苹果）- 健身舞蹈教学版.mp4"
-  echo > "$ATROOT/Musics/Niccolò Paganini/DevilMusic.m3u"
-  echo > "$ATROOT/Musics/Niccolò Paganini/Caprice/Caprice no. 24 - with piano accompaniment.mp4"
-  echo > "$ATROOT/Musics/Niccolò Paganini/Caprice/Caprice no. 5.mp4"
-  echo > "$ATROOT/Musics/Niccolò Paganini/Concerto/La Campanella.mp4"
+  unicreate "$ATROOT/Musics/平原綾香 ふたたび 千と千尋.mp4"
+  #unicreate "$ATROOT/Musics/（小苹果）- 健身舞蹈教学版.mp4"
+  echo > "$ATROOT/Musics/Paganini/DevilMusic.m3u"
+  echo > "$ATROOT/Musics/Paganini/Caprice/Caprice no. 24 - with piano accompaniment.mp4"
+  echo > "$ATROOT/Musics/Paganini/Caprice/Caprice no. 5.mp4"
+  echo > "$ATROOT/Musics/Paganini/Concerto/La Campanella.mp4"
   echo > "$ATROOT/Musics/Mozart/playlist.m3u"
   echo > "$ATROOT/Musics/Mozart/Concerto/Concerto for Flute Harp and Orchestra in C major K299.mp4"
   echo > "$ATROOT/Musics/Mozart/Concerto/violin concerto nº 3.mp4"
 
-  ln -s "Musics/Niccolò Paganini/Concerto" "$ATROOT/link_to_pananini"
+  ln -s "Musics/Paganini/Concerto" "$ATROOT/link_to_pananini"
   ln -s "Downloads/PDF_GPS/CH_KOONDROOK.pdf" "$ATROOT/link_to_koondrook"
 }
+
+
+#make_scenario
+#$RENAME -l "$ATROOT/Documents/Datasheets/ST3160023AS.pdf"
+#verify "$ATROOT/Documents/Datasheets/st3160023as.pdf"
+#exit
 
 echo "[Test001]: direct rename mode with quoted file names"
 make_scenario
@@ -216,10 +239,12 @@ find "$ATROOT" -name *.mp4 > "$ATROOT/filename.lst"
 $RENAME -vs/mp4/utube/e -f "$ATROOT/filename.lst"
 verify "$ATROOT/Musics/Mozart/Concerto/violin concerto nº 3.utube"
 verify "$ATROOT/Musics/Mozart/Concerto/Concerto for Flute Harp and Orchestra in C major K299.utube"
-verify "$ATROOT/Musics/Niccolò Paganini/Caprice/Caprice no. 5.utube"
-verify "$ATROOT/Musics/Niccolò Paganini/Caprice/Caprice no. 24 - with piano accompaniment.utube"
-verify "$ATROOT/Musics/Niccolò Paganini/Concerto/La Campanella.utube"
+verify "$ATROOT/Musics/Paganini/Caprice/Caprice no. 5.utube"
+verify "$ATROOT/Musics/Paganini/Caprice/Caprice no. 24 - with piano accompaniment.utube"
+verify "$ATROOT/Musics/Paganini/Concerto/La Campanella.utube"
 verify "$ATROOT/Westlife - You Raise Me Up.utube"
+univerify "$ATROOT/Musics/平原綾香 ふたたび 千と千尋.utube"
+#unicreate "$ATROOT/Musics/（小苹果）- 健身舞蹈教学版.utube"
 
 echo "Total $success successful and $failure failed"
 clean_scenario

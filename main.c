@@ -56,6 +56,7 @@ static	struct	cliopt	clist[] = {
 	{ 'N', "never",     0, "Never overwrite the existing files" },
 	{   1, "help",      2, "Display the help message" },
 	{   2, "version",   0, "Display the version message" },
+	{   3, "debug",     2, "*" },
 	{ 0, NULL, 0, "\nSEARCH SETTING:\n\
   -s /PATTERN/STRING[/SW]  Replace the matching PATTERN by STRING.\n\
 The SW could be:\n\
@@ -92,6 +93,7 @@ http://webserver2.tecgraf.puc-rio.br/iup\n";
 
 static int rename_free_all(int sig);
 static int cli_set_pattern(RNOPT *opt, char *optarg);
+static int debug_main(char *optarg, int optind, int argc, char **argv);
 
 int main(int argc, char **argv)
 {
@@ -130,6 +132,8 @@ int main(int argc, char **argv)
 			puts(help_descript);
 			rename_free_all(0);
 			return RNM_ERR_HELP;
+		case 3:
+			return debug_main(optarg, optind, argc, argv);
 		case 'f':
 			infile = 1;
 			break;
@@ -339,4 +343,34 @@ static int cli_set_pattern(RNOPT *opt, char *optarg)
 	return RNM_ERR_NONE;
 }
 
+static int debug_main(char *optarg, int optind, int argc, char **argv)
+{
+	FILE	*fp;
+
+	//printf("%s %d %d %s\n", optarg, optind, argc, argv[optind]);
+	if (!strcmp(optarg, "create")) {
+		smm_codepage_set(65001);
+		fp = smm_fopen(argv[optind], "w");
+		smm_codepage_reset();
+		if (fp == NULL) {
+			printf("fopen: %s\n", argv[optind]);
+		} else {
+			smm_fclose(fp);
+		}
+	} else if (!strcmp(optarg, "verify")) {
+		if (optind >= argc) {
+			return -1;	/* parameters missing */
+		}
+		smm_codepage_set(65001);
+		fp = smm_fopen(argv[optind], "r");
+		smm_codepage_reset();
+		if (fp == NULL) {
+			printf("fopen: not found\n");
+		} else {
+			smm_fclose(fp);
+			return 1;
+		}
+	}
+	return 0;
+}
 

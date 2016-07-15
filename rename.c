@@ -299,7 +299,10 @@ static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour)
 {
 	int	rc;
 
-	if (smm_fstat(dest) >= 0) {	
+	/* test if the target file has existed already.
+	 * using smm_fncmp() to seperate the difference between Windows and
+	 * unix because Windows doesn't care the capitcal or small letters */
+	if ((smm_fstat(dest) >= 0) && smm_fncmp(dest, sour)) {  
 		/* the target file has existed already */
 		switch (opt->cflags & RNM_CFLAG_PROMPT_MASK) {
 		case RNM_CFLAG_NEVER:
@@ -320,7 +323,7 @@ static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour)
 		rename_notify(opt, RNM_MSG_SIMULATION, 0, dest, sour);
 		return RNM_ERR_NONE;
 	}
-	if ((rc = rename(sour, dest)) < 0) {
+	if ((rc = smm_rename(sour, dest)) < 0) {
 		rename_notify(opt, RNM_MSG_SYS_FAIL, rc, dest, sour);
 		return RNM_ERR_RENAME;
 	}
