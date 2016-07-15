@@ -224,7 +224,7 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height)
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	//printf("mmgui_event_resize: %d x %d\n", width, height);
+	printf("mmgui_event_resize: %d x %d\n", width, height);
 	//printf("mmgui_event_resize: %s\n", IupGetAttribute(ih,"RASTERSIZE"));
 	IupSetAttribute(ih, "RASTERSIZE", IupGetAttribute(ih, "RASTERSIZE"));
 
@@ -688,7 +688,7 @@ static Ihandle *mmgui_button_box(MMGUI *gui)
 	Ihandle	*vbox;
 
 	gui->butt_open = IupButton("Open", NULL);
-	IupSetAttribute(gui->butt_open, "SIZE", "50");
+	IupSetAttribute(gui->butt_open, "SIZE", "80");
 	IupSetAttribute(gui->butt_open, "IMAGE", "IUP_FileOpen");
 	gui->butt_del = IupButton("Delete", NULL);
 	IupSetAttribute(gui->butt_del, "SIZE", "50");
@@ -703,7 +703,8 @@ static Ihandle *mmgui_button_box(MMGUI *gui)
 	vbox = IupGridBox(gui->butt_open, gui->butt_del, gui->butt_run, 
 			gui->butt_about, NULL);
 	IupSetAttribute(vbox, "ORIENTATION", "HORIZONTAL");
-	IupSetAttribute(vbox, "NUMDIV", "2");
+	IupSetAttribute(vbox, "NUMDIV", "1");
+	IupSetAttribute(vbox, "NORMALIZESIZE", "BOTH");
 
 	IupSetCallback(gui->butt_open, "ACTION",
 			(Icallback) mmgui_button_event_load);
