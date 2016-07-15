@@ -51,7 +51,6 @@ typedef	struct	{
 	Ihandle		*entry_substit;
 	Ihandle		*progress;
 
-
 	/* button box */
 	Ihandle		*butt_open;
 	Ihandle		*butt_del;
@@ -224,7 +223,7 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height)
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	printf("mmgui_event_resize: %d x %d\n", width, height);
+	//printf("mmgui_event_resize: %d x %d\n", width, height);
 	//printf("mmgui_event_resize: %s\n", IupGetAttribute(ih,"RASTERSIZE"));
 	IupSetAttribute(ih, "RASTERSIZE", IupGetAttribute(ih, "RASTERSIZE"));
 
@@ -235,7 +234,21 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height)
 		value = IupGetAttribute(gui->list_oldname, "RASTERSIZE");
 		height = (int) strtol(value, NULL, 10);
 		gui->magic_width = width - height;
+		//printf("mmgui_event_resize: %d\n", gui->magic_width);
+
+		/* normalize the buttons against the option box */
+		value = IupGetAttribute(gui->tick_prefix, "RASTERSIZE");
+		height = (int) strtol(value, NULL, 10);
+		value = IupGetAttribute(gui->entry_prefix, "RASTERSIZE");
+		height += (int) strtol(value, NULL, 10);
+		sprintf(buf, "%d", height);
+		//printf("mmgui_event_resize: %d\n", height);
+		IupSetAttribute(gui->butt_open, "RASTERSIZE", buf);
+		IupSetAttribute(gui->butt_del, "RASTERSIZE", buf);
+		IupSetAttribute(gui->butt_run, "RASTERSIZE", buf);
+		IupSetAttribute(gui->butt_about, "RASTERSIZE", buf);
 	}
+
 	sprintf(buf, "%d", width - gui->magic_width);
 	IupSetAttribute(gui->list_oldname, "RASTERSIZE", buf);
 	IupSetAttribute(gui->list_preview, "RASTERSIZE", buf);
@@ -688,23 +701,21 @@ static Ihandle *mmgui_button_box(MMGUI *gui)
 	Ihandle	*vbox;
 
 	gui->butt_open = IupButton("Open", NULL);
-	IupSetAttribute(gui->butt_open, "SIZE", "80");
 	IupSetAttribute(gui->butt_open, "IMAGE", "IUP_FileOpen");
+	IupSetAttribute(gui->butt_open, "EXPAND", "HORIZONTALFREE");
 	gui->butt_del = IupButton("Delete", NULL);
-	IupSetAttribute(gui->butt_del, "SIZE", "50");
 	IupSetAttribute(gui->butt_del, "IMAGE", "IUP_EditErase");
+	IupSetAttribute(gui->butt_del, "EXPAND", "HORIZONTALFREE");
 	gui->butt_run = IupButton("Rename", NULL);
-	IupSetAttribute(gui->butt_run, "SIZE", "50");
 	IupSetAttribute(gui->butt_run, "IMAGE", "IUP_ActionOk");
+	IupSetAttribute(gui->butt_run, "EXPAND", "HORIZONTALFREE");
 	gui->butt_about = IupButton("About", NULL);
-	IupSetAttribute(gui->butt_about, "SIZE", "50");
 	IupSetAttribute(gui->butt_about, "IMAGE", "IUP_MessageInfo");
+	IupSetAttribute(gui->butt_about, "EXPAND", "HORIZONTALFREE");
 
-	vbox = IupGridBox(gui->butt_open, gui->butt_del, gui->butt_run, 
+	vbox = IupVbox(gui->butt_open, gui->butt_del, gui->butt_run, 
 			gui->butt_about, NULL);
-	IupSetAttribute(vbox, "ORIENTATION", "HORIZONTAL");
-	IupSetAttribute(vbox, "NUMDIV", "1");
-	IupSetAttribute(vbox, "NORMALIZESIZE", "BOTH");
+	IupSetAttribute(vbox, "NGAP", "4");
 
 	IupSetCallback(gui->butt_open, "ACTION",
 			(Icallback) mmgui_button_event_load);
@@ -731,7 +742,6 @@ static int mmgui_button_event_load(Ihandle *ih)
 		return IUP_DEFAULT;	/* cancelled */
 	}
 
-	/* FIXME: What would the path look like in Win32? */
 	/*printf("Open File VALUE: %s\n", 
 			IupGetAttribute(gui->dlg_open, "VALUE"));
 	printf("Last  DIRECTORY: %s\n", 
@@ -898,13 +908,14 @@ static Ihandle *mmgui_option_box(MMGUI *gui)
 	Ihandle	*vbox, *hbox;
 
 	vbox = IupVbox(IupLabel(NULL), NULL);
+	IupSetAttribute(vbox, "NORMALIZESIZE", "BOTH");
 
 	gui->tick_prefix  = IupToggle("Prefix", NULL);
 	IupSetAttribute(gui->tick_prefix, "SIZE", "40");
 	IupSetCallback(gui->tick_prefix, "ACTION",
 			(Icallback) mmgui_option_event_tick_prefix);
 	gui->entry_prefix = IupText(NULL);
-	IupSetAttribute(gui->entry_prefix, "SIZE", "60x10");
+	IupSetAttribute(gui->entry_prefix, "SIZE", "60");
 	IupSetCallback(gui->entry_prefix, "KILLFOCUS_CB",
 			(Icallback) mmgui_event_update);
 	hbox = IupHbox(gui->tick_prefix, gui->entry_prefix, NULL);
@@ -916,7 +927,7 @@ static Ihandle *mmgui_option_box(MMGUI *gui)
 	IupSetCallback(gui->tick_suffix, "ACTION",
 			(Icallback) mmgui_option_event_tick_suffix);
 	gui->entry_suffix = IupText(NULL);
-	IupSetAttribute(gui->entry_suffix, "SIZE", "60x10");
+	IupSetAttribute(gui->entry_suffix, "SIZE", "60");
 	IupSetCallback(gui->entry_suffix, "KILLFOCUS_CB", /* use the prefix */
 			(Icallback) mmgui_event_update);
 	hbox = IupHbox(gui->tick_suffix, gui->entry_suffix, NULL);
@@ -1172,7 +1183,7 @@ static Ihandle *mmgui_search_box(MMGUI *gui)
 	IupSetCallback(gui->tick_replaced, "ACTION",
 			(Icallback) mmgui_search_event_tick_replaced);
 	gui->entry_replaced = IupText(NULL);
-	IupSetAttribute(gui->entry_replaced, "SIZE", "28x10");
+	IupSetAttribute(gui->entry_replaced, "SIZE", "28");
 	IupSetCallback(gui->entry_replaced, "KILLFOCUS_CB",
 			(Icallback) mmgui_event_update);
 	item = IupHbox(gui->tick_replaced, gui->entry_replaced, NULL);
@@ -1399,4 +1410,4 @@ static int IupTool_FileDlgCounting(char *value)
 	}
 	return rc;
 }
-			
+

@@ -118,7 +118,7 @@ void *smm_fopen(char *path, char *mode)
 	FILE	*fp;
 
 	if ((fp = fopen(path, mode)) == NULL) {
-		smm_errno_update(SMM_ERR_FOPEN)
+		smm_errno_update(SMM_ERR_FOPEN);
 	} else {
 		smm_errno_update(SMM_ERR_NONE);
 	}
