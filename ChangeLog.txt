@@ -1,3 +1,10 @@
+20160717:
+	* rename.c: remove the overwrite option totally.
+	You don't want anything being accidently overwritten by a rename tool.
+	If you want, you need to use other tools. Rename tool is not 'mv'
+	or 'cp'. It does simply change filenames. If the target file is
+	already existed, renamex simply gives up.
+
 20160715:
 	* TODO: normalize the size of the right panel
 	* TODO: charset test plan needed in Windows

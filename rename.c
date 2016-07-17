@@ -98,20 +98,16 @@ int rename_enfile(RNOPT *opt, char *filename)
 {
 	FILE	*fp;
 	char	buf[RNM_PATH_MAX];
-	int	rc = RNM_ERR_NONE;
 
 	if ((fp = fopen(filename, "r")) == NULL) {
 		return RNM_ERR_OPENFILE;
 	}
 	while (fgets(buf, sizeof(buf), fp) != NULL) {
 		buf[strlen(buf)-1] = 0;
-		rc = rename_entry(opt, buf);
-		if (rc != RNM_ERR_NONE) {
-			break;
-		}
+		rename_entry(opt, buf);
 	}
 	fclose(fp);
-	return rc;
+	return RNM_ERR_NONE;
 }
 
 int rename_entry(RNOPT *opt, char *filename)
@@ -304,6 +300,10 @@ static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour)
 	 * unix because Windows doesn't care the capitcal or small letters */
 	if ((smm_fstat(dest) >= 0) && smm_fncmp(dest, sour)) {  
 		/* the target file has existed already */
+		/* Updated 20160717: remove the overwrite option totally.
+		 * You don't want anything being accidently overwritten by 
+		 * a rename tool. If you want, you need to use other tools. */
+		/*
 		switch (opt->cflags & RNM_CFLAG_PROMPT_MASK) {
 		case RNM_CFLAG_NEVER:
 			rename_notify(opt, RNM_MSG_SKIP_EXISTED, 0, dest,sour);
@@ -317,7 +317,9 @@ static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour)
 				return RNM_ERR_NONE;
 			}
 			break;
-		}
+		}*/
+		rename_notify(opt, RNM_MSG_SKIP_EXISTED, 0, dest,sour);
+		return RNM_ERR_SKIP;
 	}
 	if (opt->cflags & RNM_CFLAG_TEST) {
 		rename_notify(opt, RNM_MSG_SIMULATION, 0, dest, sour);

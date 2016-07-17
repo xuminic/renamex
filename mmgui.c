@@ -96,8 +96,6 @@ static int mmgui_fnlist_remove(MMGUI *gui, int idx);
 static int mmgui_fnlist_rename(MMGUI *gui, int idx);
 static int mmgui_fnlist_status(MMGUI *gui, char *color, char *fmt, ...);
 static int mmgui_fnlist_update_preview(MMGUI *gui, int action);
-static int mmgui_conflict_popup(MMGUI *gui, char *fname);
-static int mmgui_conflict_event(Ihandle* ih);
 static Ihandle *mmgui_button_box(MMGUI *gui);
 static int mmgui_button_event_load(Ihandle *ih);
 static int mmgui_button_event_delete(Ihandle *ih);
@@ -119,6 +117,9 @@ static int mmgui_search_reset(MMGUI *gui);
 static int mmgui_search_box_show(MMGUI *gui, int state);
 static int mmgui_search_strip_show(MMGUI *gui, int state);
 static int mmgui_search_event_tick_replaced(Ihandle* ih, int state);
+
+static int mmgui_conflict_popup(MMGUI *gui, char *fname);
+static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname);
 static char *IupTool_FileDlgExtract(char *dfn, char **sp);
 static int IupTool_FileDlgCounting(char *value);
 
@@ -388,12 +389,13 @@ static int mmgui_fnlist_event_dropfiles(Ihandle *ih,
 {
 	MMGUI	*gui;
 
+	(void) num; (void) x; (void) y;
+	//printf("mmgui_fnlist_event_dropfiles: fname=%s number=%d %dx%d\n",
+	//		filename, num, x, y);
+
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	printf("mmgui_fnlist_event_dropfiles: fname=%s number=%d %dx%d\n",
-			filename, num, x, y);
-
 	mmgui_fnlist_append(gui, filename);
 	return mmgui_event_update(ih);
 }
@@ -440,32 +442,79 @@ static int mmgui_fnlist_event_moused(Ihandle *ih,
 static int mmgui_fnlist_event_dblclick(Ihandle *ih, int item, char *text)
 {
 	MMGUI	*gui;
-	Ihandle	*entry, *lable, *zbox;
+	Ihandle	*entry, *shadow, *vbox, *hbox;
+	Ihandle	*butt_cancel, *butt_yes;
+	char	*srcname, *newpath, *tmp;
 
-	(void) item;
+	int mmgui_fnlist_event_dblclick_button(Ihandle* ih)
+	{
+		IupSetAttribute(ih, "FCDLGCLICK", "YES");
+		return IUP_CLOSE;
+	}
 
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
 
-	lable = IupLabel(text);
-	IupSetAttribute(lable, "EXPAND", "HORIZONTAL");
-	IupSetAttribute(lable, "VISIBLE", "NO");
-	lable = IupHbox(lable, NULL);
-	IupSetAttribute(lable, "NMARGIN", "32x16");
+	/* the button box in the bottom of the dialog window */
+	butt_cancel = IupButton("Cancel", NULL);
+	IupSetAttribute(butt_cancel, "IMAGE", "IUP_ActionCancel");
+	IupSetAttribute(butt_cancel, "PADDING", "8");
+	IupSetCallback(butt_cancel, "ACTION",
+			(Icallback) mmgui_fnlist_event_dblclick_button);
+	butt_yes = IupButton("Rename", NULL);
+	IupSetAttribute(butt_yes, "IMAGE", "IUP_ActionOk");
+	IupSetAttribute(butt_yes, "PADDING", "8");
+	IupSetCallback(butt_yes, "ACTION",
+			(Icallback) mmgui_fnlist_event_dblclick_button);
+
+	/* pack the buttons first because we want them normalized */
+	hbox = IupHbox(butt_cancel, butt_yes, NULL);
+	IupSetAttribute(hbox, "NGAP", "4");
+	IupSetAttribute(hbox, "NORMALIZESIZE", "HORIZONTAL");
+
+	shadow = IupLabel("");	/* padding the left side of the box */
+	IupSetAttribute(shadow, "SIZE", "100");
+	IupSetAttribute(shadow, "VISIBLE", "NO");
+
+	hbox = IupHbox(shadow, IupFill(), hbox, NULL); 
 	
+	/* only display the basename not the full path */
+	srcname = csc_path_basename(text, NULL, 0);
+
 	entry = IupText(NULL);
-	IupSetAttribute(entry, "VALUE", text);
+	IupSetAttribute(entry, "VALUE", srcname);
 	IupSetAttribute(entry, "EXPAND", "HORIZONTAL");
-	entry = IupHbox(entry, NULL);
-	IupSetAttribute(entry, "NMARGIN", "16x16");
+	IupSetAttribute(entry, "SELECTION", "1:2");
 
-	zbox = IupZbox(entry, lable, NULL);
-	IupSetAttribute(zbox, "ALIGNMENT", "ACENTER");
+	/* use this invisible control to keep the text control long enough */
+	shadow = IupLabel(srcname);
+	IupSetAttribute(shadow, "PADDING", "10");
+	IupSetAttribute(shadow, "VISIBLE", "NO");
 
-	ih = IupDialog(zbox);
-	IupSetAttribute(ih, "TITLE", "Pattern Clipboard");
-	IupPopup(ih, IUP_CENTER, IUP_CENTER);
+	vbox = IupVbox(entry, shadow, hbox, NULL);
+	IupSetAttribute(vbox, "NGAP", "4x4");
+	IupSetAttribute(vbox, "NMARGIN", "16x16");
+
+	hbox = IupDialog(vbox);	/* never mind the old hbox */
+	IupSetAttribute(hbox, "TITLE", "Direct Rename");
+	IupSetAttribute(hbox, "MAXBOX", "NO");
+	IupSetAttribute(hbox, "MINBOX", "NO");
+	IupSetAttribute(hbox, "HIDETASKBAR", "YES");
+	IupSetAttribute(hbox, "PARENTDIALOG", gui->inst_id);
+	IupPopup(hbox, IUP_CENTER, IUP_CENTER);
+
+	if (IupGetAttribute(butt_yes, "FCDLGCLICK") != NULL) {
+		srcname = IupGetAttribute(entry, "VALUE");
+		newpath = csc_strcpy_alloc(text, strlen(srcname));
+		tmp = csc_path_basename(newpath, NULL, 0);
+		strcpy(tmp, srcname);
+
+		if (mmgui_rename_exec(gui, item, newpath, text) 
+				== RNM_ERR_NONE) {
+			mmgui_event_update(ih);	/* update the preview */
+		}
+	}
 	return IUP_DEFAULT;
 }
 
@@ -499,9 +548,7 @@ static int mmgui_fnlist_remove(MMGUI *gui, int idx)
 
 static int mmgui_fnlist_rename(MMGUI *gui, int idx)
 {
-	RNOPT	*opt = gui->ropt;
 	char	*srcname, *dstname;
-	int	rc;
 
 	srcname = IupGetAttributeId(gui->list_oldname, "", idx);
 	if (srcname == NULL) {
@@ -515,23 +562,7 @@ static int mmgui_fnlist_rename(MMGUI *gui, int idx)
 		return IUP_DEFAULT;
 	}
 
-	//printf("RENAME: %s\n", srcname);
-	if (!strcmp(dstname, srcname)) {
-		return RNM_ERR_SKIP;
-	}
-
-	/* set the codepage to utf-8 before calling rename core. 
-	 * In Win32 version, the rename uses the default codepage to process
-	 * file name. However the GTK converted the file name to UTF-8 so 
-	 * the Windows version could not find the file. */
-	smm_codepage_set(65001);  /* set the codepage to utf-8 */
-	rc = rename_executing(opt, dstname, srcname);
-	smm_codepage_reset();
-
-	if (rc == RNM_ERR_NONE) {
-		IupSetAttributeId(gui->list_oldname, "", idx, dstname);
-	}
-	return rc;
+	return mmgui_rename_exec(gui, idx, dstname, srcname);
 }
 
 static int mmgui_fnlist_status(MMGUI *gui, char *color, char *fmt, ...)
@@ -584,114 +615,6 @@ static int mmgui_fnlist_update_preview(MMGUI *gui, int action)
 	}
 	return IUP_DEFAULT;
 }
-
-/****************************************************************************
- * File Conflict Popup
- ****************************************************************************/
-static int mmgui_conflict_popup(MMGUI *gui, char *fname)
-{
-	Ihandle	*widget, *vbox, *hbox;
-	Ihandle	*butt_yes, *butt_no, *butt_cancel, *tick_always;
-	char	*title, *p;
-	int	tlen;
-
-	tlen = strlen(fname) + 128;
-	if ((title = smm_alloc(tlen)) == NULL) {
-		return RNM_ERR_LOWMEM;
-	}
-	strcpy(title, "A file name \"");
-	strcat(title, fname);
-	strcat(title, "\" is already exists. Do you want to replace it?\n");
-	
-	/* IupLabel() can not wrap the line so I have to do it manually */
-	for (p = title + 48; p < title + strlen(title); p += 48) {
-		for ( ; *p; p++) {
-			if (csc_isdelim(" -/\\", *p)) {
-				csc_strinsert(title, tlen, p+1, 0, "\n");
-				break;
-			}
-		}
-	}
-
-	widget = IupLabel(title);
-	IupSetAttribute(widget, "FONTSIZE", "14");
-	IupSetAttribute(widget, "FONTSTYLE", "Bold");
-	IupSetAttribute(widget, "ALIGNMENT", "ALEFT");
-	//IupSetAttribute(widget, "WORDWRAP", "YES");
-	vbox = IupVbox(widget, NULL);
-
-	widget = IupLabel("Replacing it will overwrite its content.\n\n\n");
-	IupAppend(vbox, widget);
-
-	tick_always = IupToggle("Apply this action to all files", NULL);
-	IupAppend(vbox, tick_always);
-
-	IupSetHandle("WARN_ICON", IupImageRGBA(64, 64, mmrc_icon_warning));
-	widget = IupLabel("");
-	IupSetAttribute(widget, "IMAGE", "WARN_ICON");
-	hbox = IupHbox(widget, vbox, NULL);
-	IupSetAttribute(hbox, "NGAP", "8");
-
-	vbox = IupVbox(hbox, IupFill(), NULL);
-	IupSetAttribute(vbox, "NGAP", "8");
-	IupSetAttribute(vbox, "NMARGIN", "16x16");
-
-	butt_yes = IupButton("Replace", NULL);
-	IupSetAttribute(butt_yes, "SIZE", "50");
-	IupSetAttribute(butt_yes, "IMAGE", "IUP_ActionOk");
-	IupSetCallback(butt_yes, "ACTION", (Icallback) mmgui_conflict_event);
-
-	butt_no = IupButton("Skip", NULL);
-	IupSetAttribute(butt_no, "SIZE", "50");
-	IupSetAttribute(butt_no, "IMAGE", "IUP_EditUndo");
-	IupSetCallback(butt_no, "ACTION", (Icallback) mmgui_conflict_event);
-
-	butt_cancel = IupButton("Cancel", NULL);
-	IupSetAttribute(butt_cancel, "SIZE", "50");
-	IupSetAttribute(butt_cancel, "IMAGE", "IUP_ActionCancel");
-	IupSetCallback(butt_cancel, "ACTION", (Icallback)mmgui_conflict_event);
-
-	widget = IupHbox(IupFill(), butt_cancel, butt_no, butt_yes, NULL);
-	IupSetAttribute(widget, "NGAP", "4");
-	IupAppend(vbox, widget);
-
-	widget = IupDialog(vbox);
-	IupSetAttribute(widget, "TITLE", "File Conflict");
-	IupSetAttribute(widget, "RESIZE", "NO");
-	IupSetAttribute(widget, "MAXBOX", "NO");
-	IupSetAttribute(widget, "MINBOX", "NO");
-	IupSetAttribute(widget, "HIDETASKBAR", "YES");
-	IupSetAttribute(widget, "PARENTDIALOG", gui->inst_id);
-	IupPopup(widget, IUP_CENTER, IUP_CENTER);
-	smm_free(title);
-
-	if ((p = IupGetAttribute(butt_yes, "FCDLGCLICK")) != NULL) {
-		tlen = 1;
-	} else if ((p = IupGetAttribute(butt_no, "FCDLGCLICK")) != NULL) {
-		tlen = 0;
-	} else {
-		return 0;	/* cancel and no */
-	}
-	
-	p = IupGetAttribute(tick_always, "VALUE");
-	if (p && !strcmp(p, "ON")) {
-		gui->ropt->cflags &= ~RNM_CFLAG_PROMPT_MASK;
-		if (tlen) {
-			gui->ropt->cflags |= RNM_CFLAG_ALWAYS;
-		} else {
-			gui->ropt->cflags |= RNM_CFLAG_NEVER;
-		}
-		rename_option_dump(gui->ropt);
-	}
-	return tlen;
-}
-
-static int mmgui_conflict_event(Ihandle* ih)
-{
-	IupSetAttribute(ih, "FCDLGCLICK", "YES");
-	return IUP_CLOSE;
-}
-
 
 /****************************************************************************
  * Button box group
@@ -800,7 +723,7 @@ static int mmgui_button_event_rename(Ihandle *ih)
 	gui->ropt->rpcnt = 0;
 
 	/* run rename one by one */
-	//IupSetAttribute(gui->zbox_extent, "VALUEPOS", "1");
+	IupSetAttribute(gui->zbox_extent, "VALUEPOS", "1");
 	mmgui_search_strip_show(gui, 0);	
 	IupSetAttribute(gui->progress, "VISIBLE", "YES");
 
@@ -817,14 +740,16 @@ static int mmgui_button_event_rename(Ihandle *ih)
 		}
 		IupFlush();
 	}
-	IupSetInt(gui->progress, "VALUE",gui->fileno);
+	IupSetInt(gui->progress, "VALUE", gui->fileno);
 	smm_sleep(0, 200000);
+	IupSetInt(gui->progress, "VALUE", 0);
 	
 	IupSetAttribute(gui->progress, "VISIBLE", "NO");
 	value = IupGetAttribute(gui->tick_search, "VALUE");
 	if (!strcmp(value, "ON")) {
 		mmgui_search_strip_show(gui, 1);
 	}
+	IupSetAttribute(gui->zbox_extent, "VALUEPOS", "0");
 
 	mmgui_fnlist_status(gui, NULL, "%d Files renamed", gui->ropt->rpcnt);
 	//mmgui_conflict_popup(gui, "asdf/asdf/asdf/asdf");
@@ -1319,6 +1244,142 @@ static int mmgui_search_event_tick_replaced(Ihandle* ih, int state)
 	return mmgui_event_update(ih);
 }
 
+/****************************************************************************
+ * File Conflict Popup
+ ****************************************************************************/
+static int mmgui_conflict_popup(MMGUI *gui, char *fname)
+{
+	Ihandle	*widget, *vbox, *hbox;
+	Ihandle	*butt_yes, *butt_no, *butt_cancel, *tick_always;
+	char	*title, *p;
+	int	tlen;
+	
+	int mmgui_conflict_event(Ihandle* ih)
+	{
+		IupSetAttribute(ih, "FCDLGCLICK", "YES");
+		return IUP_CLOSE;
+	}
+
+	tlen = strlen(fname) + 128;
+	if ((title = smm_alloc(tlen)) == NULL) {
+		return RNM_ERR_LOWMEM;
+	}
+	strcpy(title, "A file name \"");
+	strcat(title, fname);
+	strcat(title, "\" is already exists. Do you want to replace it?\n");
+	
+	/* IupLabel() can not wrap the line so I have to do it manually */
+	for (p = title + 48; p < title + strlen(title); p += 48) {
+		for ( ; *p; p++) {
+			if (csc_isdelim(" -/\\", *p)) {
+				csc_strinsert(title, tlen, p+1, 0, "\n");
+				break;
+			}
+		}
+	}
+
+	widget = IupLabel(title);
+	IupSetAttribute(widget, "FONTSIZE", "14");
+	IupSetAttribute(widget, "FONTSTYLE", "Bold");
+	IupSetAttribute(widget, "ALIGNMENT", "ALEFT");
+	//IupSetAttribute(widget, "WORDWRAP", "YES");
+	vbox = IupVbox(widget, NULL);
+
+	widget = IupLabel("Replacing it will overwrite its content.\n\n\n");
+	IupAppend(vbox, widget);
+
+	tick_always = IupToggle("Apply this action to all files", NULL);
+	IupAppend(vbox, tick_always);
+
+	IupSetHandle("WARN_ICON", IupImageRGBA(64, 64, mmrc_icon_warning));
+	widget = IupLabel("");
+	IupSetAttribute(widget, "IMAGE", "WARN_ICON");
+	hbox = IupHbox(widget, vbox, NULL);
+	IupSetAttribute(hbox, "NGAP", "8");
+
+	vbox = IupVbox(hbox, IupFill(), NULL);
+	IupSetAttribute(vbox, "NGAP", "8");
+	IupSetAttribute(vbox, "NMARGIN", "16x16");
+
+	butt_yes = IupButton("Replace", NULL);
+	IupSetAttribute(butt_yes, "SIZE", "50");
+	IupSetAttribute(butt_yes, "IMAGE", "IUP_ActionOk");
+	IupSetCallback(butt_yes, "ACTION", (Icallback) mmgui_conflict_event);
+
+	butt_no = IupButton("Skip", NULL);
+	IupSetAttribute(butt_no, "SIZE", "50");
+	IupSetAttribute(butt_no, "IMAGE", "IUP_EditUndo");
+	IupSetCallback(butt_no, "ACTION", (Icallback) mmgui_conflict_event);
+
+	butt_cancel = IupButton("Cancel", NULL);
+	IupSetAttribute(butt_cancel, "SIZE", "50");
+	IupSetAttribute(butt_cancel, "IMAGE", "IUP_ActionCancel");
+	IupSetCallback(butt_cancel, "ACTION", (Icallback)mmgui_conflict_event);
+
+	widget = IupHbox(IupFill(), butt_cancel, butt_no, butt_yes, NULL);
+	IupSetAttribute(widget, "NGAP", "4");
+	IupAppend(vbox, widget);
+
+	widget = IupDialog(vbox);
+	IupSetAttribute(widget, "TITLE", "File Conflict");
+	IupSetAttribute(widget, "RESIZE", "NO");
+	IupSetAttribute(widget, "MAXBOX", "NO");
+	IupSetAttribute(widget, "MINBOX", "NO");
+	IupSetAttribute(widget, "HIDETASKBAR", "YES");
+	IupSetAttribute(widget, "PARENTDIALOG", gui->inst_id);
+	IupPopup(widget, IUP_CENTER, IUP_CENTER);
+	smm_free(title);
+
+	if ((p = IupGetAttribute(butt_yes, "FCDLGCLICK")) != NULL) {
+		tlen = 1;
+	} else if ((p = IupGetAttribute(butt_no, "FCDLGCLICK")) != NULL) {
+		tlen = 0;
+	} else {
+		return 0;	/* cancel and no */
+	}
+	
+	p = IupGetAttribute(tick_always, "VALUE");
+	if (p && !strcmp(p, "ON")) {
+		gui->ropt->cflags &= ~RNM_CFLAG_PROMPT_MASK;
+		if (tlen) {
+			gui->ropt->cflags |= RNM_CFLAG_ALWAYS;
+		} else {
+			gui->ropt->cflags |= RNM_CFLAG_NEVER;
+		}
+		rename_option_dump(gui->ropt);
+	}
+	return tlen;
+}
+
+/****************************************************************************
+ * Supportives
+ ****************************************************************************/
+static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname)
+{
+	int 	rc;
+
+	//printf("mmgui_rename_exec[%d]: %s -> %s\n", i, srcname, dstname);
+	if (!strcmp(dstname, srcname)) {
+		return RNM_ERR_SKIP;
+	}
+
+	/* set the codepage to utf-8 before calling rename core. 
+	 * In Win32 version, the rename uses the default codepage to process
+	 * file name. However the GTK converted the file name to UTF-8 so 
+	 * the Windows version could not find the file. */
+	smm_codepage_set(65001);  /* set the codepage to utf-8 */
+	rc = rename_executing(gui->ropt, dstname, srcname);
+	smm_codepage_reset();
+
+	if (rc == RNM_ERR_NONE) {
+		/* multi-selection event will be triggered by this statement
+		 * because it de-selected the current list by changing its
+		 * content */
+		IupSetAttributeId(gui->list_oldname, "", i, dstname);
+	}
+	return rc;
+}
+
 /* IUP generate different file list between one file and more files:
  * Open File VALUE: /home/xum1/dwhelper/lan_ke_er.flv
  * Last  DIRECTORY: /home/xum1/dwhelper/
@@ -1399,7 +1460,6 @@ static void IupTool_FileDlgExtract_Test(char *dfn)
 	} while (tmp);
 }
 #endif
-
 
 static int IupTool_FileDlgCounting(char *value)
 {

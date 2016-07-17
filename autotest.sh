@@ -119,10 +119,10 @@ make_scenario()
 }
 
 
-#make_scenario
+make_scenario
 #$RENAME -l "$ATROOT/Documents/Datasheets/ST3160023AS.pdf"
 #verify "$ATROOT/Documents/Datasheets/st3160023as.pdf"
-#exit
+exit
 
 echo "[Test001]: direct rename mode with quoted file names"
 make_scenario

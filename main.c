@@ -235,17 +235,17 @@ int main(int argc, char **argv)
 	if (rename_compile_regex(sysopt)) {
 		return RNM_ERR_REGPAT;
 	}
-	for (c = optind; (c < argc) && (rc == RNM_ERR_NONE); c++) {
+	for (c = optind; c < argc; c++) {
 		if (infile) {
-			rc = rename_enfile(sysopt, argv[c]);
+			rename_enfile(sysopt, argv[c]);
 		} else {
-			rc = rename_entry(sysopt, argv[c]);
+			rename_entry(sysopt, argv[c]);
 		}
 	}
 
 	printf("%d files renamed.\n", sysopt->rpcnt);
 	rename_free_all(0);
-	return rc;
+	return 0;
 }
 
 static int rename_free_all(int sig)
