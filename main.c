@@ -35,8 +35,6 @@
 #include "libcsoup.h"
 #include "rename.h"
 
-RNOPT	*sysopt = NULL;
-
 static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, "Usage: renamex [OPTIONS] filename ..." },
 	{ 0, NULL, 0, "OPTIONS:" },
@@ -68,7 +66,6 @@ The SW could be:\n\
 	{ 0, NULL, 0, NULL }
 };
 
-
 const	char	*help_version = "Rename Extension " RENAME_VERSION;
 
 const	char	*help_descript = "\
@@ -89,6 +86,8 @@ The GUI frontend is based on IUP, a multi-platform toolkit for building\n\
 graphical user interfaces.\n\
 http://webserver2.tecgraf.puc-rio.br/iup\n";
 
+RNOPT	sysopt;
+
 static int rename_free_all(int sig);
 static int cli_set_pattern(RNOPT *opt, char *optarg);
 static int debug_main(char *optarg, int optind, int argc, char **argv);
@@ -100,19 +99,16 @@ int main(int argc, char **argv)
 
 	smm_init();
 
-	if ((sysopt = malloc(sizeof(RNOPT))) == NULL) {
-		return RNM_ERR_LOWMEM;
-	}
-	memset(sysopt, 0, sizeof(RNOPT));
-	sysopt->compare = strncmp;
-	sysopt->cflags = RNM_CFLAG_NEVER;
+	memset(&sysopt, 0, sizeof(RNOPT));
+	sysopt.compare = strncmp;
+	sysopt.cflags = RNM_CFLAG_NEVER;
 
 	if ((argp = csc_cli_getopt_open(clist)) == NULL) {
 		return -1;
 	}
 	
 #ifdef  CFG_GUI_ON
-	if ((sysopt->gui = mmgui_open(sysopt, &argc, &argv)) == NULL) {
+	if ((sysopt.gui = mmgui_open(&sysopt, &argc, &argv)) == NULL) {
 		return -2; /* the config file */
 	}
 #endif
@@ -137,39 +133,39 @@ int main(int argc, char **argv)
 			infile = 1;
 			break;
 		case 'l':
-			sysopt->oflags &= ~RNM_OFLAG_MASKCASE;
-			sysopt->oflags |= RNM_OFLAG_LOWERCASE;
+			sysopt.oflags &= ~RNM_OFLAG_MASKCASE;
+			sysopt.oflags |= RNM_OFLAG_LOWERCASE;
 			break;
 		case 'u':
-			sysopt->oflags &= ~RNM_OFLAG_MASKCASE;
-			sysopt->oflags |= RNM_OFLAG_UPPERCASE;
+			sysopt.oflags &= ~RNM_OFLAG_MASKCASE;
+			sysopt.oflags |= RNM_OFLAG_UPPERCASE;
 			break;
 		case 'p':
-			sysopt->oflags |= RNM_OFLAG_PREFIX;
-			sysopt->prefix  = optarg;
-			sysopt->pre_len = strlen(optarg);
+			sysopt.oflags |= RNM_OFLAG_PREFIX;
+			sysopt.prefix  = optarg;
+			sysopt.pre_len = strlen(optarg);
 			break;
 		case 'x':
-			sysopt->oflags |= RNM_OFLAG_SUFFIX;
-			sysopt->suffix  = optarg;
-			sysopt->suf_len = strlen(optarg);
+			sysopt.oflags |= RNM_OFLAG_SUFFIX;
+			sysopt.suffix  = optarg;
+			sysopt.suf_len = strlen(optarg);
 			break;
 #ifdef	CFG_GUI_ON
 		case 'G':
-			sysopt->cflags |= RNM_CFLAG_GUI;
+			sysopt.cflags |= RNM_CFLAG_GUI;
 			break;
 #endif
 		case 'R':
-			sysopt->cflags |= RNM_CFLAG_RECUR;
+			sysopt.cflags |= RNM_CFLAG_RECUR;
 			break;
 		case 'v':
-			sysopt->cflags |= RNM_CFLAG_VERBOSE;
+			sysopt.cflags |= RNM_CFLAG_VERBOSE;
 			break;
 		case 't':
-			sysopt->cflags |= RNM_CFLAG_TEST | RNM_CFLAG_VERBOSE;
+			sysopt.cflags |= RNM_CFLAG_TEST | RNM_CFLAG_VERBOSE;
 			break;
 		case 's':
-			rc = cli_set_pattern(sysopt, optarg);
+			rc = cli_set_pattern(&sysopt, optarg);
 			if (rc != RNM_ERR_NONE) {
 				return rc;
 			}
@@ -177,23 +173,23 @@ int main(int argc, char **argv)
 		}
 	}
 
-	sysopt->rtpath  = smm_cwd_push();
+	sysopt.rtpath  = smm_cwd_push();
 	smm_signal_break(rename_free_all);
 
-	if (sysopt->cflags & RNM_CFLAG_TEST) {
-		rename_option_dump(sysopt);
+	if (sysopt.cflags & RNM_CFLAG_TEST) {
+		rename_option_dump(&sysopt);
 	}
 
 #ifdef	CFG_GUI_ON
-	if (sysopt->cflags & RNM_CFLAG_GUI) {
-		rc = mmgui_run(sysopt->gui, argc - optind, &argv[optind]);
+	if (sysopt.cflags & RNM_CFLAG_GUI) {
+		rc = mmgui_run(sysopt.gui, argc - optind, &argv[optind]);
 		rename_free_all(0);
 		return rc;
 	}
 #endif
 	if (optind >= argc) {	/* no file name offered */
 #ifdef	CFG_GUI_ON
-		rc = mmgui_run(sysopt->gui, 0, NULL);
+		rc = mmgui_run(sysopt.gui, 0, NULL);
 #else
 		printf("%s: missing file operand\n", argv[0]);
 		rc = RNM_ERR_PARAM;
@@ -201,18 +197,18 @@ int main(int argc, char **argv)
 		rename_free_all(0);
 		return rc;
 	}
-	if (!sysopt->oflags && !sysopt->action) { /* no operation specified */
+	if (!sysopt.oflags && !sysopt.action) { /* no operation specified */
 		/* if user request command like
 		 *   renamex oldname newname
 		 * the renamex will do the direct renaming for mv's sake.
 		 * However renamex is NOT mv so it won't check the crosslink
 		 * of devices or anything fancy */
 		if (optind + 2 == argc) {
-			rc = rename_executing(sysopt, 
+			rc = rename_executing(&sysopt, 
 					argv[optind+1], argv[optind]);
 		} else {
 #ifdef	CFG_GUI_ON
-			rc = mmgui_run(sysopt->gui, 
+			rc = mmgui_run(sysopt.gui, 
 					argc - optind, &argv[optind]);
 #else
 			printf("%s: missing rename operand\n", argv[0]);
@@ -223,20 +219,20 @@ int main(int argc, char **argv)
 		return rc;
 	}
 
-	if (rename_compile_regex(sysopt)) {
+	if (rename_compile_regex(&sysopt)) {
 		return RNM_ERR_REGPAT;
 	}
 	for (c = optind; c < argc; c++) {
 		if (infile) {
-			rename_enfile(sysopt, argv[c]);
+			rename_enfile(&sysopt, argv[c]);
 		} else {
-			rename_entry(sysopt, argv[c]);
+			rename_entry(&sysopt, argv[c]);
 		}
 	}
 
 	printf("Total:%d  Renamed:%d  Failed:%d  No-change:%d  Existed:%d\n",
-			sysopt->st_process, sysopt->st_success, 
-			sysopt->st_failed, sysopt->st_same, sysopt->st_skip);
+			sysopt.st_process, sysopt.st_success, 
+			sysopt.st_failed, sysopt.st_same, sysopt.st_skip);
 	rename_free_all(0);
 	return 0;
 }
@@ -245,19 +241,18 @@ static int rename_free_all(int sig)
 {
 	(void) sig;
 
-	if (sysopt->action == RNM_ACT_REGEX) {
-		regfree(sysopt->preg);
+	if (sysopt.action == RNM_ACT_REGEX) {
+		regfree(sysopt.preg);
 	}
-	if (sysopt->patbuf) {
-		sysopt->patbuf = smm_free(sysopt->patbuf);
+	if (sysopt.patbuf) {
+		sysopt.patbuf = smm_free(sysopt.patbuf);
 	}
-	if (sysopt->rtpath) {
-		smm_cwd_pop(sysopt->rtpath);
+	if (sysopt.rtpath) {
+		smm_cwd_pop(sysopt.rtpath);
 	}
 #ifdef	CFG_GUI_ON
-	mmgui_close(sysopt->gui);
+	mmgui_close(sysopt.gui);
 #endif
-	free(sysopt);
 	return 0;
 }
 
