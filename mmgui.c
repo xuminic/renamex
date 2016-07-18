@@ -498,6 +498,7 @@ static int mmgui_fnlist_event_dblclick(Ihandle *ih, int item, char *text)
 
 	hbox = IupDialog(vbox);	/* never mind the old hbox */
 	IupSetAttribute(hbox, "TITLE", "Direct Rename");
+	IupSetAttribute(hbox, "ICON", "DLG_ICON");
 	IupSetAttribute(hbox, "MAXBOX", "NO");
 	IupSetAttribute(hbox, "MINBOX", "NO");
 	IupSetAttribute(hbox, "HIDETASKBAR", "YES");
@@ -567,7 +568,7 @@ static int mmgui_fnlist_rename(MMGUI *gui, int idx)
 
 static int mmgui_fnlist_status(MMGUI *gui, char *color, char *fmt, ...)
 {
-	char	value[128];
+	static	char	value[128];
 	va_list	ap;
 
 	if (color) {
@@ -793,6 +794,7 @@ static int mmgui_button_event_about(Ihandle *ih)
 
 	ih = IupDialog(vbox);
 	IupSetAttribute(ih, "TITLE", "About");
+	IupSetAttribute(ih, "ICON", "DLG_ICON");
 	IupSetAttribute(ih, "RESIZE", "NO");
 	IupSetAttribute(ih, "MAXBOX", "NO");
 	IupSetAttribute(ih, "MINBOX", "NO");
@@ -1322,6 +1324,7 @@ static int mmgui_conflict_popup(MMGUI *gui, char *fname)
 
 	widget = IupDialog(vbox);
 	IupSetAttribute(widget, "TITLE", "File Conflict");
+	IupSetAttribute(widget, "ICON", "DLG_ICON");
 	IupSetAttribute(widget, "RESIZE", "NO");
 	IupSetAttribute(widget, "MAXBOX", "NO");
 	IupSetAttribute(widget, "MINBOX", "NO");

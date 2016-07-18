@@ -118,10 +118,18 @@ make_scenario()
   ln -s "Downloads/PDF_GPS/CH_KOONDROOK.pdf" "$ATROOT/link_to_koondrook"
 }
 
+if [ "$1" = "create" ]; then
+  make_scenario
+  #$RENAME -l "$ATROOT/Documents/Datasheets/ST3160023AS.pdf"
+  #verify "$ATROOT/Documents/Datasheets/st3160023as.pdf"
+  exit
+fi
 
-make_scenario
-#$RENAME -l "$ATROOT/Documents/Datasheets/ST3160023AS.pdf"
-#verify "$ATROOT/Documents/Datasheets/st3160023as.pdf"
+if [ "$MSYSTEM" != "MINGW32" ]; then
+  echo This is Linux
+else
+  echo This is MINGW
+fi
 exit
 
 echo "[Test001]: direct rename mode with quoted file names"
