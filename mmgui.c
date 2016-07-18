@@ -413,7 +413,7 @@ static int mmgui_fnlist_event_multi_select(Ihandle *ih, char *value)
 
 	value = IupGetAttribute(gui->list_oldname, "VALUE");
 	//printf("List value=%s\n", value);
-	mmgui_fnlist_status(gui, NULL, "%d File Selected", 
+	mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "%d File Selected", 
 			IupTool_FileDlgCounting(value));
 	return mmgui_event_update(ih);
 }
@@ -434,7 +434,7 @@ static int mmgui_fnlist_event_moused(Ihandle *ih,
 	/* deselect every thing if the right button was released */
 	if (button == IUP_BUTTON3) {
 		IupSetAttribute(gui->list_oldname, "VALUE", "");
-		mmgui_fnlist_status(gui, NULL, "0 File Selected");
+		mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "0 File Selected");
 	}
 	return mmgui_event_update(ih);
 }
@@ -445,6 +445,7 @@ static int mmgui_fnlist_event_dblclick(Ihandle *ih, int item, char *text)
 	Ihandle	*entry, *shadow, *vbox, *hbox;
 	Ihandle	*butt_cancel, *butt_yes;
 	char	*srcname, *newpath, *tmp;
+	int	rc;
 
 	int mmgui_fnlist_event_dblclick_button(Ihandle* ih)
 	{
@@ -511,10 +512,12 @@ static int mmgui_fnlist_event_dblclick(Ihandle *ih, int item, char *text)
 		tmp = csc_path_basename(newpath, NULL, 0);
 		strcpy(tmp, srcname);
 
-		if (mmgui_rename_exec(gui, item, newpath, text) 
-				== RNM_ERR_NONE) {
+		rename_status_clean(gui->ropt);
+		rc = mmgui_rename_exec(gui, item, newpath, text);
+		if (rc == RNM_ERR_NONE) {
 			mmgui_event_update(ih);	/* update the preview */
 		}
+		smm_free(newpath);
 	}
 	return IUP_DEFAULT;
 }
@@ -524,7 +527,7 @@ static int mmgui_fnlist_append(MMGUI *gui, char *fname)
 	if (fname) {
 		IupSetStrAttributeId(gui->list_oldname, "",  
 				++(gui->fileno), fname);
-		mmgui_fnlist_status(gui, NULL, 
+		mmgui_fnlist_status(gui, IUPCOLOR_BLACK,
 				"%d Files in the Queue", gui->fileno);
 	}
 	return IUP_DEFAULT;
@@ -543,13 +546,14 @@ static int mmgui_fnlist_remove(MMGUI *gui, int idx)
 	if (fname) {
 		IupSetInt(gui->list_preview, "REMOVEITEM", idx);
 	}
-	mmgui_fnlist_status(gui, NULL, "%d Files in the Queue", gui->fileno);
+	mmgui_fnlist_status(gui, IUPCOLOR_BLACK, 
+			"%d Files in the Queue", gui->fileno);
 	return IUP_DEFAULT;
 }
 
 static int mmgui_fnlist_rename(MMGUI *gui, int idx)
 {
-	char	*srcname, *dstname;
+	char	*srcname;
 
 	srcname = IupGetAttributeId(gui->list_oldname, "", idx);
 	if (srcname == NULL) {
@@ -557,13 +561,17 @@ static int mmgui_fnlist_rename(MMGUI *gui, int idx)
 		return IUP_DEFAULT;
 	}
 	
-	dstname = IupGetAttributeId(gui->list_preview, "", idx);
+	//FIXME: STILL BUGGY
+	/*dstname = IupGetAttributeId(gui->list_preview, "", idx);
 	if (dstname == NULL) {
 		printf("mmgui_fnlist_rename: lost preview.\n");
 		return IUP_DEFAULT;
+	}*/
+	if (rename_open_buffer(gui->ropt, srcname) != RNM_ERR_NONE) {
+		printf("mmgui_fnlist_rename: can not rename\n");
+		return IUP_DEFAULT;
 	}
-
-	return mmgui_rename_exec(gui, idx, dstname, srcname);
+	return mmgui_rename_exec(gui, idx, gui->ropt->buffer, srcname);
 }
 
 static int mmgui_fnlist_status(MMGUI *gui, char *color, char *fmt, ...)
@@ -578,6 +586,7 @@ static int mmgui_fnlist_status(MMGUI *gui, char *color, char *fmt, ...)
 		va_start(ap, fmt);
 		SMM_VSNPRINT(value, sizeof(value), fmt, ap);
 		va_end(ap);
+		puts(value);
 		IupSetAttribute(gui->status, "TITLE", value);
 	}
 	return IUP_DEFAULT;
@@ -739,7 +748,17 @@ static int mmgui_button_event_rename(Ihandle *ih)
 		IupFlush();
 	}
 	IupSetInt(gui->progress, "VALUE", gui->fileno);
-	smm_sleep(0, 200000);	//FIXME: POP UP
+	
+	IupMessagef("Batch Rename", 
+			"Total Process Files:             %d\n"
+			"Successfully Renamed Files:      %d\n"
+			"Failed to be renamed:            %d\n"
+			"Unchanged Files:                 %d\n"
+			"Skipped Existed Files:           %d\n",
+			gui->ropt->st_process, gui->ropt->st_success,
+			gui->ropt->st_failed, gui->ropt->st_same, 
+			gui->ropt->st_skip);
+
 	IupSetInt(gui->progress, "VALUE", 0);
 	
 	IupSetAttribute(gui->progress, "VISIBLE", "NO");
@@ -749,7 +768,7 @@ static int mmgui_button_event_rename(Ihandle *ih)
 	}
 	IupSetAttribute(gui->zbox_extent, "VALUEPOS", "0");
 
-	mmgui_fnlist_status(gui, NULL, 
+	mmgui_fnlist_status(gui, IUPCOLOR_BLACK,
 			"%d Files renamed", gui->ropt->st_success);
 	return mmgui_option_free(gui);
 }
@@ -1359,9 +1378,6 @@ static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname)
 	int 	rc;
 
 	//printf("mmgui_rename_exec[%d]: %s -> %s\n", i, srcname, dstname);
-	if (!strcmp(dstname, srcname)) {
-		return RNM_ERR_SKIP;
-	}
 
 	/* set the codepage to utf-8 before calling rename core. 
 	 * In Win32 version, the rename uses the default codepage to process
@@ -1371,11 +1387,27 @@ static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname)
 	rc = rename_executing(gui->ropt, dstname, srcname);
 	smm_codepage_reset();
 
-	if (rc == RNM_ERR_NONE) {
+	switch (rc) {
+	case RNM_ERR_NONE:
 		/* multi-selection event will be triggered by this statement
 		 * because it de-selected the current list by changing its
 		 * content */
 		IupSetAttributeId(gui->list_oldname, "", i, dstname);
+		mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "%d Files renamed", 
+				gui->ropt->st_success);
+		break;
+	case RNM_ERR_IGNORE:
+		mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "%d Files are not changed", 
+				gui->ropt->st_same);
+		break;
+	case RNM_ERR_RENAME:
+		mmgui_fnlist_status(gui, IUPCOLOR_RED, "%d Files rename Error",
+				gui->ropt->st_failed);
+		break;
+	case RNM_ERR_SKIP:
+		mmgui_fnlist_status(gui, IUPCOLOR_BLUE, 
+				"%d Files skipped the existed names",
+				gui->ropt->st_skip);
 	}
 	return rc;
 }
