@@ -52,8 +52,6 @@ static	struct	cliopt	clist[] = {
 	{ 'R', "recursive", 0, "Work on files and directories recursively" },
 	{ 'v', "verbose",   0, "Display verbose information" },
 	{ 't', "test",      0, "Test only mode. Nothing will be changed" },
-	{ 'A', "always",    0, "Always overwrite the existing files" },
-	{ 'N', "never",     0, "Never overwrite the existing files" },
 	{   1, "help",      2, "Display the help message" },
 	{   2, "version",   0, "Display the version message" },
 	{   3, "debug",     2, "*" },
@@ -107,6 +105,7 @@ int main(int argc, char **argv)
 	}
 	memset(sysopt, 0, sizeof(RNOPT));
 	sysopt->compare = strncmp;
+	sysopt->cflags = RNM_CFLAG_NEVER;
 
 	if ((argp = csc_cli_getopt_open(clist)) == NULL) {
 		return -1;
@@ -168,14 +167,6 @@ int main(int argc, char **argv)
 			break;
 		case 't':
 			sysopt->cflags |= RNM_CFLAG_TEST | RNM_CFLAG_VERBOSE;
-			break;
-		case 'A':
-			sysopt->cflags &= ~RNM_CFLAG_PROMPT_MASK;
-			sysopt->cflags |= RNM_CFLAG_ALWAYS;
-			break;
-		case 'N':
-			sysopt->cflags &= ~RNM_CFLAG_PROMPT_MASK;
-			sysopt->cflags |= RNM_CFLAG_NEVER;
 			break;
 		case 's':
 			rc = cli_set_pattern(sysopt, optarg);
@@ -243,7 +234,9 @@ int main(int argc, char **argv)
 		}
 	}
 
-	printf("%d files renamed.\n", sysopt->rpcnt);
+	printf("Total:%d  Renamed:%d  Failed:%d  No-change:%d  Existed:%d\n",
+			sysopt->st_process, sysopt->st_success, 
+			sysopt->st_failed, sysopt->st_same, sysopt->st_skip);
 	rename_free_all(0);
 	return 0;
 }
@@ -254,9 +247,6 @@ static int rename_free_all(int sig)
 
 	if (sysopt->action == RNM_ACT_REGEX) {
 		regfree(sysopt->preg);
-	}
-	if (sysopt->buffer) {
-		sysopt->buffer = smm_free(sysopt->buffer);
 	}
 	if (sysopt->patbuf) {
 		sysopt->patbuf = smm_free(sysopt->patbuf);

@@ -46,7 +46,7 @@
 #define RNM_ERR_OPENFILE	-11
 #define RNM_ERR_OVERFLOW	-12
 #define RNM_ERR_RENAME		-13
-#define RNM_ERR_CHOWN		-14
+#define RNM_ERR_IGNORE		-14
 
 #define RNM_CFLAG_NONE		0
 #define RNM_CFLAG_NEVER		1	/* say no to all existed files */
@@ -95,6 +95,10 @@
 #define RNM_MSG_SYS_FAIL	15
 #define RNM_MSG_RENAME		16
 
+/* PATH_MAX and MAX_PATH are all not quite reliable. Currently the NTFS
+ * seems having the longest path limit of 32768 utf-16 */
+#define RNM_PATH_MAX    65536
+
 
 typedef	struct	{
 	int	oflags;
@@ -121,10 +125,18 @@ typedef	struct	{
 	int	(*notify)(void *opt, int msg, int v, void *dest, void *sour);
 
 	void	*rtpath;	/* return path */
-	char	*buffer;	/* change to dynamic allocation */
-	void	*gui;
+
 	int	room;
-	int	rpcnt;
+	char	buffer[RNM_PATH_MAX];	/* change to dynamic allocation */
+	
+	void	*gui;		/* handler reserved for GUI */
+
+	/* statistics */
+	int	st_process;	/* total processed files */
+	int	st_success;	/* successfully renamed */
+	int	st_failed;	/* failed in rename system call */
+	int	st_same;	/* no rename because of the same name */
+	int	st_skip;	/* skipped by existed filenames */
 } RNOPT;
 
 
@@ -134,10 +146,10 @@ extern	const	char	*help_credits;
 
 int rename_enfile(RNOPT *opt, char *filename);
 int rename_entry(RNOPT *opt, char *filename);
-int rename_action(RNOPT *opt, char *oldname);
 int rename_executing(RNOPT *opt, char *dest, char *sour);
-char *rename_alloc(RNOPT *opt, char *oldname, int *errcode);
+int rename_open_buffer(RNOPT *opt, char *oldname);
 int rename_compile_regex(RNOPT *opt);
+int rename_status_clean(RNOPT *opt);
 int rename_option_dump(RNOPT *opt);
 int rename_notify(RNOPT *opt, int msg, int v, void *dest, void *sour);
 

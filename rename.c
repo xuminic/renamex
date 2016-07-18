@@ -64,22 +64,11 @@
 #include "libcsoup.h"
 #include "rename.h"
   
-/* PATH_MAX and MAX_PATH are all not quite reliable. Currently the NTFS
- * seems having the longest path limit of 32768 utf-16 */
-#define RNM_PATH_MAX    65536
-/*#ifdef        CFG_UNIX_API
-#include <limits.h>
-#define RNM_PATH_MAX    (PATH_MAX << 1)
-#else
-#define RNM_PATH_MAX    (MAX_PATH << 2)
-#endif*/
-
 
 
 static int rename_recursive(RNOPT *opt, char *path);
 static int rename_recursive_cb(void *option, char *path, int type, void *info);
 static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour);
-static int rename_prompt(RNOPT *opt, char *fname);
 static int rename_show(char *dest, char *sour, char *action);
 static int console_notify(RNOPT *opt, int msg, int v, void *dest, void *sour);
 static int match_regexpr(RNOPT *opt, char *fname, int flen);
@@ -116,24 +105,12 @@ int rename_entry(RNOPT *opt, char *filename)
 
 	if (opt->cflags & RNM_CFLAG_RECUR)  {
 		if (smm_fstat(filename) == SMM_FSTAT_DIR) {
-			rc = rename_recursive(opt, filename);
-			if (rc != RNM_ERR_NONE) {
-				return rc;	//FIXME: return to entry dir
-			}
+			rename_recursive(opt, filename);
 		}
 	}
-	return rename_action(opt, filename);
-}
-
-int rename_action(RNOPT *opt, char *oldname)
-{
-	int	rc;
-
-	if ((opt->buffer = rename_alloc(opt, oldname, NULL)) == NULL) {
-		return RNM_ERR_RENAME;
+	if ((rc = rename_open_buffer(opt, filename)) == RNM_ERR_NONE) {
+		rc = rename_executing(opt, opt->buffer, filename);
 	}
-	rc = rename_executing(opt, opt->buffer, oldname);
-	opt->buffer = smm_free(opt->buffer);
 	return rc;
 }
 
@@ -142,31 +119,60 @@ int rename_executing(RNOPT *opt, char *dest, char *sour)
 	char	*bname;
 	int	rc;
 
-	/* if the destination is directory, which means we must move the
-	 * original file into this directory, just like mv(1) does */
-	/*   mv abc dir/
-	 *   mv home/path/file home/path/dir == home/path/dir/file 
-	 * This process must be explicitly in manipulating the path
-	 * because the system call rename(2) won't do as mv(1) */
-	if (smm_fstat(dest) != SMM_FSTAT_DIR) {
-		return rename_execute_stage2(opt, dest, sour);
-	}
+	opt->st_process++;
 
-	bname = csc_path_basename(sour, NULL, 0);
-	if (*bname == 0) {
-		return RNM_ERR_PARAM;
-	}
+	if (!strcmp(dest, sour)) {
+		rc = RNM_ERR_IGNORE;	/* ignore the same name */
+	} else if (smm_fstat(dest) != SMM_FSTAT_DIR) {
+		rc = rename_execute_stage2(opt, dest, sour);
+	} else {
+		/* the destination is directory, which means the source file
+		 * must be moved to that directory, just like mv(1) does. i.g
+		 *   mv home/path/file home/path/dir == home/path/dir/file 
+		 * This process must explicitly manipulate the path
+		 * because the system call rename(2) won't do as mv(1) */
+		bname = csc_path_basename(sour, NULL, 0);
+		if (*bname == 0) {
+			opt->st_failed++;
+			return RNM_ERR_PARAM;
+		}
+		dest = csc_strcpy_alloc(dest, strlen(bname) + 8);
+		if (dest == NULL) {
+			opt->st_failed++;
+			return RNM_ERR_LOWMEM;
+		}
 
-	dest = csc_strcpy_alloc(dest, strlen(bname) + 8);
-	if (dest == NULL) {
-		return RNM_ERR_LOWMEM;
+		strcat(dest, SMM_DEF_DELIM);
+		strcat(dest, bname);
+		rc = rename_execute_stage2(opt, dest, sour);
+		smm_free(dest);
 	}
-
-	strcat(dest, SMM_DEF_DELIM);
-	strcat(dest, bname);
-	rc = rename_execute_stage2(opt, dest, sour);
-	smm_free(dest);
+	switch (rc) {
+	case RNM_ERR_NONE:
+		opt->st_success++;
+		rename_notify(opt, RNM_MSG_RENAME, 
+				opt->st_success, dest, sour);
+		break;
+	case RNM_ERR_RENAME:
+		opt->st_failed++;
+		break;
+	case RNM_ERR_IGNORE:
+		opt->st_same++;
+		break;
+	case RNM_ERR_SKIP:
+		opt->st_skip++;
+	}
 	return rc;
+}
+
+int rename_status_clean(RNOPT *opt)
+{
+	opt->st_process = 0;
+	opt->st_success = 0;
+	opt->st_failed = 0;
+	opt->st_same = 0;
+	opt->st_skip = 0;
+	return 0;
 }
 
 int rename_option_dump(RNOPT *opt)
@@ -285,7 +291,9 @@ static int rename_recursive_cb(void *option, char *path, int type, void *info)
 		rename_notify(opt, RNM_MSG_LEAVE_DIR, 0, path, NULL);
 		break;
 	case SMM_MSG_PATH_EXEC:
-		rename_action(opt, path);
+		if (rename_open_buffer(opt, path) == RNM_ERR_NONE) {
+			rename_executing(opt, opt->buffer, path);
+		}
 		break;
 	}
 	return SMM_NTF_PATH_NONE;
@@ -329,39 +337,7 @@ static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour)
 		rename_notify(opt, RNM_MSG_SYS_FAIL, rc, dest, sour);
 		return RNM_ERR_RENAME;
 	}
-	opt->rpcnt++;
-	rename_notify(opt, RNM_MSG_RENAME, opt->rpcnt, dest, sour);
 	return RNM_ERR_NONE;
-}
-
-static int rename_prompt(RNOPT *opt, char *fname)
-{
-	char	buf[64];
-
-	fprintf(stderr, "Overwrite '%s'?  (Yes/No/Always/Skip) ", fname);
-	if (fgets(buf, 64, stdin) == NULL) {
-		return 0;
-	}
-
-	switch (*(csc_strbody(buf, NULL)))  {
-	case 'a':
-	case 'A':
-		opt->cflags &= ~RNM_CFLAG_PROMPT_MASK;
-		opt->cflags |= RNM_CFLAG_ALWAYS;
-		return 1;
-	case 's':
-	case 'S':
-		opt->cflags &= ~RNM_CFLAG_PROMPT_MASK;
-		opt->cflags |= RNM_CFLAG_NEVER;
-		return 0;
-	case 'y':
-	case 'Y':
-		return 1;
-	case 'n':
-	case 'N':
-		return 0;
-	}
-	return 0;
 }
 
 static int rename_show(char *dest, char *sour, char *action)
@@ -406,11 +382,7 @@ static int console_notify(RNOPT *opt, int msg, int v, void *a1, void *a2)
 	case RNM_MSG_OVERWRITE:
 		break;
 	case RNM_MSG_PROMPT:
-		if (rename_prompt(opt, dest) == 0) {
-			rename_show(dest, sour, "skipped");
-			return RNM_ERR_SKIP;
-		}
-		break;
+		return RNM_ERR_SKIP;
 	case RNM_MSG_SIMULATION:
 		rename_show(dest, sour, "tested");
 		break;
@@ -434,23 +406,19 @@ static int console_notify(RNOPT *opt, int msg, int v, void *a1, void *a2)
 /****************************************************************************
  * Core functions of Rename
  ****************************************************************************/
-char *rename_alloc(RNOPT *opt, char *oldname, int *errcode)
+int rename_open_buffer(RNOPT *opt, char *oldname)
 {
-	char	buffer[RNM_PATH_MAX];
 	char	*fname;
 	int	rc = RNM_ERR_NONE, flen;
 
 	/* indicate the expected filename, not the whole path */
-	csc_strlcpy(buffer, oldname, sizeof(buffer));
-	fname = csc_path_basename(buffer, NULL, 0);
-	opt->room = sizeof(buffer) - strlen(buffer) - 1;
+	csc_strlcpy(opt->buffer, oldname, RNM_PATH_MAX);
+	fname = csc_path_basename(opt->buffer, NULL, 0);
+	opt->room = RNM_PATH_MAX - strlen(opt->buffer) - 1;
 
 	/* ignore the "." and ".." system path */
 	if (!strcmp(fname, ".") || !strcmp(fname, "..")) {
-		if (errcode) {
-			*errcode = RNM_ERR_OPENFILE;
-		}
-		return NULL;	/* invalided file name */
+		return RNM_ERR_OPENFILE;	/* invalided file name */
 	}
     
 	flen = strlen(fname);
@@ -469,11 +437,8 @@ char *rename_alloc(RNOPT *opt, char *oldname, int *errcode)
 		break;
 	}
 	if (rc < 0) {
-		if (errcode) {
-			*errcode = RNM_ERR_LONGPATH;
-		}
-		printf("rename_alloc: file name truncated\n");
-		return NULL;	/* file name truncated */
+		printf("rename_open_buffer: file name truncated\n");
+		return RNM_ERR_LONGPATH;	/* file name truncated */
 	}
 	
 	if ((opt->oflags & RNM_OFLAG_MASKCASE) == RNM_OFLAG_LOWERCASE) {
@@ -483,34 +448,17 @@ char *rename_alloc(RNOPT *opt, char *oldname, int *errcode)
 	}
 	if (opt->oflags & RNM_OFLAG_PREFIX) {
 		if (postproc_prefix(opt, fname, flen) < 0) {
-			if (errcode) {
-				*errcode = RNM_ERR_LONGPATH;
-			}
-			printf("rename_alloc: file name truncated\n");
-			return NULL;	/* file name truncated */
+			printf("rename_open_buffer: file name truncated\n");
+			return RNM_ERR_LONGPATH;  /* file name truncated */
 		}
 	}
 	if (opt->oflags & RNM_OFLAG_SUFFIX) {
 		if (postproc_suffix(opt, fname, flen) < 0) {
-			if (errcode) {
-				*errcode = RNM_ERR_LONGPATH;
-			}
-			printf("rename_alloc: file name truncated\n");
-			return NULL;	/* file name truncated */
+			printf("rename_open_buffer: file name truncated\n");
+			return RNM_ERR_LONGPATH;  /* file name truncated */
 		}
 	}
-
-	if (!strcmp(buffer, oldname)) {
-		if (errcode) {
-			*errcode = RNM_ERR_SKIP;
-		}
-		return NULL;	/* same name after renaming */
-	}
-
-	if (errcode) {
-		*errcode = RNM_ERR_NONE;
-	}
-	return csc_strcpy_alloc(buffer, 0);
+	return RNM_ERR_NONE;
 }
 
 /* 20160712: testing or compiling error: 

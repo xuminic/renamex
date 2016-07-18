@@ -603,16 +603,14 @@ static int mmgui_fnlist_update_preview(MMGUI *gui, int action)
 			break;
 		}
 		smm_codepage_set(65001);   /* set the codepage to utf-8 */
-		opt->buffer = rename_alloc(gui->ropt, fname, NULL);
-		smm_codepage_reset();
-		if (opt->buffer == NULL) {
-			IupSetStrAttributeId(
-				gui->list_preview, "",  i, fname);
+		if (rename_open_buffer(gui->ropt, fname) == RNM_ERR_NONE) {
+			IupSetStrAttributeId(gui->list_preview, 
+					"",  i, opt->buffer);
 		} else {
-			IupSetStrAttributeId(
-				gui->list_preview, "",  i, opt->buffer);
-			opt->buffer = smm_free(opt->buffer);
+			IupSetStrAttributeId(gui->list_preview, 
+					"",  i, fname);
 		}
+		smm_codepage_reset();
 	}
 	return IUP_DEFAULT;
 }
@@ -721,7 +719,7 @@ static int mmgui_button_event_rename(Ihandle *ih)
 		return mmgui_option_free(gui);
 	}
 	//rename_option_dump(gui->ropt);
-	gui->ropt->rpcnt = 0;
+	rename_status_clean(gui->ropt);
 
 	/* run rename one by one */
 	IupSetAttribute(gui->zbox_extent, "VALUEPOS", "1");
@@ -734,15 +732,14 @@ static int mmgui_button_event_rename(Ihandle *ih)
 	for (i = 0; i < gui->fileno; i++) {
 		if (vflag == NULL) {
 			mmgui_fnlist_rename(gui, i+1);
-			IupSetInt(gui->progress, "VALUE", i+1);
 		} else if (value[i] == '+') {
 			mmgui_fnlist_rename(gui, i+1);
-			IupSetInt(gui->progress, "VALUE", i+1);
 		}
+		IupSetInt(gui->progress, "VALUE", i+1);
 		IupFlush();
 	}
 	IupSetInt(gui->progress, "VALUE", gui->fileno);
-	smm_sleep(0, 200000);
+	smm_sleep(0, 200000);	//FIXME: POP UP
 	IupSetInt(gui->progress, "VALUE", 0);
 	
 	IupSetAttribute(gui->progress, "VISIBLE", "NO");
@@ -752,8 +749,8 @@ static int mmgui_button_event_rename(Ihandle *ih)
 	}
 	IupSetAttribute(gui->zbox_extent, "VALUEPOS", "0");
 
-	mmgui_fnlist_status(gui, NULL, "%d Files renamed", gui->ropt->rpcnt);
-	//mmgui_conflict_popup(gui, "asdf/asdf/asdf/asdf");
+	mmgui_fnlist_status(gui, NULL, 
+			"%d Files renamed", gui->ropt->st_success);
 	return mmgui_option_free(gui);
 }
 
