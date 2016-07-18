@@ -50,6 +50,9 @@ typedef	struct	{
 	Ihandle		*lable_substit;
 	Ihandle		*entry_substit;
 	Ihandle		*progress;
+	int		progbar_min;
+	int		progbar_max;
+	int		progbar_now;
 
 	/* button box */
 	Ihandle		*butt_open;
@@ -82,8 +85,7 @@ typedef	struct	{
 
 static int mmgui_reset(MMGUI *gui);
 static int mmgui_event_resize(Ihandle *ih, int width, int height);
-//static int mmgui_event_show(Ihandle *ih, int state);
-static int mmgui_event_close(Ihandle *ih);
+static int mmgui_event_timer(Ihandle *ih);
 static int mmgui_event_update(Ihandle *ih, ...);
 static int mmgui_notify(void *opobj, int msg, int v, void *a1, void *a2);
 static Ihandle *mmgui_fnlist_box(MMGUI *gui);
@@ -159,7 +161,7 @@ int mmgui_close(void *guiobj)
 int mmgui_run(void *guiobj, int argc, char **argv)
 {
 	MMGUI	*gui = guiobj;
-	Ihandle	*vbox_fname, *vbox_panel, *hbox;
+	Ihandle	*vbox_fname, *vbox_panel, *hbox, *timer;
 	int	i;
 
 	/* create the controls of left side, the file list panel */
@@ -185,10 +187,6 @@ int mmgui_run(void *guiobj, int argc, char **argv)
 	IupSetHandle(gui->inst_id, gui->dlg_main);
 	IupSetCallback(gui->dlg_main, "RESIZE_CB", 
 			(Icallback) mmgui_event_resize);
-	//IupSetCallback(gui->dlg_main, "SHOW_CB", 
-	//		(Icallback) mmgui_event_show);
-	IupSetCallback(gui->dlg_main, "CLOSE_CB", 
-			(Icallback) mmgui_event_close);
 
 	/* create the Open-File dialog initially so it can be popup and hide 
 	 * without doing a real destory */
@@ -201,9 +199,21 @@ int mmgui_run(void *guiobj, int argc, char **argv)
 	mmgui_reset(gui);
 	gui->ropt->notify = mmgui_notify;
 	IupShow(gui->dlg_main);
+
+	/* appending filename list from the command line */
 	for (i = 0; i < argc; i++) {
 		mmgui_fnlist_append(gui, argv[i]);
 	}
+
+	/* starting the timer to monitor the progress bar 
+	 * Note that the 'timer' object trigger the timeout event, 
+	 * not the 'dlg_main' */
+	timer = IupTimer();
+	IupSetAttribute(timer, "TIME", "50");	/* in ms */
+	IupSetAttribute(timer, RENAME_MAIN, (char*) gui);
+	IupSetCallback(timer, "ACTION_CB", (Icallback) mmgui_event_timer);
+	IupSetAttribute(timer, "RUN", "YES");
+
 	IupMainLoop();
 	return 0;
 }
@@ -256,47 +266,16 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height)
 	return IUP_DEFAULT;
 }
 
-#if 0
-static int mmgui_event_show(Ihandle *ih, int state)
+static int mmgui_event_timer(Ihandle *ih)
 {
 	MMGUI	*gui;
 
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	switch (state) {
-	case IUP_HIDE:
-		printf("EVT_SHOW(%d): IUP_HIDE\n", state);
-		break;
-	case IUP_SHOW:
-		printf("EVT_SHOW(%d): IUP_SHOW\n", state);
-		break;
-	case IUP_RESTORE:
-		printf("EVT_SHOW(%d): IUP_RESTORE\n", state);
-		break;
-	case IUP_MINIMIZE:
-		printf("EVT_SHOW(%d): IUP_MINIMIZE\n", state);
-		break;
-	case IUP_MAXIMIZE:
-		printf("EVT_SHOW(%d): IUP_MAXIMIZE\n", state);
-		break;
-	case IUP_CLOSE:
-		printf("EVT_SHOW(%d): IUP_CLOSE\n", state);
-		break;
-	default:
-		printf("EVT_SHOW(%d): unknown\n", state);
-		break;
-	}
-	return IUP_DEFAULT;
-}
-#endif
 
-static int mmgui_event_close(Ihandle *ih)
-{
-	MMGUI	*gui;
-
-	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
-		return IUP_DEFAULT;
+	if (gui->progbar_min < gui->progbar_max) {
+		IupSetInt(gui->progress, "VALUE", gui->progbar_now);
 	}
 	return IUP_DEFAULT;
 }
@@ -742,34 +721,41 @@ static int mmgui_button_event_rename(Ihandle *ih)
 	IupSetAttribute(gui->zbox_extent, "VALUEPOS", "1");
 	mmgui_search_strip_show(gui, 0);	
 	IupSetAttribute(gui->progress, "VISIBLE", "YES");
+	IupSetInt(gui->progress, "MAX", gui->fileno);
+	IupSetInt(gui->progress, "MIN", 0);
+
+	/* notify the timer the progress is on the way */
+	gui->progbar_min = 0;
+	gui->progbar_max = gui->fileno;
 
 	value = IupGetAttribute(gui->list_oldname, "VALUE");
 	vflag = strchr(value, '+');
-	IupSetInt(gui->progress, "MAX", gui->fileno);
 	for (i = 0; i < gui->fileno; i++) {
 		if (vflag == NULL) {
 			mmgui_fnlist_rename(gui, i+1);
 		} else if (value[i] == '+') {
 			mmgui_fnlist_rename(gui, i+1);
 		}
-		IupSetInt(gui->progress, "VALUE", i+1);
-		IupFlush();
+		gui->progbar_now = i + 1; 	/* notify the timer */
 	}
-	IupSetInt(gui->progress, "VALUE", gui->fileno);
 	
 	IupMessagef("Batch Rename", 
-			"Total Process Files:		%d\n"
-			"Successfully Renamed Files:	%d\n"
-			"Failed to be renamed:		%d\n"
-			"Unchanged Files:			%d\n"
-			"Skipped Existed Files:		%d\n",
+			"Total Process Files:		%d	\n"
+			"Successfully Renamed:		%d	\n"
+			"Failed to be renamed:		%d	\n"
+			"Unchanged Files:			%d	\n"
+			"Skipped Existed Files:		%d	\n",
 			gui->ropt->st_process, gui->ropt->st_success,
 			gui->ropt->st_failed, gui->ropt->st_same, 
 			gui->ropt->st_skip);
 
+	/* notify the timer the progress is stopped */
+	gui->progbar_min = gui->progbar_max = 0;
 	IupSetInt(gui->progress, "VALUE", 0);
-	
 	IupSetAttribute(gui->progress, "VISIBLE", "NO");
+
+	/* you can't simply turn on the search strip because it depends
+	 * on the status of option box */
 	value = IupGetAttribute(gui->tick_search, "VALUE");
 	if (!strcmp(value, "ON")) {
 		mmgui_search_strip_show(gui, 1);
