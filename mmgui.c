@@ -415,7 +415,14 @@ static int mmgui_fnlist_event_multi_select(Ihandle *ih, char *value)
 	//printf("List value=%s\n", value);
 	mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "%d File Selected", 
 			IupTool_FileDlgCounting(value));
-	return mmgui_event_update(ih);
+
+	/* 20160718 Any write to list_oldname will trigger this event
+	 * right in the middle of the process so if calling mmgui_event_update
+	 * here will read a broken list, which offsets every item in the list.
+	 * It seems not very urgent in this event to update the preview
+	 * so I think having it removed should be safe. */
+	//return mmgui_event_update(ih);
+	return IUP_DEFAULT;
 }
 
 static int mmgui_fnlist_event_moused(Ihandle *ih,
@@ -553,25 +560,26 @@ static int mmgui_fnlist_remove(MMGUI *gui, int idx)
 
 static int mmgui_fnlist_rename(MMGUI *gui, int idx)
 {
-	char	*srcname;
+	char	*srcname, *dstname;
 
 	srcname = IupGetAttributeId(gui->list_oldname, "", idx);
 	if (srcname == NULL) {
 		printf("mmgui_fnlist_rename: out of range. [%d]\n", idx);
 		return IUP_DEFAULT;
 	}
-	
-	//FIXME: STILL BUGGY
-	/*dstname = IupGetAttributeId(gui->list_preview, "", idx);
+
+	dstname = IupGetAttributeId(gui->list_preview, "", idx);
 	if (dstname == NULL) {
 		printf("mmgui_fnlist_rename: lost preview.\n");
 		return IUP_DEFAULT;
-	}*/
-	if (rename_open_buffer(gui->ropt, srcname) != RNM_ERR_NONE) {
+	}
+
+	return mmgui_rename_exec(gui, idx, dstname, srcname);
+	/*if (rename_open_buffer(gui->ropt, srcname) != RNM_ERR_NONE) {
 		printf("mmgui_fnlist_rename: can not rename\n");
 		return IUP_DEFAULT;
 	}
-	return mmgui_rename_exec(gui, idx, gui->ropt->buffer, srcname);
+	return mmgui_rename_exec(gui, idx, gui->ropt->buffer, srcname);*/
 }
 
 static int mmgui_fnlist_status(MMGUI *gui, char *color, char *fmt, ...)
@@ -586,7 +594,7 @@ static int mmgui_fnlist_status(MMGUI *gui, char *color, char *fmt, ...)
 		va_start(ap, fmt);
 		SMM_VSNPRINT(value, sizeof(value), fmt, ap);
 		va_end(ap);
-		puts(value);
+		//puts(value);
 		IupSetAttribute(gui->status, "TITLE", value);
 	}
 	return IUP_DEFAULT;
@@ -750,11 +758,11 @@ static int mmgui_button_event_rename(Ihandle *ih)
 	IupSetInt(gui->progress, "VALUE", gui->fileno);
 	
 	IupMessagef("Batch Rename", 
-			"Total Process Files:             %d\n"
-			"Successfully Renamed Files:      %d\n"
-			"Failed to be renamed:            %d\n"
-			"Unchanged Files:                 %d\n"
-			"Skipped Existed Files:           %d\n",
+			"Total Process Files:		%d\n"
+			"Successfully Renamed Files:	%d\n"
+			"Failed to be renamed:		%d\n"
+			"Unchanged Files:			%d\n"
+			"Skipped Existed Files:		%d\n",
 			gui->ropt->st_process, gui->ropt->st_success,
 			gui->ropt->st_failed, gui->ropt->st_same, 
 			gui->ropt->st_skip);
