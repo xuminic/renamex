@@ -104,15 +104,19 @@ make_scenario()
   mkdir  "$ATROOT/Musics/Paganini"
   mkdir  "$ATROOT/Musics/Paganini/Caprice" "$ATROOT/Musics/Paganini/Concerto"
   mkdir  "$ATROOT/Musics/Mozart" "$ATROOT/Musics/Mozart/Concerto"
-  unicreate "$ATROOT/Musics/平原綾香 ふたたび 千と千尋.mp4"
-  #unicreate "$ATROOT/Musics/（小苹果）- 健身舞蹈教学版.mp4"
   echo > "$ATROOT/Musics/Paganini/DevilMusic.m3u"
   echo > "$ATROOT/Musics/Paganini/Caprice/Caprice no. 24 - with piano accompaniment.mp4"
   echo > "$ATROOT/Musics/Paganini/Caprice/Caprice no. 5.mp4"
   echo > "$ATROOT/Musics/Paganini/Concerto/La Campanella.mp4"
   echo > "$ATROOT/Musics/Mozart/playlist.m3u"
   echo > "$ATROOT/Musics/Mozart/Concerto/Concerto for Flute Harp and Orchestra in C major K299.mp4"
-  echo > "$ATROOT/Musics/Mozart/Concerto/violin concerto nº 3.mp4"
+
+  # Only create the UTF-8 files in Linux
+  if [ "$MSYSTEM" != "MINGW32" ]; then
+    echo > "$ATROOT/Musics/平原綾香 ふたたび 千と千尋.mp4"
+    echo > "$ATROOT/Musics/（小苹果）- 健身舞蹈教学版.mp4"
+    echo > "$ATROOT/Musics/Mozart/Concerto/violin concerto nº 3.mp4"
+  fi
 
   ln -s "Musics/Paganini/Concerto" "$ATROOT/link_to_pananini"
   ln -s "Downloads/PDF_GPS/CH_KOONDROOK.pdf" "$ATROOT/link_to_koondrook"
@@ -124,13 +128,6 @@ if [ "$1" = "create" ]; then
   #verify "$ATROOT/Documents/Datasheets/st3160023as.pdf"
   exit
 fi
-
-if [ "$MSYSTEM" != "MINGW32" ]; then
-  echo This is Linux
-else
-  echo This is MINGW
-fi
-exit
 
 echo "[Test001]: direct rename mode with quoted file names"
 make_scenario
@@ -245,14 +242,17 @@ echo "[Test021]: rename from a file"
 make_scenario
 find "$ATROOT" -name *.mp4 > "$ATROOT/filename.lst"
 $RENAME -vs/mp4/utube/e -f "$ATROOT/filename.lst"
-verify "$ATROOT/Musics/Mozart/Concerto/violin concerto nº 3.utube"
 verify "$ATROOT/Musics/Mozart/Concerto/Concerto for Flute Harp and Orchestra in C major K299.utube"
 verify "$ATROOT/Musics/Paganini/Caprice/Caprice no. 5.utube"
 verify "$ATROOT/Musics/Paganini/Caprice/Caprice no. 24 - with piano accompaniment.utube"
 verify "$ATROOT/Musics/Paganini/Concerto/La Campanella.utube"
 verify "$ATROOT/Westlife - You Raise Me Up.utube"
-univerify "$ATROOT/Musics/平原綾香 ふたたび 千と千尋.utube"
-#unicreate "$ATROOT/Musics/（小苹果）- 健身舞蹈教学版.utube"
+# Only test the UTF-8 files in Linux
+if [ "$MSYSTEM" != "MINGW32" ]; then
+  verify "$ATROOT/Musics/Mozart/Concerto/violin concerto nº 3.utube"
+  verify "$ATROOT/Musics/平原綾香 ふたたび 千と千尋.utube"
+  verify "$ATROOT/Musics/（小苹果）- 健身舞蹈教学版.utube"
+fi
 
 echo "Total $success successful and $failure failed"
 clean_scenario
