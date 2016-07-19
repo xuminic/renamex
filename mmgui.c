@@ -476,9 +476,8 @@ static int mmgui_fnlist_event_dblclick(Ihandle *ih, int item, char *text)
 	srcname = csc_path_basename(text, NULL, 0);
 
 	entry = IupText(NULL);
-	IupSetAttribute(entry, "VALUE", srcname);
 	IupSetAttribute(entry, "EXPAND", "HORIZONTAL");
-	IupSetAttribute(entry, "SELECTION", "1:2");
+	IupSetAttribute(entry, "VALUE", srcname);
 
 	/* use this invisible control to keep the text control long enough */
 	shadow = IupLabel(srcname);
