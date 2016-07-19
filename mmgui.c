@@ -152,10 +152,7 @@ void *mmgui_open(RNOPT *ropt, int *argcs, char ***argvs)
 
 int mmgui_close(void *guiobj)
 {
-	MMGUI	*gui = guiobj;
-
 	if (guiobj) {
-		gui->inst_id[0] = 0;	/* notify it's closing */
 		IupClose();
 		smm_free(guiobj);
 	}
@@ -167,7 +164,7 @@ int mmgui_run(void *guiobj, int argc, char **argv)
 	MMGUI	*gui = guiobj;
 	Ihandle	*vbox_fname, *vbox_panel, *hbox, *timer;
 	int	i;
-
+	
 	/* create the controls of left side, the file list panel */
 	vbox_fname = mmgui_fnlist_box(gui);
 
@@ -219,6 +216,14 @@ int mmgui_run(void *guiobj, int argc, char **argv)
 	IupSetAttribute(timer, "RUN", "YES");
 
 	IupMainLoop();
+	IupSetAttribute(timer, "RUN", "NO");
+
+	/* 20160719 It is known some event will come behind the CLOSE event,
+	 * for example, click in a text control then click the close button,
+	 * the KILLFOCUS will come behind the IupMainLoop() */
+	/* I set NULL to 'RENAME_MAIN' as a flag to notify all events the main
+	 * loop is closed. Having all event unhooked may be a better way */
+	IupSetAttribute(gui->dlg_main, RENAME_MAIN, NULL);
 	return 0;
 }
 
@@ -290,6 +295,7 @@ static int mmgui_event_update(Ihandle *ih, ...)
 	int	action;
 
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
+		printf("mmgui_event_update: oops!\n");
 		return IUP_DEFAULT;
 	}
 
@@ -996,10 +1002,6 @@ static int mmgui_option_collection(MMGUI *gui)
 {
 	RNOPT	*opt = gui->ropt;
 	char	*value;
-
-	if (gui->inst_id[0] == 0) {
-		return 0;
-	}
 
 	opt->oflags = 0;
 	value = IupGetAttribute(gui->tick_lowercase, "VALUE");
