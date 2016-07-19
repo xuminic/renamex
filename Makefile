@@ -115,16 +115,20 @@ clean: cleanobj
 extlib:
 	make -C ./external/iup do_all
 	make -C ./external/libcsoup all
+	make -C ./external/regex-20090805 all
 
 extinstall:
 	cp -f  ./external/libcsoup/libcsoup.a ./libmingw/lib
 	cp -f  ./external/libcsoup/libcsoup.h ./libmingw/include
-	cp -af ./external/iup/include ./libmingw/include/iup
+	cp -af ./external/iup/include/* ./libmingw/include/iup
 	cp -f  ./external/iup/lib/mingw4/*.a ./libmingw/lib
+	cp -f  ./external/regex-20090805/lib/regex.h ./libmingw/include
+	cp -f  ./external/regex-20090805/.libs/libregex.a ./libmingw/lib
 
 extclean:
 	make -C ./external/iup clean
 	make -C ./external/libcsoup clean
+	make -C ./external/regex-20090805 clean
 
 version.mk: rename.h 
 	echo -n "RELVERS	= " > $@
