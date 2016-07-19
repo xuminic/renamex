@@ -152,7 +152,10 @@ void *mmgui_open(RNOPT *ropt, int *argcs, char ***argvs)
 
 int mmgui_close(void *guiobj)
 {
+	MMGUI	*gui = guiobj;
+
 	if (guiobj) {
+		gui->inst_id[0] = 0;	/* notify it's closing */
 		IupClose();
 		smm_free(guiobj);
 	}
@@ -478,6 +481,7 @@ static int mmgui_fnlist_event_dblclick(Ihandle *ih, int item, char *text)
 	entry = IupText(NULL);
 	IupSetAttribute(entry, "EXPAND", "HORIZONTAL");
 	IupSetAttribute(entry, "VALUE", srcname);
+	IupSetAttribute(entry, "SELECTION", "NONE");
 
 	/* use this invisible control to keep the text control long enough */
 	shadow = IupLabel(srcname);
@@ -993,6 +997,10 @@ static int mmgui_option_collection(MMGUI *gui)
 	RNOPT	*opt = gui->ropt;
 	char	*value;
 
+	if (gui->inst_id[0] == 0) {
+		return 0;
+	}
+
 	opt->oflags = 0;
 	value = IupGetAttribute(gui->tick_lowercase, "VALUE");
 	if (!strcmp(value, "ON")) {
@@ -1023,7 +1031,9 @@ static int mmgui_option_collection(MMGUI *gui)
 		opt->patbuf  = NULL;
 		opt->regflag = 0;
 		opt->substit = IupGetAttribute(gui->entry_substit, "VALUE");
-		opt->su_len = strlen(opt->substit);
+		if (opt->substit) {
+			opt->su_len = strlen(opt->substit);
+		}
 		value = IupGetAttribute(gui->tick_icase, "VALUE");
 		if (!strcmp(value, "OFF")) {
 			opt->compare = strncmp;
@@ -1031,6 +1041,7 @@ static int mmgui_option_collection(MMGUI *gui)
 			opt->regflag |= REG_ICASE;
 			opt->compare = strncasecmp;
 		}
+
 		opt->rpnum = 0;
 		value = IupGetAttribute(gui->tick_replaced, "VALUE");
 		if (!strcmp(value, "ON")) {
@@ -1058,7 +1069,9 @@ static int mmgui_option_collection(MMGUI *gui)
 			opt->regflag |= REG_EXTENDED;
 		}
 		opt->pattern = IupGetAttribute(gui->entry_pattern, "VALUE");
-		if ((opt->pa_len = strlen(opt->pattern)) == 0) {
+		if (opt->pattern == NULL) {
+			opt->action = 0;
+		} else if ((opt->pa_len = strlen(opt->pattern)) == 0) {
 			opt->action = 0;	/* empty pattern */
 		} else if (rename_compile_regex(opt)) {
 			opt->action = 0;	/* wrong regular expression */
