@@ -90,6 +90,10 @@ LIBS	+= -liup -liupimglib
 endif
 LIBS	+= $(SYSLIB)
 
+
+COMMONS	= COPYING ChangeLog.txt README.en.txt autotest.sh rename.ico \
+	  renamex-2.0.lsm renamex.1 renamex.pdf
+
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 	
@@ -144,8 +148,8 @@ release: extclean installer_win
 endif
 	-if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
 	-mkdir $(RELDIR)
-	-$(CP) *.c *.h *.pdf *.1 *.txt *.rc *.ico *.lsm *.png $(RELDIR)
-	-$(CP) COPYING Makefile autotest.sh $(RELDIR)
+	-$(CP) $(COMMONS) $(RELDIR)
+	-$(CP) *.c *.h *.rc *.png *.nsi Makefile version.mk $(RELDIR)
 	-$(CP) -a libmingw $(RELDIR)
 	-$(CP) -a external $(RELDIR)
 	-7z a -tzip $(RELDIR).zip $(RELDIR)
@@ -159,7 +163,7 @@ installer_win: release-win
 release-win: 
 	-if [ -d $(RELWIN) ]; then $(RM) -r $(RELWIN); fi
 	-mkdir $(RELWIN)
-	-$(CP) COPYING *.pdf *.1 *.txt *.ico autotest.sh $(RELWIN)
+	-$(CP) $(COMMONS) $(RELWIN)
 	SYSGUI=CFG_GUI_OFF make clean
 	SYSGUI=CFG_GUI_OFF make
 	-$(CP) $(PROJECT).exe $(RELWIN)

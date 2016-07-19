@@ -51,6 +51,11 @@ Section "Rename Extension (required)"
   File "renamex.1"
   File "renamex.pdf"
   File "rename.ico"
+  File "COPYING"
+  File "ChangeLog.txt"
+  File "README.en.txt"
+  File "autotest.sh"
+  File "renamex-2.0.lsm"
   
   ; Write the installation path into the registry
   WriteRegStr HKLM "SOFTWARE\Rename Extension" "Install_Dir" "$INSTDIR"

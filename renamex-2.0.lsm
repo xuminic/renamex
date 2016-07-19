@@ -11,8 +11,10 @@ Keywords:       rename, regular expression
 Author:	        "Andy Xuming" <xuming@users.sourceforge.net>
 Maintained-by:  "Andy Xuming" <xuming@users.sourceforge.net>
 Primary-site:   http://rename.sourceforge.net/
-                82K rename-2.0.tar.gz
-		1K  rename-2.0.lsm
+                 872K renamex-2.0-setup.exe
+                 828K renamex-2.0-win32-bin.zip
+                7941K renamex-2.0.zip
+		   1K rename-2.0.lsm
 Alternate-site: ftp://ibiblio.org/pub/linux/utils/file
 Platforms:      Linux,Windows 2000/XP
 Copying-policy: GPLv3+

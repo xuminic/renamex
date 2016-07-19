@@ -1362,7 +1362,7 @@ static int mmgui_conflict_popup(MMGUI *gui, char *fname)
 static int mmgui_batch_popup(MMGUI *gui)
 {
 	IupMessagef("Batch Rename", 
-			"Total Process Files:		%d	\n"
+			"Total Process Files:			%d	\n"
 			"Successfully Renamed:		%d	\n"
 			"Failed to be renamed:		%d	\n"
 			"Unchanged Files:			%d	\n"
@@ -1396,15 +1396,18 @@ static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname)
 		 * because it de-selected the current list by changing its
 		 * content */
 		IupSetAttributeId(gui->list_oldname, "", i, dstname);
-		mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "%d Files successfully renamed", 
+		mmgui_fnlist_status(gui, IUPCOLOR_BLACK, 
+				"%d Files successfully renamed", 
 				gui->ropt->st_success);
 		break;
 	case RNM_ERR_IGNORE:
-		mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "%d Files are not changed", 
+		mmgui_fnlist_status(gui, IUPCOLOR_BLACK, 
+				"%d Files are not changed", 
 				gui->ropt->st_same);
 		break;
 	case RNM_ERR_RENAME:
-		mmgui_fnlist_status(gui, IUPCOLOR_RED, "%d Files have System Error",
+		mmgui_fnlist_status(gui, IUPCOLOR_RED, 
+				"%d Files have System Error",
 				gui->ropt->st_failed);
 		break;
 	case RNM_ERR_SKIP:
