@@ -121,6 +121,7 @@ static int mmgui_search_strip_show(MMGUI *gui, int state);
 static int mmgui_search_event_tick_replaced(Ihandle* ih, int state);
 
 static int mmgui_conflict_popup(MMGUI *gui, char *fname);
+static int mmgui_batch_popup(MMGUI *gui);
 static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname);
 static char *IupTool_FileDlgExtract(char *dfn, char **sp);
 static int IupTool_FileDlgCounting(char *value);
@@ -325,6 +326,7 @@ static Ihandle *mmgui_fnlist_box(MMGUI *gui)
 	IupSetAttribute(gui->list_oldname, "SCROLLBAR", "YES");
 	IupSetAttribute(gui->list_oldname, "DROPFILESTARGET", "YES");
 	IupSetAttribute(gui->list_oldname, "ALIGNMENT", "ARIGHT");
+	IupSetAttribute(gui->list_oldname, "CANFOCUS", "YES");
 	IupSetCallback(gui->list_oldname, "DROPFILES_CB",
 			(Icallback) mmgui_fnlist_event_dropfiles);
 	IupSetCallback(gui->list_oldname, "MULTISELECT_CB",
@@ -396,12 +398,15 @@ static int mmgui_fnlist_event_multi_select(Ihandle *ih, char *value)
 			IupTool_FileDlgCounting(value));
 
 	/* 20160718 Any write to list_oldname will trigger this event
-	 * right in the middle of the process so if calling mmgui_event_update
-	 * here will read a broken list, which offsets every item in the list.
+	 * right in the middle of the process so if called mmgui_event_update
+	 * here it will read a broken list, which offsets/upsets every items.
 	 * It seems not very urgent in this event to update the preview
 	 * so I think having it removed should be safe. */
-	//return mmgui_event_update(ih);
-	return IUP_DEFAULT;
+	/* 20160719 Nope, actually the mouse event did the update!!
+	 * We'd better do the update seperate to the preview update 
+	 * so it won't look broken while doing the keyboard movement. */
+	mmgui_button_status_update(gui, mmgui_option_collection(gui));
+	return mmgui_option_free(gui);
 }
 
 static int mmgui_fnlist_event_moused(Ihandle *ih,
@@ -418,6 +423,7 @@ static int mmgui_fnlist_event_moused(Ihandle *ih,
 		return IUP_DEFAULT;
 	}
 	/* deselect every thing if the right button was released */
+	//printf("Moused: %d\n", button);
 	if (button == IUP_BUTTON3) {
 		IupSetAttribute(gui->list_oldname, "VALUE", "");
 		mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "0 File Selected");
@@ -660,11 +666,10 @@ static int mmgui_button_event_load(Ihandle *ih)
 		return IUP_DEFAULT;	/* cancelled */
 	}
 
-	/*printf("Open File VALUE: %s\n", 
-			IupGetAttribute(gui->dlg_open, "VALUE"));
-	printf("Last  DIRECTORY: %s\n", 
+	/*printf("Last  DIRECTORY: %s\n", 
 			IupGetAttribute(gui->dlg_open, "DIRECTORY"));*/
 	dlgrd = IupGetAttribute(gui->dlg_open, "VALUE");
+	//printf("Open File VALUE: %s\n", dlgrd);
 	while ((fname = IupTool_FileDlgExtract(dlgrd, &sp)) != NULL) {
 		mmgui_fnlist_append(gui, fname);
 		/* IupList control seems save a copy of its content.
@@ -738,16 +743,7 @@ static int mmgui_button_event_rename(Ihandle *ih)
 		}
 		gui->progbar_now = i + 1; 	/* notify the timer */
 	}
-	
-	IupMessagef("Batch Rename", 
-			"Total Process Files:		%d	\n"
-			"Successfully Renamed:		%d	\n"
-			"Failed to be renamed:		%d	\n"
-			"Unchanged Files:			%d	\n"
-			"Skipped Existed Files:		%d	\n",
-			gui->ropt->st_process, gui->ropt->st_success,
-			gui->ropt->st_failed, gui->ropt->st_same, 
-			gui->ropt->st_skip);
+	mmgui_batch_popup(gui);
 
 	/* notify the timer the progress is stopped */
 	gui->progbar_min = gui->progbar_max = 0;
@@ -1364,6 +1360,20 @@ static int mmgui_conflict_popup(MMGUI *gui, char *fname)
 	return tlen;
 }
 
+static int mmgui_batch_popup(MMGUI *gui)
+{
+	IupMessagef("Batch Rename", 
+			"Total Process Files:		%d	\n"
+			"Successfully Renamed:		%d	\n"
+			"Failed to be renamed:		%d	\n"
+			"Unchanged Files:			%d	\n"
+			"Skipped Existed Files:		%d	\n",
+			gui->ropt->st_process, gui->ropt->st_success,
+			gui->ropt->st_failed, gui->ropt->st_same, 
+			gui->ropt->st_skip);
+	return IUP_DEFAULT;
+}
+
 /****************************************************************************
  * Supportives
  ****************************************************************************/
@@ -1387,7 +1397,7 @@ static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname)
 		 * because it de-selected the current list by changing its
 		 * content */
 		IupSetAttributeId(gui->list_oldname, "", i, dstname);
-		mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "%d Files renamed", 
+		mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "%d Files successfully renamed", 
 				gui->ropt->st_success);
 		break;
 	case RNM_ERR_IGNORE:
@@ -1395,12 +1405,12 @@ static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname)
 				gui->ropt->st_same);
 		break;
 	case RNM_ERR_RENAME:
-		mmgui_fnlist_status(gui, IUPCOLOR_RED, "%d Files rename Error",
+		mmgui_fnlist_status(gui, IUPCOLOR_RED, "%d Files have System Error",
 				gui->ropt->st_failed);
 		break;
 	case RNM_ERR_SKIP:
 		mmgui_fnlist_status(gui, IUPCOLOR_BLUE, 
-				"%d Files skipped the existed names",
+				"%d Files conflict with the existed names",
 				gui->ropt->st_skip);
 	}
 	return rc;
