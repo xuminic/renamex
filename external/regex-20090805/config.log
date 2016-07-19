@@ -1497,6 +1497,7 @@ config.status:1230: creating Makefile
 config.status:1230: creating lib/Makefile
 config.status:1230: creating tests/Makefile
 config.status:1230: creating config.h
+config.status:1452: config.h is unchanged
 config.status:1504: executing depfiles commands
 config.status:1504: executing libtool commands
 
