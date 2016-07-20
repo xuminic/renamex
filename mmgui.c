@@ -613,7 +613,6 @@ static int mmgui_fnlist_update_preview(MMGUI *gui, int action)
 		if (fname == NULL) {
 			break;
 		}
-		smm_codepage_set(65001);   /* set the codepage to utf-8 */
 		if (rename_open_buffer(gui->ropt, fname) == RNM_ERR_NONE) {
 			IupSetStrAttributeId(gui->list_preview, 
 					"",  i, opt->buffer);
@@ -621,7 +620,6 @@ static int mmgui_fnlist_update_preview(MMGUI *gui, int action)
 			IupSetStrAttributeId(gui->list_preview, 
 					"",  i, fname);
 		}
-		smm_codepage_reset();
 	}
 	return IUP_DEFAULT;
 }
@@ -1397,14 +1395,10 @@ static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname)
 
 	//printf("mmgui_rename_exec[%d]: %s -> %s\n", i, srcname, dstname);
 
-	/* set the codepage to utf-8 before calling rename core. 
-	 * In Win32 version, the rename uses the default codepage to process
-	 * file name. However the GTK converted the file name to UTF-8 so 
-	 * the Windows version could not find the file. */
-	smm_codepage_set(65001);  /* set the codepage to utf-8 */
+	/* smm_codepage_set(65001);  // set the codepage to utf-8 
+	 * smm_codepage_reset();
+	 * IUP uses local WIN32 API so it doesn't need to set codepages */
 	rc = rename_executing(gui->ropt, dstname, srcname);
-	smm_codepage_reset();
-
 	switch (rc) {
 	case RNM_ERR_NONE:
 		/* multi-selection event will be triggered by this statement

@@ -334,9 +334,7 @@ static int debug_main(char *optarg, int optind, int argc, char **argv)
 
 	//printf("%s %d %d %s\n", optarg, optind, argc, argv[optind]);
 	if (!strcmp(optarg, "create")) {
-		smm_codepage_set(65001);
 		fp = smm_fopen(argv[optind], "w");
-		smm_codepage_reset();
 		if (fp == NULL) {
 			printf("fopen: %s\n", argv[optind]);
 		} else {
@@ -346,9 +344,7 @@ static int debug_main(char *optarg, int optind, int argc, char **argv)
 		if (optind >= argc) {
 			return -1;	/* parameters missing */
 		}
-		smm_codepage_set(65001);
 		fp = smm_fopen(argv[optind], "r");
-		smm_codepage_reset();
 		if (fp == NULL) {
 			printf("fopen: not found\n");
 		} else {
