@@ -116,11 +116,29 @@ cleanobj:
 clean: cleanobj
 	$(RM) $(TARGET)
 
-extlib:
-	make -C ./external/iup do_all
-	make -C ./external/libcsoup all
+regexlib:
 	cd ./external/regex-20090805 && ./configure --disable-shared && \
 		cd ../.. && make -C ./external/regex-20090805 all
+
+regexclean:
+	-if [ -f ./external/regex-20090805/Makefile ]; \
+		then make -C ./external/regex-20090805 distclean; fi
+
+ifeq	($(SYSTOOL),unix)
+extlib:
+else
+extlib: regexlib
+endif
+	make -C ./external/iup do_all
+	make -C ./external/libcsoup all
+
+ifeq	($(SYSTOOL),unix)
+extclean:
+else
+extclean: regexclean
+endif
+	make -C ./external/iup clean
+	make -C ./external/libcsoup clean
 
 extinstall:
 	cp -f  ./external/libcsoup/libcsoup.a ./libmingw/lib
@@ -129,12 +147,6 @@ extinstall:
 	cp -f  ./external/iup/lib/mingw4/*.a ./libmingw/lib
 	cp -f  ./external/regex-20090805/lib/regex.h ./libmingw/include
 	cp -f  ./external/regex-20090805/.libs/libregex.a ./libmingw/lib
-
-extclean:
-	make -C ./external/iup clean
-	make -C ./external/libcsoup clean
-	-if [ -f ./external/regex-20090805/Makefile ]; \
-		then make -C ./external/regex-20090805 distclean; fi
 
 version.mk: rename.h 
 	echo -n "RELVERS	= " > $@

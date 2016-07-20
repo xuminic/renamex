@@ -1,3 +1,14 @@
+20160720:
+	* iup/iup_list.c: The Temporary patch can be removed. In iListGetNaturalItemsSize():846:
+	  *h += 2*ih->data->spacing;  /* this will be multiplied by the number of lines */
+	  *w += 2*ih->data->spacing;  /* include also horizontal spacing */
+	changed to
+	  /* 20140505 A.Xuming: Temporary solution to go around the IupList too short issue */
+	  *h += 2*ih->data->spacing + 1;  /* this will be multiplied by the number of lines */
+	  *w += 2*ih->data->spacing;  /* include also horizontal spacing */
+	to workaround the IupList can not go to the bottom items. It seems
+	fixed above 3.10
+
 20160717:
 	* rename.c: remove the overwrite option totally.
 	You don't want anything being accidently overwritten by a rename tool.
