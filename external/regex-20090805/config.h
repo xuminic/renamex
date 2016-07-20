@@ -37,14 +37,14 @@
 
 /* Define to 1 if you have <alloca.h> and it should be used (not on Ultrix).
    */
-/* #undef HAVE_ALLOCA_H */
+#define HAVE_ALLOCA_H 1
 
 /* Define to 1 if you have the `btowc' function. */
 #define HAVE_BTOWC 1
 
 /* Define to 1 if you have the declaration of `getc_unlocked', and to 0 if you
    don't. */
-#define HAVE_DECL_GETC_UNLOCKED 0
+#define HAVE_DECL_GETC_UNLOCKED 1
 
 /* Define to 1 if you have the declaration of `isblank', and to 0 if you
    don't. */
@@ -55,7 +55,7 @@
 #define HAVE_DECL_WCTOB 1
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
-/* #undef HAVE_DLFCN_H */
+#define HAVE_DLFCN_H 1
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
@@ -70,7 +70,7 @@
 #define HAVE_ISWCTYPE 1
 
 /* Define if you have <langinfo.h> and nl_langinfo(CODESET). */
-/* #undef HAVE_LANGINFO_CODESET */
+#define HAVE_LANGINFO_CODESET 1
 
 /* Define to 1 if you have the <libintl.h> header file. */
 #define HAVE_LIBINTL_H 1
@@ -86,7 +86,7 @@
 #define HAVE_MALLOC 1
 
 /* Define if the 'malloc' function is POSIX compliant. */
-/* #undef HAVE_MALLOC_POSIX */
+#define HAVE_MALLOC_POSIX 1
 
 /* Define to 1 if you have the `mbrtowc' function. */
 #define HAVE_MBRTOWC 1
@@ -128,7 +128,7 @@
 #define HAVE_STRING_H 1
 
 /* Define to 1 if the system has the type `struct random_data'. */
-/* #undef HAVE_STRUCT_RANDOM_DATA */
+#define HAVE_STRUCT_RANDOM_DATA 1
 
 /* Define to 1 if you have the <sys/bitypes.h> header file. */
 /* #undef HAVE_SYS_BITYPES_H */
