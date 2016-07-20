@@ -200,6 +200,9 @@
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "regex"
 
+/* Define to the home page for this package. */
+#define PACKAGE_URL ""
+
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "20090805"
 
@@ -312,6 +315,9 @@
 #if defined __SUNPRO_CC && !defined __RESTRICT
 # define _Restrict
 #endif
+
+/* Define to `unsigned int' if <sys/types.h> does not define. */
+/* #undef size_t */
 
 /* Define as a signed type of the same size as size_t. */
 /* #undef ssize_t */
