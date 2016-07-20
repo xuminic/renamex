@@ -133,7 +133,8 @@ extinstall:
 extclean:
 	make -C ./external/iup clean
 	make -C ./external/libcsoup clean
-	make -C ./external/regex-20090805 distclean
+	-if [ -f ./external/regex-20090805/Makefile ]; \
+		then make -C ./external/regex-20090805 distclean; fi
 
 version.mk: rename.h 
 	echo -n "RELVERS	= " > $@
