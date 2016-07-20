@@ -119,7 +119,8 @@ clean: cleanobj
 extlib:
 	make -C ./external/iup do_all
 	make -C ./external/libcsoup all
-	make -C ./external/regex-20090805 all
+	cd ./external/regex-20090805 && ./configure --disable-shared && \
+		cd ../.. && make -C ./external/regex-20090805 all
 
 extinstall:
 	cp -f  ./external/libcsoup/libcsoup.a ./libmingw/lib
@@ -132,7 +133,7 @@ extinstall:
 extclean:
 	make -C ./external/iup clean
 	make -C ./external/libcsoup clean
-	make -C ./external/regex-20090805 clean
+	make -C ./external/regex-20090805 distclean
 
 version.mk: rename.h 
 	echo -n "RELVERS	= " > $@
