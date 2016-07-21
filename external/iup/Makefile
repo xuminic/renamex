@@ -1,5 +1,7 @@
 ifeq ($(OS), Windows_NT)
   WINLIBS = iupole
+  export MINGW4=/c/mingw
+  export TEC_UNAME=mingw4
 endif
 export USE_GTK2=1
 
@@ -9,6 +11,11 @@ do_all: iup iupimglib $(WINLIBS)
 
 clean:
 	rm -rf ./lib/* ./obj/*
+
+.PHONY: install
+install:
+	cp -f  ./lib/mingw4/*.a ../../libmingw/lib
+	cp -af ./include/* ../../libmingw/include/iup
 
 iup iupgtk iupmot:
 	@$(MAKE) --no-print-directory -C ./src/ $@
