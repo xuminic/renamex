@@ -9,6 +9,8 @@
 #include "libcsoup.h"
 #include "rename.h"
 #include "mmrc_icon_dialog.h"
+#include "mmrc_icon_error.h"
+#include "mmrc_icon_info.h"
 #include "mmrc_icon_warning.h"
 
 #define RENAME_MAIN		"RENAMEGUIOBJ"
@@ -121,7 +123,10 @@ static int mmgui_search_strip_show(MMGUI *gui, int state);
 static int mmgui_search_event_tick_replaced(Ihandle* ih, int state);
 
 static int mmgui_conflict_popup(MMGUI *gui, char *fname);
+static int mmgui_rename_popup(MMGUI *gui, int item, char *text);
+static int mmgui_rawname_popup(MMGUI *gui, int item, char *text);
 static int mmgui_batch_popup(MMGUI *gui);
+static int mmgui_message_popup(MMGUI *gui, int type, char *title, char *);
 static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname);
 static char *IupTool_FileDlgExtract(char *dfn, char **sp);
 static int IupTool_FileDlgCounting(char *value);
@@ -443,82 +448,17 @@ static int mmgui_fnlist_event_moused(Ihandle *ih,
 static int mmgui_fnlist_event_dblclick(Ihandle *ih, int item, char *text)
 {
 	MMGUI	*gui;
-	Ihandle	*entry, *shadow, *vbox, *hbox;
-	Ihandle	*butt_cancel, *butt_yes;
-	char	*srcname, *newpath, *tmp;
-	int	rc;
+	char	*tmp;
 
-	int mmgui_fnlist_event_dblclick_button(Ihandle* ih)
-	{
-		IupSetAttribute(ih, "FCDLGCLICK", "YES");
-		return IUP_CLOSE;
-	}
-
+	//printf("mmgui_fnlist_event_dblclick: %d %s\n", item, text);
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-
-	/* the button box in the bottom of the dialog window */
-	butt_cancel = IupButton("Cancel", NULL);
-	IupSetAttribute(butt_cancel, "IMAGE", "IUP_ActionCancel");
-	IupSetAttribute(butt_cancel, "PADDING", "8");
-	IupSetCallback(butt_cancel, "ACTION",
-			(Icallback) mmgui_fnlist_event_dblclick_button);
-	butt_yes = IupButton("Rename", NULL);
-	IupSetAttribute(butt_yes, "IMAGE", "IUP_ActionOk");
-	IupSetAttribute(butt_yes, "PADDING", "8");
-	IupSetCallback(butt_yes, "ACTION",
-			(Icallback) mmgui_fnlist_event_dblclick_button);
-
-	/* pack the buttons first because we want them normalized */
-	hbox = IupHbox(butt_cancel, butt_yes, NULL);
-	IupSetAttribute(hbox, "NGAP", "4");
-	IupSetAttribute(hbox, "NORMALIZESIZE", "HORIZONTAL");
-
-	shadow = IupLabel("");	/* padding the left side of the box */
-	IupSetAttribute(shadow, "SIZE", "100");
-	IupSetAttribute(shadow, "VISIBLE", "NO");
-
-	hbox = IupHbox(shadow, IupFill(), hbox, NULL); 
-	
-	/* only display the basename not the full path */
-	srcname = csc_path_basename(text, NULL, 0);
-
-	entry = IupText(NULL);
-	IupSetAttribute(entry, "EXPAND", "HORIZONTAL");
-	IupSetAttribute(entry, "VALUE", srcname);
-	IupSetAttribute(entry, "SELECTION", "NONE");
-
-	/* use this invisible control to keep the text control long enough */
-	shadow = IupLabel(srcname);
-	IupSetAttribute(shadow, "PADDING", "10");
-	IupSetAttribute(shadow, "VISIBLE", "NO");
-
-	vbox = IupVbox(entry, shadow, hbox, NULL);
-	IupSetAttribute(vbox, "NGAP", "4x4");
-	IupSetAttribute(vbox, "NMARGIN", "16x16");
-
-	hbox = IupDialog(vbox);	/* never mind the old hbox */
-	IupSetAttribute(hbox, "TITLE", "Direct Rename");
-	IupSetAttribute(hbox, "ICON", "DLG_ICON");
-	IupSetAttribute(hbox, "MAXBOX", "NO");
-	IupSetAttribute(hbox, "MINBOX", "NO");
-	IupSetAttribute(hbox, "HIDETASKBAR", "YES");
-	IupSetAttribute(hbox, "PARENTDIALOG", gui->inst_id);
-	IupPopup(hbox, IUP_CENTER, IUP_CENTER);
-
-	if (IupGetAttribute(butt_yes, "FCDLGCLICK") != NULL) {
-		srcname = IupGetAttribute(entry, "VALUE");
-		newpath = csc_strcpy_alloc(text, strlen(srcname));
-		tmp = csc_path_basename(newpath, NULL, 0);
-		strcpy(tmp, srcname);
-
-		rename_status_clean(gui->ropt);
-		rc = mmgui_rename_exec(gui, item, newpath, text);
-		if (rc == RNM_ERR_NONE) {
-			mmgui_event_update(ih);	/* update the preview */
-		}
-		smm_free(newpath);
+	tmp = IupGetAttribute(NULL, "SHIFTKEY");
+	if (tmp && !strcmp(tmp, "ON")) {
+		mmgui_rawname_popup(gui, item, text);
+	} else {
+		mmgui_rename_popup(gui, item, text);
 	}
 	return IUP_DEFAULT;
 }
@@ -1369,20 +1309,177 @@ static int mmgui_conflict_popup(MMGUI *gui, char *fname)
 		}
 		rename_option_dump(gui->ropt);
 	}
+	IupDestroy(widget);
 	return tlen;
+}
+
+static int mmgui_rename_popup(MMGUI *gui, int item, char *text)
+{
+	Ihandle	*entry, *shadow, *vbox, *hbox;
+	Ihandle	*butt_cancel, *butt_yes;
+	char	*srcname, *newpath, *tmp;
+	int	rc;
+
+	int mmgui_fnlist_event_dblclick_button(Ihandle* ih)
+	{
+		IupSetAttribute(ih, "FCDLGCLICK", "YES");
+		return IUP_CLOSE;
+	}
+
+	/* the button box in the bottom of the dialog window */
+	butt_cancel = IupButton("Cancel", NULL);
+	IupSetAttribute(butt_cancel, "IMAGE", "IUP_ActionCancel");
+	IupSetAttribute(butt_cancel, "PADDING", "8");
+	IupSetCallback(butt_cancel, "ACTION",
+			(Icallback) mmgui_fnlist_event_dblclick_button);
+	butt_yes = IupButton("Rename", NULL);
+	IupSetAttribute(butt_yes, "IMAGE", "IUP_ActionOk");
+	IupSetAttribute(butt_yes, "PADDING", "8");
+	IupSetCallback(butt_yes, "ACTION",
+			(Icallback) mmgui_fnlist_event_dblclick_button);
+
+	/* pack the buttons first because we want them normalized */
+	hbox = IupHbox(butt_cancel, butt_yes, NULL);
+	IupSetAttribute(hbox, "NGAP", "4");
+	IupSetAttribute(hbox, "NORMALIZESIZE", "HORIZONTAL");
+
+	shadow = IupLabel("");	/* padding the left side of the box */
+	IupSetAttribute(shadow, "SIZE", "100");
+	IupSetAttribute(shadow, "VISIBLE", "NO");
+
+	hbox = IupHbox(shadow, IupFill(), hbox, NULL); 
+	
+	/* only display the basename not the full path */
+	srcname = csc_path_basename(text, NULL, 0);
+
+	entry = IupText(NULL);
+	IupSetAttribute(entry, "EXPAND", "HORIZONTAL");
+	IupSetAttribute(entry, "VALUE", srcname);
+	IupSetAttribute(entry, "SELECTION", "NONE");
+
+	/* use this invisible control to keep the text control long enough */
+	shadow = IupLabel(srcname);
+	IupSetAttribute(shadow, "PADDING", "10");
+	IupSetAttribute(shadow, "VISIBLE", "NO");
+
+	vbox = IupVbox(entry, shadow, hbox, NULL);
+	IupSetAttribute(vbox, "NGAP", "4x4");
+	IupSetAttribute(vbox, "NMARGIN", "16x16");
+
+	hbox = IupDialog(vbox);	/* never mind the old hbox */
+	IupSetAttribute(hbox, "TITLE", "Direct Rename");
+	IupSetAttribute(hbox, "ICON", "DLG_ICON");
+	IupSetAttribute(hbox, "MAXBOX", "NO");
+	IupSetAttribute(hbox, "MINBOX", "NO");
+	IupSetAttribute(hbox, "HIDETASKBAR", "YES");
+	IupSetAttribute(hbox, "PARENTDIALOG", gui->inst_id);
+	IupPopup(hbox, IUP_CENTER, IUP_CENTER);
+
+	if (IupGetAttribute(butt_yes, "FCDLGCLICK") != NULL) {
+		srcname = IupGetAttribute(entry, "VALUE");
+		newpath = csc_strcpy_alloc(text, strlen(srcname));
+		tmp = csc_path_basename(newpath, NULL, 0);
+		strcpy(tmp, srcname);
+
+		rename_status_clean(gui->ropt);
+		rc = mmgui_rename_exec(gui, item, newpath, text);
+		if (rc == RNM_ERR_NONE) {
+			/* update the preview */
+			mmgui_event_update(gui->list_oldname);
+		}
+		smm_free(newpath);
+	}
+	IupDestroy(hbox);
+	return IUP_DEFAULT;
+}
+
+static int mmgui_rawname_popup(MMGUI *gui, int item, char *text)
+{
+	char	*buf, *mp;
+
+	item = strlen(text);
+	if ((buf = smm_alloc(item * 8)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
+	mp = buf;
+	while (item > 0) {
+		csc_memdump_line(text, 16, 0, mp, 128);
+		strcat(mp, "\n");
+		text += 16;
+		item -= 16;
+		mp += strlen(mp);
+	}
+
+	mmgui_message_popup(gui, 0, "Raw Filename Analyser", buf);
+	smm_free(buf);
+	return IUP_DEFAULT;
 }
 
 static int mmgui_batch_popup(MMGUI *gui)
 {
-	IupMessagef("Batch Rename", 
-			"Total Process Files:			%d	\n"
+	char	buf[256];
+
+	sprintf(buf,    "Total Process Files:		%d	\n"
 			"Successfully Renamed:		%d	\n"
 			"Failed to be renamed:		%d	\n"
-			"Unchanged Files:			%d	\n"
+			"Unchanged Files:		%d	\n"
 			"Skipped Existed Files:		%d	\n",
 			gui->ropt->st_process, gui->ropt->st_success,
 			gui->ropt->st_failed, gui->ropt->st_same, 
 			gui->ropt->st_skip);
+	mmgui_message_popup(gui, 2, "Batch Rename", buf);
+	return IUP_DEFAULT;
+}
+
+static int mmgui_message_popup(MMGUI *gui, int type, char *title, char *value)
+{
+	Ihandle *popup, *icon, *lable, *btn, *hbox, *vbox;
+	unsigned char	*iconrc;
+
+	int mmgui_message_event(Ihandle* ih)
+	{
+		(void) ih;
+		return IUP_CLOSE;
+	}
+
+	switch (type) {
+	case 0:
+		iconrc = (unsigned char *) mmrc_icon_warning;
+		break;
+	case 1:
+		iconrc = (unsigned char *) mmrc_icon_error;
+		break;
+	default:
+		iconrc = (unsigned char *) mmrc_icon_info;
+		break;
+	}
+	IupSetHandle("LARGE_ICON", IupImageRGBA(64, 64, iconrc));
+	icon = IupLabel("");
+	IupSetAttribute(icon, "IMAGE", "LARGE_ICON");
+	lable = IupLabel(value);
+	IupSetAttribute(lable, "FONT", "Courier,10");	/* fix width font */
+	hbox = IupHbox(icon, lable, NULL);
+	IupSetAttribute(hbox, "NGAP", "8");
+
+	btn = IupButton("Ok", NULL);
+	IupSetAttribute(btn, "IMAGE", "IUP_ActionOk");
+	IupSetAttribute(btn, "PADDING", "16");
+	IupSetCallback(btn, "ACTION",
+			(Icallback) mmgui_message_event);
+
+	vbox = IupVbox(hbox, IupHbox(IupFill(), btn, NULL), NULL);
+	IupSetAttribute(vbox, "NGAP", "8");
+	IupSetAttribute(vbox, "NMARGIN", "16x16");
+
+	popup = IupDialog(vbox);
+	IupSetAttribute(popup, "TITLE", title);
+	IupSetAttribute(popup, "MAXBOX", "NO");
+	IupSetAttribute(popup, "MINBOX", "NO");
+	IupSetAttribute(popup, "HIDETASKBAR", "YES");
+	IupSetAttribute(popup, "PARENTDIALOG", gui->inst_id);
+	IupPopup(popup, IUP_CURRENT, IUP_CURRENT);
+	IupDestroy(popup);
 	return IUP_DEFAULT;
 }
 

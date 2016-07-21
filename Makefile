@@ -163,7 +163,7 @@ endif
 	-if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
 	-mkdir $(RELDIR)
 	-$(CP) $(COMMONS) $(RELDIR)
-	-$(CP) *.c *.h *.rc *.png *.nsi Makefile version.mk $(RELDIR)
+	-$(CP) *.c *.h *.rc *.nsi Makefile version.mk $(RELDIR)
 	-$(CP) -a libmingw $(RELDIR)
 	-$(CP) -a external $(RELDIR)
 	-7z a -tzip $(RELDIR).zip $(RELDIR)

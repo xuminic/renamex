@@ -90,7 +90,7 @@ RNOPT	sysopt;
 
 static int rename_free_all(int sig);
 static int cli_set_pattern(RNOPT *opt, char *optarg);
-static int debug_main(char *optarg, int optind, int argc, char **argv);
+static int debug_main(char *optarg, int argc, char **argv);
 
 int main(int argc, char **argv)
 {
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
 			rename_free_all(0);
 			return RNM_ERR_HELP;
 		case 3:
-			return debug_main(optarg, optind, argc, argv);
+			return debug_main(optarg, argc-optind, &argv[optind]);
 		case 'f':
 			infile = 1;
 			break;
@@ -176,9 +176,10 @@ int main(int argc, char **argv)
 	sysopt.rtpath  = smm_cwd_push();
 	smm_signal_break(rename_free_all);
 
+	/* moved to debug_main() 
 	if (sysopt.cflags & RNM_CFLAG_TEST) {
 		rename_option_dump(&sysopt);
-	}
+	}*/
 
 #ifdef	CFG_GUI_ON
 	if (sysopt.cflags & RNM_CFLAG_GUI) {
@@ -328,28 +329,40 @@ static int cli_set_pattern(RNOPT *opt, char *optarg)
 	return RNM_ERR_NONE;
 }
 
-static int debug_main(char *optarg, int optind, int argc, char **argv)
+static int debug_main(char *optarg, int argc, char **argv)
 {
 	FILE	*fp;
+	int	i;
 
-	//printf("%s %d %d %s\n", optarg, optind, argc, argv[optind]);
+	//printf("%s %d %s\n", optarg, argc, argv[0]);
+	/* debug functions doesn't need parameters */
+	if (!strcmp(optarg, "option")) {
+		rename_option_dump(&sysopt);
+	}
+
+	/* debug functions doesn't need one parameters */
+	if (argc < 1) {
+		return -1;	/* parameters missing */
+	}
 	if (!strcmp(optarg, "create")) {
-		fp = smm_fopen(argv[optind], "w");
+		fp = smm_fopen(argv[0], "w");
 		if (fp == NULL) {
-			printf("fopen: %s\n", argv[optind]);
+			printf("fopen: %s\n", argv[0]);
 		} else {
 			smm_fclose(fp);
 		}
 	} else if (!strcmp(optarg, "verify")) {
-		if (optind >= argc) {
-			return -1;	/* parameters missing */
-		}
-		fp = smm_fopen(argv[optind], "r");
+		fp = smm_fopen(argv[0], "r");
 		if (fp == NULL) {
 			printf("fopen: not found\n");
 		} else {
 			smm_fclose(fp);
 			return 1;
+		}
+	} else if (!strcmp(optarg, "rawname")) {
+		for (i = 0; i < argc; i++) {
+			csc_memdump(argv[i], strlen(argv[i]), 
+					16, CSC_MEMDUMP_NO_ADDR);
 		}
 	}
 	return 0;
