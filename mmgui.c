@@ -454,9 +454,9 @@ static int mmgui_fnlist_event_dblclick(Ihandle *ih, int item, char *text)
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	tmp = IupGetAttribute(NULL, "SHIFTKEY");
-	if (tmp && !strcmp(tmp, "ON")) {
-		mmgui_rawname_popup(gui, item, text);
+	tmp = IupGetAttribute(NULL, "MODKEYSTATE");
+	if (tmp && strstr(tmp, "CA")) {
+		mmgui_rawname_popup(gui, item, text);	/* CTRL-ALT-DblClick */
 	} else {
 		mmgui_rename_popup(gui, item, text);
 	}

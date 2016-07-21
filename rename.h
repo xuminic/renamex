@@ -28,7 +28,7 @@
   #include "regex.h"
 #endif
 
-#define RENAME_VERSION		"2.0"
+#define RENAME_VERSION		"2.1"
   
 #define RNM_ERR_NONE		0
 #define RNM_ERR_SKIP		1

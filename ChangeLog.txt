@@ -1,4 +1,8 @@
-20160720:
+20160721:
+	* main.c/mmgui.c: added functions to dump the filename in hex for debug.
+	* icons: updated some 64x64 icons.
+
+20160720: release 2.0
 	* iup/iup_list.c: The Temporary patch can be removed. In iListGetNaturalItemsSize():846:
 	  *h += 2*ih->data->spacing;  /* this will be multiplied by the number of lines */
 	  *w += 2*ih->data->spacing;  /* include also horizontal spacing */
