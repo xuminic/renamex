@@ -1,35 +1,33 @@
 ifeq ($(OS), Windows_NT)
   WINLIBS = iupole
-  export MINGW4=/c/mingw
-  export TEC_UNAME=mingw4
 endif
+export USE_GTK2=1
 
-
-.PHONY: do_all iup iupgtk iupmot iupcd iupcontrols iupgl iup_pplot iup_mglplot iup_scintilla iupim iupimglib ledc iupview iuplua3 iuplua5 iupconsole iupole iupweb iuptuio
-#do_all: iup iupcd iupcontrols iupgl iup_pplot iup_mglplot iup_scintilla iupim iupimglib $(WINLIBS) iupweb iuptuio ledc iupview iuplua5 iupconsole
-
-ifeq    ($(MSYSTEM),MINGW32)
+.PHONY: do_all iup iupgtk iupmot iupcd iupcontrols iupmatrixex iupgl iupglcontrols iup_plot iup_mglplot iup_scintilla iupim iupimglib ledc iupview iuplua5 iupconsole iupole iupweb iuptuio
+#do_all: iup iupcd iupcontrols iupgl iupglcontrols iupmatrixex iup_plot iup_mglplot iup_scintilla iupim iupimglib $(WINLIBS) iupweb iuptuio ledc iupview iuplua5 iupconsole
 do_all: iup iupimglib $(WINLIBS)
-else
-do_all: iup iupimglib iupgtk
-endif
+
+clean:
+	rm -rf ./lib/* ./obj/*
 
 iup iupgtk iupmot:
 	@$(MAKE) --no-print-directory -C ./src/ $@
-clean:
-	rm -rf ./lib/* ./obj/*
 iupcd:
 	@$(MAKE) --no-print-directory -C ./srccd/
 iupcontrols:
 	@$(MAKE) --no-print-directory -C ./srccontrols/
-iup_pplot:
-	@$(MAKE) --no-print-directory -C ./srcpplot/
+iupmatrixex:
+	@$(MAKE) --no-print-directory -C ./srcmatrixex/
+iup_plot:
+	@$(MAKE) --no-print-directory -C ./srcplot/
 iup_mglplot:
 	@$(MAKE) --no-print-directory -C ./srcmglplot/
 iup_scintilla:
 	@$(MAKE) --no-print-directory -C ./srcscintilla/
 iupgl:
 	@$(MAKE) --no-print-directory -C ./srcgl/
+iupglcontrols:
+	@$(MAKE) --no-print-directory -C ./srcglcontrols/
 iupim:
 	@$(MAKE) --no-print-directory -C ./srcim/
 iupole:
@@ -40,8 +38,6 @@ iuptuio:
 	@$(MAKE) --no-print-directory -C ./srctuio/
 iupimglib:
 	@$(MAKE) USE_IUP_IMGLIB_LARGE=1 --no-print-directory -C ./srcimglib/
-iuplua3:
-	@$(MAKE) --no-print-directory -C ./srclua3/
 iuplua5:
 	@$(MAKE) --no-print-directory -C ./srclua5/
 iupconsole:

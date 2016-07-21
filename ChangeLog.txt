@@ -1,6 +1,7 @@
 20160721:
 	* main.c/mmgui.c: added functions to dump the filename in hex for debug.
 	* icons: updated some 64x64 icons.
+	* IUP: moved to 3.19.1
 
 20160720: release 2.0
 	* iup/iup_list.c: The Temporary patch can be removed. In iListGetNaturalItemsSize():846:
