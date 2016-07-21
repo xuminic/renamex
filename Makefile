@@ -198,3 +198,30 @@ showdll:
 	fi
 
 
+P_ICON	= /usr/share/icons/hicolor
+M_ICON	= apps/rename-extension.png
+
+install:
+	cp -f renamex /usr/bin
+	cp -f renamex.1 /usr/share/man/man1
+	cp -f renamex.desktop /usr/share/applications
+	cp -f ./external/icons/rename256.png $(P_ICON)/256x256/$(M_ICON)
+	cp -f ./external/icons/rename128.png $(P_ICON)/128x128/$(M_ICON)
+	convert -resize 48x48 ./external/icons/rename256.png $(P_ICON)/48x48/$(M_ICON)
+	convert -resize 32x32 ./external/icons/rename256.png $(P_ICON)/32x32/$(M_ICON)
+	convert -resize 24x24 ./external/icons/rename256.png $(P_ICON)/24x24/$(M_ICON)
+	convert -resize 22x22 ./external/icons/rename256.png $(P_ICON)/22x22/$(M_ICON)
+	convert -resize 16x16 ./external/icons/rename256.png $(P_ICON)/16x16/$(M_ICON)
+
+uninstall:
+	rm -f /usr/bin/renamex 
+	rm -f /usr/share/man/man1/renamex.1
+	rm -f /usr/share/applications/renamex.desktop
+	rm -f $(P_ICON)/256x256/$(M_ICON)
+	rm -f $(P_ICON)/128x128/$(M_ICON)
+	rm -f $(P_ICON)/48x48/$(M_ICON)
+	rm -f $(P_ICON)/32x32/$(M_ICON)
+	rm -f $(P_ICON)/24x24/$(M_ICON)
+	rm -f $(P_ICON)/22x22/$(M_ICON)
+	rm -f $(P_ICON)/16x16/$(M_ICON)
+
