@@ -1418,17 +1418,18 @@ static int mmgui_rawname_popup(MMGUI *gui, int item, char *text)
 
 static int mmgui_batch_popup(MMGUI *gui)
 {
-	char	buf[256];
+	char	buf[512];
 
-	sprintf(buf,    "Total Process Files:		%d	\n"
-			"Successfully Renamed:		%d	\n"
-			"Failed to be renamed:		%d	\n"
-			"Unchanged Files:		%d	\n"
-			"Skipped Existed Files:		%d	\n",
+	sprintf(buf,    "Total Process Files:           %d      \n"
+			"Successfully Renamed:          %d      \n"
+			"Failed to be renamed:          %d      \n"
+			"Unchanged Files:               %d      \n"
+			"Skipped Existed Files:         %d      \n",
 			gui->ropt->st_process, gui->ropt->st_success,
 			gui->ropt->st_failed, gui->ropt->st_same, 
 			gui->ropt->st_skip);
 	mmgui_message_popup(gui, 2, "Batch Rename", buf);
+	//IupMessage("Batch Rename", buf);
 	return IUP_DEFAULT;
 }
 
@@ -1436,6 +1437,7 @@ static int mmgui_message_popup(MMGUI *gui, int type, char *title, char *value)
 {
 	Ihandle *popup, *icon, *lable, *btn, *hbox, *vbox;
 	unsigned char	*iconrc;
+	char	fontbuf[32];
 
 	int mmgui_message_event(Ihandle* ih)
 	{
@@ -1455,10 +1457,14 @@ static int mmgui_message_popup(MMGUI *gui, int type, char *title, char *value)
 		break;
 	}
 	IupSetHandle("LARGE_ICON", IupImageRGBA(64, 64, iconrc));
+
+	strcpy(fontbuf, "Courier,");
+	strcat(fontbuf, IupGetAttribute(NULL, "DEFAULTFONTSIZE"));
+
 	icon = IupLabel("");
 	IupSetAttribute(icon, "IMAGE", "LARGE_ICON");
 	lable = IupLabel(value);
-	IupSetAttribute(lable, "FONT", "Courier,10");	/* fix width font */
+	IupSetAttribute(lable, "FONT", fontbuf);	/* fix width font */
 	hbox = IupHbox(icon, lable, NULL);
 	IupSetAttribute(hbox, "NGAP", "8");
 
@@ -1470,7 +1476,7 @@ static int mmgui_message_popup(MMGUI *gui, int type, char *title, char *value)
 
 	vbox = IupVbox(hbox, IupHbox(IupFill(), btn, NULL), NULL);
 	IupSetAttribute(vbox, "NGAP", "8");
-	IupSetAttribute(vbox, "NMARGIN", "16x16");
+	IupSetAttribute(vbox, "NMARGIN", "24x24");
 
 	popup = IupDialog(vbox);
 	IupSetAttribute(popup, "TITLE", title);

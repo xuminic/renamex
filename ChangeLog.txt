@@ -2,6 +2,7 @@
 	* main.c/mmgui.c: added functions to dump the filename in hex for debug.
 	* icons: updated some 64x64 icons.
 	* IUP: moved to 3.19.1
+	* mmgui_message_popup(): adapte to the size of the system font.
 
 20160720: release 2.0
 	* iup/iup_list.c: The Temporary patch can be removed. In iListGetNaturalItemsSize():846:
