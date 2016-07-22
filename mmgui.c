@@ -6,7 +6,6 @@
 #include <stdarg.h>
 
 #include "iup.h"
-#include "libcsoup.h"
 #include "rename.h"
 #include "mmrc_icon_dialog.h"
 #include "mmrc_icon_error.h"

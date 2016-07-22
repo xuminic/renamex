@@ -32,8 +32,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "libcsoup.h"
 #include "rename.h"
+
+/* re-use the debug protocols in libcsoup */
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(RENAME_MOD_CORE, SLOG_LVL_WARNING)
+#include "libcsoup_debug.h"
+
 
 static	struct	cliopt	clist[] = {
 	{ 0, NULL, 0, "Usage: renamex [OPTIONS] filename ..." },
@@ -87,31 +91,41 @@ graphical user interfaces.\n\
 http://webserver2.tecgraf.puc-rio.br/iup\n";
 
 RNOPT	sysopt;
+SMMDBG	*dbg_ctrl;
+F_PRF	dbg_prefix;
 
 static int rename_free_all(int sig);
 static int cli_set_pattern(RNOPT *opt, char *optarg);
+static char *rename_debug_prefix(void *self, int cw);
 static int debug_main(char *optarg, int argc, char **argv);
 
 int main(int argc, char **argv)
 {
 	void	*argp;
-	int 	c, infile = 0, rc = RNM_ERR_NONE;
+	int 	c, rc, infile = 0;
 
+	printf("%x %x\n", CSOUP_DEBUG_LOCAL, SLOG_LEVEL_SET(CSOUP_DEBUG_LOCAL,(7)));
 	smm_init();
+	dbg_ctrl = slog_csoup_open(NULL, NULL);
+	dbg_prefix = dbg_ctrl->f_prefix;
+	dbg_ctrl->f_prefix = rename_debug_prefix;
 
 	memset(&sysopt, 0, sizeof(RNOPT));
 	sysopt.compare = strncmp;
 	sysopt.cflags = RNM_CFLAG_NEVER;
 
 	if ((argp = csc_cli_getopt_open(clist)) == NULL) {
+		slog_csoup_close();
 		return -1;
 	}
 	
 #ifdef  CFG_GUI_ON
 	if ((sysopt.gui = mmgui_open(&sysopt, &argc, &argv)) == NULL) {
+		slog_csoup_close();
 		return -2; /* the config file */
 	}
 #endif
+	rc = RNM_ERR_NONE;
 	while ((c = csc_cli_getopt(argc, argv, argp)) > 0) {
 		switch (c) {
 		case 1:
@@ -120,15 +134,17 @@ int main(int argc, char **argv)
 			} else if (!strcmp(optarg, "credit")) {
 				puts(help_credits);
 			}
-			rename_free_all(0);
-			return RNM_ERR_HELP;
+			rc = RNM_ERR_HELP;
+			break;
 		case 2:
 			printf("%s, ", help_version);
 			puts(help_descript);
-			rename_free_all(0);
-			return RNM_ERR_HELP;
+			rc = RNM_ERR_HELP;
+			break;
 		case 3:
-			return debug_main(optarg, argc-optind, &argv[optind]);
+			debug_main(optarg, argc-optind, &argv[optind]);
+			rc = RNM_ERR_HELP;
+			break;
 		case 'f':
 			infile = 1;
 			break;
@@ -160,26 +176,24 @@ int main(int argc, char **argv)
 			break;
 		case 'v':
 			sysopt.cflags |= RNM_CFLAG_VERBOSE;
+			slog_csoup_setcw(SLOG_LVL_INFO);
 			break;
 		case 't':
 			sysopt.cflags |= RNM_CFLAG_TEST | RNM_CFLAG_VERBOSE;
+			slog_csoup_setcw(SLOG_LVL_MODULE);
 			break;
 		case 's':
 			rc = cli_set_pattern(&sysopt, optarg);
-			if (rc != RNM_ERR_NONE) {
-				return rc;
-			}
 			break;
+		}
+		if (rc != RNM_ERR_NONE) {
+			rename_free_all(0);
+			return rc;
 		}
 	}
 
 	sysopt.rtpath  = smm_cwd_push();
 	smm_signal_break(rename_free_all);
-
-	/* moved to debug_main() 
-	if (sysopt.cflags & RNM_CFLAG_TEST) {
-		rename_option_dump(&sysopt);
-	}*/
 
 #ifdef	CFG_GUI_ON
 	if (sysopt.cflags & RNM_CFLAG_GUI) {
@@ -192,7 +206,7 @@ int main(int argc, char **argv)
 #ifdef	CFG_GUI_ON
 		rc = mmgui_run(sysopt.gui, 0, NULL);
 #else
-		printf("%s: missing file operand\n", argv[0]);
+		CDB_SHOW(("%s: missing file operand\n", argv[0]));
 		rc = RNM_ERR_PARAM;
 #endif
 		rename_free_all(0);
@@ -212,7 +226,7 @@ int main(int argc, char **argv)
 			rc = mmgui_run(sysopt.gui, 
 					argc - optind, &argv[optind]);
 #else
-			printf("%s: missing rename operand\n", argv[0]);
+			CDB_SHOW(("%s: missing rename operand\n", argv[0]));
 			rc = RNM_ERR_PARAM;
 #endif
 		}
@@ -221,6 +235,7 @@ int main(int argc, char **argv)
 	}
 
 	if (rename_compile_regex(&sysopt)) {
+		rename_free_all(0);
 		return RNM_ERR_REGPAT;
 	}
 	for (c = optind; c < argc; c++) {
@@ -231,9 +246,9 @@ int main(int argc, char **argv)
 		}
 	}
 
-	printf("Total:%d  Renamed:%d  Failed:%d  No-change:%d  Existed:%d\n",
-			sysopt.st_process, sysopt.st_success, 
-			sysopt.st_failed, sysopt.st_same, sysopt.st_skip);
+	CDB_INFO(("Total:%d  Renamed:%d  Failed:%d  No-change:%d  "
+			"Existed:%d\n", sysopt.st_process, sysopt.st_success, 
+			sysopt.st_failed, sysopt.st_same, sysopt.st_skip));
 	rename_free_all(0);
 	return 0;
 }
@@ -241,6 +256,8 @@ int main(int argc, char **argv)
 static int rename_free_all(int sig)
 {
 	(void) sig;
+
+	slog_csoup_close();
 
 	if (sysopt.action == RNM_ACT_REGEX) {
 		regfree(sysopt.preg);
@@ -329,6 +346,27 @@ static int cli_set_pattern(RNOPT *opt, char *optarg)
 	return RNM_ERR_NONE;
 }
 
+static char *rename_debug_prefix(void *self, int cw)
+{
+	SMMDBG	*dbgc = self;
+	char	*prefix;
+
+	if (dbg_prefix) {
+		prefix = dbg_prefix(self, cw);
+	} else {
+		return NULL;
+	}
+	if (dbgc->option & SLOG_OPT_MODULE) {
+		if (cw & RENAME_MOD_CORE) {
+			strcat(prefix, "[RENAME] ");
+		}
+		if (cw & RENAME_MOD_GUI) {
+			strcat(prefix, "[GUI] ");
+		}
+	}
+	return prefix;
+}
+
 static int debug_main(char *optarg, int argc, char **argv)
 {
 	FILE	*fp;
@@ -338,6 +376,14 @@ static int debug_main(char *optarg, int argc, char **argv)
 	/* debug functions doesn't need parameters */
 	if (!strcmp(optarg, "option")) {
 		rename_option_dump(&sysopt);
+	} else if (!strcmp(optarg, "debug")) {
+		CDB_ERROR(("Internal: ERROR\n"));
+		CDB_WARN(("Internal: Warning\n"));
+		CDB_INFO(("Internal: INFO\n"));
+		CDB_DEBUG(("Internal: DEBUG\n"));
+		CDB_PROG(("Internal: PROG\n"));
+		CDB_MODL(("Internal: MODule\n"));
+		CDB_FUNC(("Internal: function\n"));
 	}
 
 	/* debug functions doesn't need one parameters */

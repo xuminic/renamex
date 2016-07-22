@@ -61,9 +61,11 @@
   #endif
 #endif
 
-#include "libcsoup.h"
 #include "rename.h"
   
+/* re-use the debug protocols in libcsoup */
+#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(RENAME_MOD_CORE, SLOG_LVL_WARNING)
+#include "libcsoup_debug.h"
 
 
 static int rename_recursive(RNOPT *opt, char *path);
@@ -202,7 +204,7 @@ int rename_option_dump(RNOPT *opt)
 	if (opt->cflags & RNM_CFLAG_GUI) {
 		strcat(buf, "|GUI");
 	}
-	printf("Control Flags:  %s]\n", buf);
+	CDB_SHOW(("Control Flags:  %s]\n", buf));
 
 	strcpy(buf, "[");
 	switch (opt->oflags & RNM_OFLAG_MASKCASE) {
@@ -243,18 +245,20 @@ int rename_option_dump(RNOPT *opt)
 		strcat(buf, "|XREGEX");
 	}
 	strcat(buf, "]");
-	printf("Process Flags:  %s\n", buf);
+	CDB_SHOW(("Process Flags:  %s\n", buf));
 
-	printf("Pattern:        %s (%d)\n", opt->pattern, opt->pa_len);
-	printf("Substituter:    %s (%d)(x %d)\n", 
-			opt->substit, opt->su_len, opt->rpnum);
+	CDB_SHOW(("Pattern:        %s (%d)\n", opt->pattern, opt->pa_len));
+	CDB_SHOW(("Substituter:    %s (%d)(x %d)\n", 
+			opt->substit, opt->su_len, opt->rpnum));
 	if (opt->oflags & RNM_OFLAG_PREFIX) {
-		printf("Prefix:         %s (%d)\n", opt->prefix, opt->pre_len);
+		CDB_SHOW(("Prefix:         %s (%d)\n", 
+				opt->prefix, opt->pre_len));
 	}
 	if (opt->oflags & RNM_OFLAG_SUFFIX) {
-		printf("Suffix:         %s (%d)\n", opt->suffix, opt->suf_len);
+		CDB_SHOW(("Suffix:         %s (%d)\n", 
+				opt->suffix, opt->suf_len));
 	}
-	printf("\n");
+	CDB_SHOW(("\n"));
 	return 0;
 }
 
@@ -342,8 +346,8 @@ static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour)
 
 static int rename_show(char *dest, char *sour, char *action)
 {
-	printf("renaming: %s\n", sour);
-	printf("     -->  %s : %s\n", dest, action);  
+	CDB_INFO(("renaming: %s\n", sour));
+	CDB_INFO(("     -->  %s : %s\n", dest, action));
 	return 0;
 }
 
@@ -355,14 +359,16 @@ static int console_notify(RNOPT *opt, int msg, int v, void *a1, void *a2)
 
 	switch (msg) {
 	case RNM_MSG_ENTER_DIR:
-		if (opt->cflags & RNM_CFLAG_VERBOSE) {
+		/*if (opt->cflags & RNM_CFLAG_VERBOSE) {
 			printf("Entering directory [%s]\n", dest);
-		}
+		}*/
+		CDB_INFO(("Entering directory [%s]\n", dest));
 		break;
 	case RNM_MSG_LEAVE_DIR:
-		if (opt->cflags & RNM_CFLAG_VERBOSE) {
+		/*if (opt->cflags & RNM_CFLAG_VERBOSE) {
 			printf("Leaving directory [%s]\n", dest);
-		}
+		}*/
+		CDB_INFO(("Leaving directory [%s]\n", dest));
 		break;
 	case RNM_MSG_ACT_FORWARD:
 	case RNM_MSG_ACT_BACKWARD:
@@ -395,7 +401,7 @@ static int console_notify(RNOPT *opt, int msg, int v, void *a1, void *a2)
 		}
 		break;
 	default:
-		printf("Unknown message [%d]\n", msg);
+		CDB_ERROR(("Unknown message [%d]\n", msg));
 		return RNM_ERR_PARAM;
 	}
 	return RNM_ERR_NONE;
@@ -437,7 +443,8 @@ int rename_open_buffer(RNOPT *opt, char *oldname)
 		break;
 	}
 	if (rc < 0) {
-		printf("rename_open_buffer: file name truncated\n");
+rename_open_buffer_error:
+		CDB_ERROR(("rename_open_buffer: file name truncated\n"));
 		return RNM_ERR_LONGPATH;	/* file name truncated */
 	}
 	
@@ -448,14 +455,12 @@ int rename_open_buffer(RNOPT *opt, char *oldname)
 	}
 	if (opt->oflags & RNM_OFLAG_PREFIX) {
 		if (postproc_prefix(opt, fname, flen) < 0) {
-			printf("rename_open_buffer: file name truncated\n");
-			return RNM_ERR_LONGPATH;  /* file name truncated */
+			goto rename_open_buffer_error;
 		}
 	}
 	if (opt->oflags & RNM_OFLAG_SUFFIX) {
 		if (postproc_suffix(opt, fname, flen) < 0) {
-			printf("rename_open_buffer: file name truncated\n");
-			return RNM_ERR_LONGPATH;  /* file name truncated */
+			goto rename_open_buffer_error;
 		}
 	}
 	return RNM_ERR_NONE;
@@ -475,7 +480,8 @@ int rename_compile_regex(RNOPT *opt)
 	rcode = regcomp(opt->preg, opt->pattern, opt->regflag);
 	if (rcode != 0) {
 		regerror(rcode, opt->preg, errmsg, sizeof(errmsg));
-		printf("Regular Expression '%s': %s\n", opt->pattern, errmsg);
+		CDB_ERROR(("Regular Expression '%s': %s\n", 
+				opt->pattern, errmsg));
 	}
 	return rcode;
 }
@@ -493,16 +499,25 @@ static int match_regexpr(RNOPT *opt, char *fname, int flen)
 	regmatch_t	pmatch[1];
 	int		count = 0;
 
-	while (!regexec(opt->preg, fname, 1, pmatch, 0))  {
-		{	//debugging
-			int	i;
-			printf("match_regexpr[%d-%d]: ", 
-					pmatch->rm_so, pmatch->rm_eo);
-			for (i = pmatch->rm_so; i < pmatch->rm_eo; i++) {
-				putchar(fname[i]);
-			}
-			puts("");
+#ifdef	DEBUG
+	void dump_matched_regexpr(regmatch_t *pm)
+	{
+		char	buf[256];
+		int	i, k;
+
+		sprintf(buf, "match_regexpr[%d-%d]: ", pm->rm_so, pm->rm_eo);
+		for (i = pm->rm_so, k = strlen(buf); 
+				(i < pm->rm_eo) && (k < 255); ) {
+			buf[k++] = fname[i++];
 		}
+		buf[k++] = 0;
+		CDB_FUNC(("%s\n", buf));
+	}
+#endif
+	while (!regexec(opt->preg, fname, 1, pmatch, 0))  {
+#ifdef	DEBUG
+		dump_matched_regexpr(pmatch);
+#endif
 		/* 20160712 for unknown reason the '-s/e?/-/xg' option crash
 		 * the regexec() by rm_so == rm_eo == 0 */
 		if (pmatch->rm_so >= pmatch->rm_eo) {

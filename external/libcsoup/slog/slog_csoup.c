@@ -28,7 +28,7 @@ static char *slog_csoup_prefix(void *self, int cw);
 
 SMMDBG	csoup_debug_control = {
 	SLOG_MAGIC,				/* the magic word */
-	SLOG_MODUL_ALL(SLOG_LVL_ERROR),		/* control word in host */
+	SLOG_MODUL_ALL(SLOG_LVL_WARNING),	/* control word in host */
 	SLOG_OPT_ALL,				/* option */
 	NULL, NULL,				/* file name and FILEP */
 	(void*) -1,				/* standard i/o */
@@ -52,6 +52,13 @@ SMMDBG *slog_csoup_open(FILE *stdio, char *fname)
 int slog_csoup_close(void)
 {
 	return slog_shutdown(&csoup_debug_control);
+}
+
+int slog_csoup_setcw(int cw)
+{
+	csoup_debug_control.cword =
+		SLOG_LEVEL_SET(csoup_debug_control.cword, cw);
+	return csoup_debug_control.cword;
 }
 
 int slog_csoup_puts(SMMDBG *dbgc, int setcw, int cw, char *buf)
@@ -88,20 +95,20 @@ static char *slog_csoup_prefix(void *self, int cw)
 				lctm->tm_year + 1900, 
 				lctm->tm_mon, lctm->tm_mday,
 				lctm->tm_hour, lctm->tm_min, lctm->tm_sec);
+		if (dbgc->option == 0) {
+			strcat(buffer, " ");
+		}
 	}
 	if (dbgc->option & SLOG_OPT_MODULE) {
 		if (cw & CSOUP_MOD_SLOG) {
-			strcat(buffer, "[SLOG]");
+			strcat(buffer, "[SLOG] ");
 		}
 		if (cw & CSOUP_MOD_CLI) {
-			strcat(buffer, "[CLI]");
+			strcat(buffer, "[CLI] ");
 		}
 		if (cw & CSOUP_MOD_CONFIG) {
-			strcat(buffer, "[CONFIG]");
+			strcat(buffer, "[CONFIG] ");
 		}
-	}
-	if (dbgc->option) {
-		strcat(buffer, " ");
 	}
 	return buffer;
 }
