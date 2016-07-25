@@ -90,25 +90,24 @@ The GUI frontend is based on IUP, a multi-platform toolkit for building\n\
 graphical user interfaces.\n\
 http://webserver2.tecgraf.puc-rio.br/iup\n";
 
-RNOPT	sysopt;
-SMMDBG	*dbg_ctrl;
-F_PRF	dbg_prefix;
+RNOPT		sysopt;
+F_PRF_MODL	dbg_trans_modl;
 
 static int rename_free_all(int sig);
 static int cli_set_pattern(RNOPT *opt, char *optarg);
-static char *rename_debug_prefix(void *self, int cw);
+static int rename_debug_trans_module(int cw, char *buf, int blen);
 static int debug_main(char *optarg, int argc, char **argv);
 
 int main(int argc, char **argv)
 {
+	SMMDBG	*dbgc;
 	void	*argp;
 	int 	c, rc, infile = 0;
 
-	printf("%x %x\n", CSOUP_DEBUG_LOCAL, SLOG_LEVEL_SET(CSOUP_DEBUG_LOCAL,(7)));
 	smm_init();
-	dbg_ctrl = slog_csoup_open(NULL, NULL);
-	dbg_prefix = dbg_ctrl->f_prefix;
-	dbg_ctrl->f_prefix = rename_debug_prefix;
+	dbgc = slog_csoup_open(NULL, NULL);
+	dbg_trans_modl = dbgc->f_trans_modu;
+	dbgc->f_trans_modu = rename_debug_trans_module;
 
 	memset(&sysopt, 0, sizeof(RNOPT));
 	sysopt.compare = strncmp;
@@ -176,11 +175,11 @@ int main(int argc, char **argv)
 			break;
 		case 'v':
 			sysopt.cflags |= RNM_CFLAG_VERBOSE;
-			slog_csoup_setcw(SLOG_LVL_INFO);
+			slog_csoup_set_level(SLOG_LVL_INFO);
 			break;
 		case 't':
 			sysopt.cflags |= RNM_CFLAG_TEST | RNM_CFLAG_VERBOSE;
-			slog_csoup_setcw(SLOG_LVL_MODULE);
+			slog_csoup_set_level(SLOG_LVL_MODULE);
 			break;
 		case 's':
 			rc = cli_set_pattern(&sysopt, optarg);
@@ -346,25 +345,16 @@ static int cli_set_pattern(RNOPT *opt, char *optarg)
 	return RNM_ERR_NONE;
 }
 
-static char *rename_debug_prefix(void *self, int cw)
+static int rename_debug_trans_module(int cw, char *buf, int blen)
 {
-	SMMDBG	*dbgc = self;
-	char	*prefix;
-
-	if (dbg_prefix) {
-		prefix = dbg_prefix(self, cw);
+	if (cw & RENAME_MOD_CORE) {
+		csc_strlcat(buf, "[RENAME]", blen);
+	} else if (cw & RENAME_MOD_GUI) {
+		csc_strlcat(buf, "[GUI]", blen);
 	} else {
-		return NULL;
+		return dbg_trans_modl(cw, buf, blen);
 	}
-	if (dbgc->option & SLOG_OPT_MODULE) {
-		if (cw & RENAME_MOD_CORE) {
-			strcat(prefix, "[RENAME] ");
-		}
-		if (cw & RENAME_MOD_GUI) {
-			strcat(prefix, "[GUI] ");
-		}
-	}
-	return prefix;
+	return strlen(buf);
 }
 
 static int debug_main(char *optarg, int argc, char **argv)

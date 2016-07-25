@@ -12,6 +12,10 @@
 #include "mmrc_icon_info.h"
 #include "mmrc_icon_warning.h"
 
+/* re-use the debug protocols in libcsoup */
+#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(RENAME_MOD_GUI, SLOG_LVL_DEBUG)
+#include "libcsoup_debug.h"
+
 #define RENAME_MAIN		"RENAMEGUIOBJ"
 
 #define IUPCOLOR_BLACK		"#000000"
@@ -140,7 +144,7 @@ void *mmgui_open(RNOPT *ropt, int *argcs, char ***argvs)
 
 	IupSetGlobal("SINGLEINSTANCE", "RENAME");
 	if (!IupGetGlobal("SINGLEINSTANCE")) {
-		printf("Instance is already running!\n");
+		CDB_WARN(("Instance is already running!\n"));
 		return NULL;
 	}
 
@@ -247,8 +251,9 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height)
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	//printf("mmgui_event_resize: %d x %d\n", width, height);
-	//printf("mmgui_event_resize: %s\n", IupGetAttribute(ih,"RASTERSIZE"));
+	CDB_PROG(("mmgui_event_resize: %d x %d\n", width, height));
+
+	/* magic statement to keep the dialog in shape */
 	IupSetAttribute(ih, "RASTERSIZE", IupGetAttribute(ih, "RASTERSIZE"));
 
 	/* resize the list panel to make sure it won't growth unexpectly */
@@ -258,7 +263,6 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height)
 		value = IupGetAttribute(gui->list_oldname, "RASTERSIZE");
 		height = (int) strtol(value, NULL, 10);
 		gui->magic_width = width - height;
-		//printf("mmgui_event_resize: %d\n", gui->magic_width);
 
 		/* normalize the buttons against the option box */
 		value = IupGetAttribute(gui->tick_prefix, "RASTERSIZE");
@@ -266,11 +270,12 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height)
 		value = IupGetAttribute(gui->entry_prefix, "RASTERSIZE");
 		height += (int) strtol(value, NULL, 10);
 		sprintf(buf, "%d", height);
-		//printf("mmgui_event_resize: %d\n", height);
 		IupSetAttribute(gui->butt_open, "RASTERSIZE", buf);
 		IupSetAttribute(gui->butt_del, "RASTERSIZE", buf);
 		IupSetAttribute(gui->butt_run, "RASTERSIZE", buf);
 		IupSetAttribute(gui->butt_about, "RASTERSIZE", buf);
+		CDB_FUNC(("mmgui_event_resize: Magic=%d Button=%d\n",
+					gui->magic_width, height));
 	}
 
 	sprintf(buf, "%d", width - gui->magic_width);
@@ -299,7 +304,7 @@ static int mmgui_event_update(Ihandle *ih, ...)
 	int	action;
 
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
-		printf("mmgui_event_update: oops!\n");
+		CDB_WARN(("mmgui_event_update: oops!\n"));
 		return IUP_DEFAULT;
 	}
 
@@ -384,8 +389,8 @@ static int mmgui_fnlist_event_dropfiles(Ihandle *ih,
 	MMGUI	*gui;
 
 	(void) num; (void) x; (void) y;
-	//printf("mmgui_fnlist_event_dropfiles: fname=%s number=%d %dx%d\n",
-	//		filename, num, x, y);
+	CDB_DEBUG(("mmgui_fnlist_event_dropfiles: fname=%s number=%d %dx%d\n",
+			filename, num, x, y));
 
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
@@ -406,7 +411,7 @@ static int mmgui_fnlist_event_multi_select(Ihandle *ih, char *value)
 	/* printf("mmgui_fnlist_event_multi_select: %s\n", value); */
 
 	value = IupGetAttribute(gui->list_oldname, "VALUE");
-	//printf("List value=%s\n", value);
+	CDB_DEBUG(("mmgui_fnlist_event_multi_select: %s\n", value));
 	mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "%d File Selected", 
 			IupTool_FileDlgCounting(value));
 
@@ -436,7 +441,7 @@ static int mmgui_fnlist_event_moused(Ihandle *ih,
 		return IUP_DEFAULT;
 	}
 	/* deselect every thing if the right button was released */
-	//printf("Moused: %d\n", button);
+	CDB_DEBUG(("Moused: %d\n", button));
 	if (button == IUP_BUTTON3) {
 		IupSetAttribute(gui->list_oldname, "VALUE", "");
 		mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "0 File Selected");
@@ -497,13 +502,13 @@ static int mmgui_fnlist_rename(MMGUI *gui, int idx)
 
 	srcname = IupGetAttributeId(gui->list_oldname, "", idx);
 	if (srcname == NULL) {
-		printf("mmgui_fnlist_rename: out of range. [%d]\n", idx);
+		CDB_ERROR(("mmgui_fnlist_rename: out of range. [%d]\n", idx));
 		return IUP_DEFAULT;
 	}
 
 	dstname = IupGetAttributeId(gui->list_preview, "", idx);
 	if (dstname == NULL) {
-		printf("mmgui_fnlist_rename: lost preview.\n");
+		CDB_ERROR(("mmgui_fnlist_rename: lost preview.\n"));
 		return IUP_DEFAULT;
 	}
 
@@ -527,7 +532,7 @@ static int mmgui_fnlist_status(MMGUI *gui, char *color, char *fmt, ...)
 		va_start(ap, fmt);
 		SMM_VSNPRINT(value, sizeof(value), fmt, ap);
 		va_end(ap);
-		//puts(value);
+		CDB_DEBUG(("STATUS: %s\n", value));
 		IupSetAttribute(gui->status, "TITLE", value);
 	}
 	return IUP_DEFAULT;
@@ -612,10 +617,10 @@ static int mmgui_button_event_load(Ihandle *ih)
 		return IUP_DEFAULT;	/* cancelled */
 	}
 
-	/*printf("Last  DIRECTORY: %s\n", 
-			IupGetAttribute(gui->dlg_open, "DIRECTORY"));*/
+	CDB_FUNC(("Last  DIRECTORY: %s\n", 
+			IupGetAttribute(gui->dlg_open, "DIRECTORY")));
 	dlgrd = IupGetAttribute(gui->dlg_open, "VALUE");
-	//printf("Open File VALUE: %s\n", dlgrd);
+	CDB_DEBUG(("Open File VALUE: %s\n", dlgrd));
 	while ((fname = IupTool_FileDlgExtract(dlgrd, &sp)) != NULL) {
 		mmgui_fnlist_append(gui, fname);
 		/* IupList control seems save a copy of its content.
@@ -637,7 +642,7 @@ static int mmgui_button_event_delete(Ihandle *ih)
 
 	while (1) {
 		value = IupGetAttribute(gui->list_oldname, "VALUE");
-		//printf("mmgui_button_event_delete: %s\n", value);
+		CDB_PROG(("mmgui_button_event_delete: %s\n", value));
 		for (i = 0; value[i]; i++) {
 			if (value[i] == '+') {
 				mmgui_fnlist_remove(gui, i+1);
@@ -1016,7 +1021,12 @@ static int mmgui_option_collection(MMGUI *gui)
 			opt->action = 0;	/* wrong regular expression */
 		}
 	}
-	//rename_option_dump(opt);
+	
+#ifdef	DEBUG
+	if (CDB_REACH(SLOG_LVL_DEBUG)) {
+		rename_option_dump(opt);
+	}
+#endif
 	if ((opt->action == 0) && (opt->oflags == 0)) {
 		return 0;
 	}
@@ -1495,7 +1505,7 @@ static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname)
 {
 	int 	rc;
 
-	//printf("mmgui_rename_exec[%d]: %s -> %s\n", i, srcname, dstname);
+	CDB_PROG(("mmgui_rename_exec[%d]: %s -> %s\n", i, srcname, dstname));
 
 	/* smm_codepage_set(65001);  // set the codepage to utf-8 
 	 * smm_codepage_reset();
