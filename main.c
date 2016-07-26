@@ -175,11 +175,11 @@ int main(int argc, char **argv)
 			break;
 		case 'v':
 			sysopt.cflags |= RNM_CFLAG_VERBOSE;
-			slog_csoup_set_level(SLOG_LVL_INFO);
+			CDB_SET_LEVEL(SLOG_LVL_INFO);
 			break;
 		case 't':
 			sysopt.cflags |= RNM_CFLAG_TEST | RNM_CFLAG_VERBOSE;
-			slog_csoup_set_level(SLOG_LVL_MODULE);
+			CDB_SET_LEVEL(SLOG_LVL_MODULE);
 			break;
 		case 's':
 			rc = cli_set_pattern(&sysopt, optarg);
