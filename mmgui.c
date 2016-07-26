@@ -1489,6 +1489,7 @@ static int mmgui_message_popup(MMGUI *gui, int type, char *title, char *value)
 
 	popup = IupDialog(vbox);
 	IupSetAttribute(popup, "TITLE", title);
+	IupSetAttribute(popup, "ICON", "DLG_ICON");
 	IupSetAttribute(popup, "MAXBOX", "NO");
 	IupSetAttribute(popup, "MINBOX", "NO");
 	IupSetAttribute(popup, "HIDETASKBAR", "YES");

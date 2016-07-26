@@ -105,7 +105,11 @@ int main(int argc, char **argv)
 	int 	c, rc, infile = 0;
 
 	smm_init();
+#if	defined(DEBUG) && defined(CFG_WIN32_API) && defined(CFG_GUI_ON)
+	dbgc = slog_csoup_open(NULL, "win32.log");
+#else
 	dbgc = slog_csoup_open(NULL, NULL);
+#endif
 	dbg_trans_modl = dbgc->f_trans_modu;
 	dbgc->f_trans_modu = rename_debug_trans_module;
 
