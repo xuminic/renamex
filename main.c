@@ -52,7 +52,7 @@ static	struct	cliopt	clist[] = {
 	{ 'G', "gui",       0, "start the GUI mode" },
 #endif
 	{ 'R', "recursive", 0, "Work on files and directories recursively" },
-	{ 'v', "verbose",   0, "Display verbose information" },
+	{ 'v', "verbose",   2, "Display verbose information" },
 	{ 't', "test",      0, "Test only mode. Nothing will be changed" },
 	{   1, "help",      2, "Display the help message" },
 	{   2, "version",   0, "Display the version message" },
@@ -175,7 +175,15 @@ int main(int argc, char **argv)
 			break;
 		case 'v':
 			sysopt.cflags |= RNM_CFLAG_VERBOSE;
-			CDB_SET_LEVEL(SLOG_LVL_INFO);
+			rc = SLOG_LVL_INFO;
+			if (optarg != NULL) {
+				rc = (int) strtol(optarg, NULL, 10);
+			}
+			if ((rc < SLOG_LVL_ERROR) || (rc > SLOG_LVL_FUNC)) {
+				rc = SLOG_LVL_INFO;
+			}
+			CDB_SET_LEVEL(rc);
+			rc = RNM_ERR_NONE;
 			break;
 		case 't':
 			sysopt.cflags |= RNM_CFLAG_TEST | RNM_CFLAG_VERBOSE;
