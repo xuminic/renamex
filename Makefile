@@ -143,6 +143,7 @@ endif
 extinstall:
 	cp -f  ./external/libcsoup/libcsoup.a ./libmingw/lib
 	cp -f  ./external/libcsoup/libcsoup.h ./libmingw/include
+	cp -f  ./external/libcsoup/libcsoup_debug.h ./libmingw/include
 	cp -af ./external/iup/include/* ./libmingw/include/iup
 	cp -f  ./external/iup/lib/mingw4/*.a ./libmingw/lib
 	cp -f  ./external/regex-20090805/lib/regex.h ./libmingw/include
