@@ -204,6 +204,15 @@ int mmgui_run(void *guiobj, int argc, char **argv)
 	IupSetAttribute(gui->dlg_open, "TITLE", "Open Files");
 	IupSetAttribute(gui->dlg_open, "MULTIPLEFILES", "YES");
 
+	/* 20160727 enable utf-8 mode for Windows.
+	 * One case had been found that default setting can only accept utf-16
+	 * in Windows, though utf-8 filename can be normally displayed in 
+	 * File Explorer. Enabling the following attributions will let 
+	 * IupFileDlg() return utf-8 filenames */
+	/* Note that these two lines must be kept in this sequence */
+	IupSetAttribute(NULL, "UTF8MODE", "YES");
+	IupSetAttribute(NULL, "UTF8MODE_FILE", "YES");
+
 	/* show and run the interface */
 	mmgui_reset(gui);
 	gui->ropt->notify = mmgui_notify;
@@ -1508,10 +1517,12 @@ static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname)
 
 	CDB_PROG(("mmgui_rename_exec[%d]: %s -> %s\n", i, srcname, dstname));
 
-	/* smm_codepage_set(65001);  // set the codepage to utf-8 
-	 * smm_codepage_reset();
-	 * IUP uses local WIN32 API so it doesn't need to set codepages */
+	/* Enabling UTF8MODE_FILE cause IUP receive and process utf-8 only
+	 * filenames so we must set the codepage to 65001, utf-8. Then
+	 * the rename_* functions can convert them to the current locale */
+	smm_codepage_set(65001);
 	rc = rename_executing(gui->ropt, dstname, srcname);
+	smm_codepage_reset();
 	switch (rc) {
 	case RNM_ERR_NONE:
 		/* multi-selection event will be triggered by this statement

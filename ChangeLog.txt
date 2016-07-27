@@ -1,7 +1,11 @@
+20160727: Version 2.2
+	* mmgui.c: fixed the problem that displaying "????" in the filenames
+	where were encoded by utf-8 in Windows.
+
 20160726:
 	* libcsoup: updated to 0.9.2 to re-use the debug functions.
 
-20160721:
+20160721: Version 2.1
 	* main.c/mmgui.c: added functions to dump the filename in hex for debug.
 	* icons: updated some 64x64 icons.
 	* IUP: moved to 3.19.1
