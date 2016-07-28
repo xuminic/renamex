@@ -98,6 +98,9 @@ static int mmgui_fnlist_event_dropfiles(Ihandle *, char *, int,int,int);
 static int mmgui_fnlist_event_multi_select(Ihandle *ih, char *value);
 static int mmgui_fnlist_event_moused(Ihandle *ih, int, int, int, int, char *);
 static int mmgui_fnlist_event_dblclick(Ihandle *ih, int item, char *text);
+#if     (defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
+static int mmgui_fnlist_event_ctrl_a(Ihandle *ih, int c);
+#endif
 static int mmgui_fnlist_append(MMGUI *gui, char *fname);
 static int mmgui_fnlist_remove(MMGUI *gui, int idx);
 static int mmgui_fnlist_rename(MMGUI *gui, int idx);
@@ -362,6 +365,12 @@ static Ihandle *mmgui_fnlist_box(MMGUI *gui)
 			(Icallback) mmgui_fnlist_event_moused);
 	IupSetCallback(gui->list_oldname, "DBLCLICK_CB",
 			(Icallback) mmgui_fnlist_event_dblclick);
+#if     (defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
+	/* 20160728: In Windows the list control doesn't support Ctrl-A to
+	 * select all items so I put a workaround here */
+	IupSetCallback(gui->list_oldname, "K_cA",
+			(Icallback) mmgui_fnlist_event_ctrl_a);
+#endif
 	
 	gui->list_preview = IupList(NULL);
 	IupSetAttribute(gui->list_preview, "EXPAND", "YES");
@@ -475,6 +484,35 @@ static int mmgui_fnlist_event_dblclick(Ihandle *ih, int item, char *text)
 	}
 	return IUP_DEFAULT;
 }
+
+#if     (defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
+static int mmgui_fnlist_event_ctrl_a(Ihandle *ih, int c)
+{
+	MMGUI	*gui;
+	char	*buf;
+
+	(void) c;
+	CDB_DEBUG(("mmgui_fnlist_event_ctrl_a: %x\n",c));
+
+	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
+		return IUP_DEFAULT;
+	}
+
+	buf = csc_strcpy_alloc(IupGetAttribute(gui->list_oldname, "VALUE"), 0);
+	memset(buf, '+', strlen(buf));
+	IupSetAttribute(gui->list_oldname, "VALUE", buf);
+
+	/* Next three lines copied from mmgui_fnlist_event_multi_select(). 
+	 * Writing "VALUE" to list control, unlink writing content, won't 
+	 * trigger the multi-select event so I do it manually. */
+	mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "%d File Selected",
+			IupTool_FileDlgCounting(buf));
+	mmgui_button_status_update(gui, mmgui_option_collection(gui));
+	mmgui_option_free(gui);
+	smm_free(buf);
+	return IUP_CONTINUE;
+}
+#endif
 
 static int mmgui_fnlist_append(MMGUI *gui, char *fname)
 {
@@ -1032,7 +1070,7 @@ static int mmgui_option_collection(MMGUI *gui)
 	}
 	
 #ifdef	DEBUG
-	if (CDB_REACH(SLOG_LVL_DEBUG)) {
+	if (CDB_REACH(SLOG_LVL_PROGRAM)) {
 		rename_option_dump(opt);
 	}
 #endif

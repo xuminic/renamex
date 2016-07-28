@@ -1,3 +1,6 @@
+20160728:
+	* mmgui.c: fixed the missing Ctrl-A in Windows.
+
 20160727: Version 2.2
 	* mmgui.c: fixed the problem that displaying "????" in the filenames
 	where were encoded by utf-8 in Windows.
