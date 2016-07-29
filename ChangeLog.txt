@@ -1,3 +1,8 @@
+20160729:
+	* Makefile: Updated the build system to support GTK3.
+	Note that in dual GTK system the GTK3 is the default. 
+	It can be overrided by prefix "USE_GTK2=1" to make
+
 20160728:
 	* mmgui.c: fixed the missing Ctrl-A in Windows.
 
