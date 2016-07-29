@@ -3,7 +3,14 @@ ifeq ($(OS), Windows_NT)
   export MINGW4=/c/mingw
   export TEC_UNAME=mingw4
 endif
-export USE_GTK2=1
+
+# quick decision which GTK is available
+ifndef	USE_GTK2
+gtkver := $(shell pkg-config gtk+-3.0 --cflags)
+ifeq ($(gtkver), )
+  export USE_GTK2=1
+endif
+endif
 
 .PHONY: do_all iup iupgtk iupmot iupcd iupcontrols iupmatrixex iupgl iupglcontrols iup_plot iup_mglplot iup_scintilla iupim iupimglib ledc iupview iuplua5 iupconsole iupole iupweb iuptuio
 #do_all: iup iupcd iupcontrols iupgl iupglcontrols iupmatrixex iup_plot iup_mglplot iup_scintilla iupim iupimglib $(WINLIBS) iupweb iuptuio ledc iupview iuplua5 iupconsole

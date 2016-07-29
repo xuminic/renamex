@@ -1,14 +1,14 @@
 
 ifndef	SYSTOOL		# Options: unix, mingw
-ifeq	($(MSYSTEM),MINGW32)
-SYSTOOL = mingw
-else
-SYSTOOL	= unix
-endif
+  ifeq	($(MSYSTEM),MINGW32)
+    SYSTOOL = mingw
+  else
+    SYSTOOL = unix
+  endif
 endif
 
-ifndef	SYSGUI		# Options: CFG_GUI_ON, CFG_GUI_OFF
-SYSGUI	= CFG_GUI_ON
+ifndef	SYSGUI		# Options: CFG_GUI_OFF, CFG_GUI_ON
+  SYSGUI = CFG_GUI_ON
 endif
 
 ifeq	($(SYSTOOL),mingw)
@@ -24,11 +24,11 @@ SYSFLAG	= -DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 \
 # Options: -mwindows, -mconsole -mwindows, -Wl,--subsystem,windows
 #SYSLIB	= -ljpeg -lpng -lz -lwsock32 -lwldap32 -lregex
 SYSLIB	= -lwsock32 -lwldap32 -lregex
-ifeq	($(SYSGUI),CFG_GUI_ON)
-SYSLIB	+= -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
-	   -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
+ifeq	($(SYSGUI),CFG_GUI_OFF)
+  SYSLIB += -mconsole
 else
-SYSLIB	+= -mconsole
+  SYSLIB += -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool -lcomdlg32 \
+	     -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32
 endif
 endif
 
@@ -43,15 +43,27 @@ RM	= rm -f
 SYSINC	= -I./external/libcsoup 
 SYSLDD	= -L./external/libcsoup
 SYSLIB	=
-ifeq	($(SYSGUI),CFG_GUI_ON)
-SYSINC	+= -I./external/iup/include `pkg-config gtk+-2.0 --cflags`
-SYSLDD	+= -L$(shell echo ./external/iup/lib/*)
-SYSLIB	+= `pkg-config gtk+-2.0 --libs` -lX11
-endif
 SYSFLAG =
-endif
+OBJLIB	= ./external/libcsoup/libcsoup.a
 
-include	version.mk
+ifeq	($(SYSGUI),CFG_GUI_ON)
+  ifdef	USE_GTK2
+    GTKINC := $(shell pkg-config gtk+-2.0 --cflags)
+    GTKLIB := $(shell pkg-config gtk+-2.0 --libs)
+  else
+    GTKINC := $(shell pkg-config gtk+-3.0 --cflags)
+    GTKLIB := $(shell pkg-config gtk+-3.0 --libs)
+    ifeq  ($(GTKINC), )
+      GTKINC := $(shell pkg-config gtk+-2.0 --cflags)
+      GTKLIB := $(shell pkg-config gtk+-2.0 --libs)
+    endif
+  endif
+  SYSINC += -I./external/iup/include $(GTKINC)
+  SYSLIB += $(GTKLIB) -lX11
+  SYSLDD += -L$(shell echo ./external/iup/lib/*)
+  OBJLIB += $(shell echo ./external/iup/lib/*)/libiup.a
+endif
+endif
 
 PREFIX	= /usr/local
 BINDIR	= /usr/local/bin
@@ -66,16 +78,17 @@ CFLAGS  = -Wall -Wextra $(DEBUG) $(DEFINES) $(SYSINC) $(SYSFLAG)
 PROJECT	= renamex
 
 ifeq	($(SYSTOOL),unix)
-TARGET	= $(PROJECT)
+  TARGET = $(PROJECT)
 else 
-ifeq	($(SYSGUI),CFG_GUI_OFF)
-TARGET	= $(PROJECT).exe
-else
-TARGET	= $(PROJECT)_win.exe
-endif
+  ifeq	($(SYSGUI),CFG_GUI_OFF)
+    TARGET = $(PROJECT).exe
+  else
+    TARGET = $(PROJECT)_win.exe
+  endif
 endif
 
-RELDATE	= `date +%Y%m%d`
+RELDATE	:= $(shell date +%Y%m%)
+RELVERS	:= $(shell grep RENAME_VERSION rename.h | cut -d\" -f 2)
 RELDIR	= $(PROJECT)-$(RELVERS)
 RELWIN	= $(RELDIR)-win32-bin
 
@@ -99,7 +112,14 @@ COMMONS	= COPYING ChangeLog.txt README.en.txt autotest.sh rename.ico \
 	
 .PHONY: $(TARGET)
 
-all: $(TARGET) version.mk
+all:
+	@echo $(SYSINC) 
+	@echo $(SYSLIB) $(SYSLDD)
+	@echo $(RELDIR)
+	@echo $(LIBS)
+
+
+#all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $(SYSLDD) -o $@ $(OBJS) $(LIBS)
@@ -129,7 +149,7 @@ extlib:
 else
 extlib: regexlib
 endif
-	make -C ./external/iup do_all
+	$(IUPCOND) make -C ./external/iup do_all
 	make -C ./external/libcsoup all
 
 ifeq	($(SYSTOOL),unix)
@@ -148,7 +168,7 @@ extinstall:
 	cp -f  ./external/iup/lib/mingw4/*.a ./libmingw/lib
 	cp -f  ./external/regex-20090805/lib/regex.h ./libmingw/include
 	cp -f  ./external/regex-20090805/.libs/libregex.a ./libmingw/lib
-
+	
 version.mk: rename.h 
 	echo -n "RELVERS	= " > $@
 	grep RENAME_VERSION $< | cut -d\" -f 2 >> $@
