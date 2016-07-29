@@ -213,6 +213,7 @@ install:
 	convert -resize 24x24 ./external/icons/rename256.png $(P_ICON)/24x24/$(M_ICON)
 	convert -resize 22x22 ./external/icons/rename256.png $(P_ICON)/22x22/$(M_ICON)
 	convert -resize 16x16 ./external/icons/rename256.png $(P_ICON)/16x16/$(M_ICON)
+	rm $(P_ICON)/icon-theme.cache
 
 uninstall:
 	rm -f /usr/bin/renamex 
