@@ -44,30 +44,32 @@ SYSINC	= -I./external/libcsoup
 SYSLDD	= -L./external/libcsoup
 SYSLIB	=
 SYSFLAG =
-OBJLIB	= ./external/libcsoup/libcsoup.a
 
 ifeq	($(SYSGUI),CFG_GUI_ON)
   ifdef	USE_GTK2
     GTKINC := $(shell pkg-config gtk+-2.0 --cflags)
     GTKLIB := $(shell pkg-config gtk+-2.0 --libs)
-  else
-    GTKINC := $(shell pkg-config gtk+-3.0 --cflags)
-    GTKLIB := $(shell pkg-config gtk+-3.0 --libs)
+    IUPCFG = USE_GTK2=$(USE_GTK2)
+  else	# auto-detect
+    GTKINC := $(shell pkg-config gtk+-3.0 --cflags 2> /dev/null)
+    GTKLIB := $(shell pkg-config gtk+-3.0 --libs 2> /dev/null)
     ifeq  ($(GTKINC), )
       GTKINC := $(shell pkg-config gtk+-2.0 --cflags)
       GTKLIB := $(shell pkg-config gtk+-2.0 --libs)
+      IUPCFG = USE_GTK2=1	# No GTK3 installed
     endif
   endif
   SYSINC += -I./external/iup/include $(GTKINC)
   SYSLIB += $(GTKLIB) -lX11
-  SYSLDD += -L$(shell echo ./external/iup/lib/*)
-  OBJLIB += $(shell echo ./external/iup/lib/*)/libiup.a
+  SYSLDD += -L`echo ./external/iup/lib/*`
 endif
 endif
 
 PREFIX	= /usr/local
 BINDIR	= /usr/local/bin
 MANDIR	= /usr/local/man/man1
+P_ICON	= /usr/share/icons/hicolor
+M_ICON	= apps/rename-extension.png
 
 DEBUG	= -g -O0 -DDEBUG
 #DEBUG	= -O3
@@ -105,23 +107,18 @@ LIBS	+= $(SYSLIB)
 
 
 COMMONS	= COPYING ChangeLog.txt README.en.txt autotest.sh rename.ico \
-	  renamex-2.0.lsm renamex.1 renamex.pdf
+	  renamex-*.lsm renamex.1 renamex.pdf
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 	
-.PHONY: $(TARGET)
+.PHONY: all clean cleanobj extlib extclean release installer_win \
+	release-win showdll install uninstall
 
-all:
-	@echo $(SYSINC) 
-	@echo $(SYSLIB) $(SYSLDD)
-	@echo $(RELDIR)
-	@echo $(LIBS)
-
-
-#all: $(TARGET)
+all: $(TARGET)
 
 $(TARGET): $(OBJS)
+	$(IUPCFG) make -C external all
 	$(CC) $(CFLAGS) $(SYSLDD) -o $@ $(OBJS) $(LIBS)
 
 rename_icon.o: rename_icon.rc
@@ -136,46 +133,13 @@ cleanobj:
 clean: cleanobj
 	$(RM) $(TARGET)
 
-regexlib:
-	cd ./external/regex-20090805 && ./configure --disable-shared && \
-		cd ../.. && make -C ./external/regex-20090805 all
-
-regexclean:
-	-if [ -f ./external/regex-20090805/Makefile ]; \
-		then make -C ./external/regex-20090805 distclean; fi
-
-ifeq	($(SYSTOOL),unix)
 extlib:
-else
-extlib: regexlib
-endif
-	$(IUPCOND) make -C ./external/iup do_all
-	make -C ./external/libcsoup all
+	$(IUPCFG) make -C external all
 
-ifeq	($(SYSTOOL),unix)
 extclean:
-else
-extclean: regexclean
-endif
-	make -C ./external/iup clean
-	make -C ./external/libcsoup clean
+	$(IUPCFG) make -C external clean
 
-extinstall:
-	cp -f  ./external/libcsoup/libcsoup.a ./libmingw/lib
-	cp -f  ./external/libcsoup/libcsoup.h ./libmingw/include
-	cp -f  ./external/libcsoup/libcsoup_debug.h ./libmingw/include
-	cp -af ./external/iup/include/* ./libmingw/include/iup
-	cp -f  ./external/iup/lib/mingw4/*.a ./libmingw/lib
-	cp -f  ./external/regex-20090805/lib/regex.h ./libmingw/include
-	cp -f  ./external/regex-20090805/.libs/libregex.a ./libmingw/lib
 	
-version.mk: rename.h 
-	echo -n "RELVERS	= " > $@
-	grep RENAME_VERSION $< | cut -d\" -f 2 >> $@
-ifeq	($(SYSTOOL),unix)
-	make extlib
-endif
-
 ifeq	($(SYSTOOL),unix)
 release: extclean
 else
@@ -184,10 +148,11 @@ endif
 	-if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
 	-mkdir $(RELDIR)
 	-$(CP) $(COMMONS) $(RELDIR)
-	-$(CP) *.c *.h *.rc *.nsi Makefile version.mk $(RELDIR)
+	-$(CP) *.c *.h *.rc *.nsi Makefile $(RELDIR)
 	-$(CP) -a libmingw $(RELDIR)
 	-$(CP) -a external $(RELDIR)
-	-7z a -tzip $(RELDIR).zip $(RELDIR)
+	#-7z a -tzip $(RELDIR).zip $(RELDIR)
+	-tar czf $(RELDIR).tar.gz $(RELDIR)
 	-$(RM) -r $(RELDIR)
 
 installer_win: release-win
@@ -218,13 +183,9 @@ showdll:
 		objdump -p $(PROJECT)_win.exe | grep 'DLL Name:'; \
 	fi
 
-
-P_ICON	= /usr/share/icons/hicolor
-M_ICON	= apps/rename-extension.png
-
 install:
-	cp -f renamex /usr/bin
-	cp -f renamex.1 /usr/share/man/man1
+	install -s renamex $(BINDIR)
+	cp -f renamex.1 $(MANDIR)
 	cp -f renamex.desktop /usr/share/applications
 	cp -f ./external/icons/rename256.png $(P_ICON)/256x256/$(M_ICON)
 	cp -f ./external/icons/rename128.png $(P_ICON)/128x128/$(M_ICON)
@@ -236,8 +197,8 @@ install:
 	rm $(P_ICON)/icon-theme.cache
 
 uninstall:
-	rm -f /usr/bin/renamex 
-	rm -f /usr/share/man/man1/renamex.1
+	rm -f $(BINDIR)/renamex 
+	rm -f $(MANDIR)/renamex.1
 	rm -f /usr/share/applications/renamex.desktop
 	rm -f $(P_ICON)/256x256/$(M_ICON)
 	rm -f $(P_ICON)/128x128/$(M_ICON)
