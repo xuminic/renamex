@@ -15,9 +15,14 @@ endif
 .PHONY: do_all iup iupgtk iupmot iupcd iupcontrols iupmatrixex iupgl iupglcontrols iup_plot iup_mglplot iup_scintilla iupim iupimglib ledc iupview iuplua5 iupconsole iupole iupweb iuptuio
 #do_all: iup iupcd iupcontrols iupgl iupglcontrols iupmatrixex iup_plot iup_mglplot iup_scintilla iupim iupimglib $(WINLIBS) iupweb iuptuio ledc iupview iuplua5 iupconsole
 do_all: iup iupimglib $(WINLIBS)
+ifdef	USE_GTK2
+	echo 2 > VERSION.gtk
+else
+	echo 3 > VERSION.gtk
+endif
 
 clean:
-	rm -rf ./lib/* ./obj/*
+	rm -rf ./lib/* ./obj/* VERSION.gtk
 
 .PHONY: install
 install:
