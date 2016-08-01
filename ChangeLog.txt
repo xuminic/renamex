@@ -1,3 +1,6 @@
+20160801: Version 2.3
+	* Makefile: Updated in Windows and dual-GTK distrobution.
+
 20160729:
 	* Makefile: Updated the build system to support GTK3.
 	Note that in dual GTK system the GTK3 is the default. 

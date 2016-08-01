@@ -23,14 +23,44 @@ Features
  * support MS Windows and Linux/Unix system'
  * integrated a GUI frontend
 
+Release Notes
+-------------
+
+Version 2.3:
+ * Fixed the problem that Ctrl-A could not select-all in MS Windows.
+ * Updated the build system to support GTK3
+
+Version 2.2:
+ * Fixed the bug that displaying ??? against UTF-8 Eastern Asia characters
+   in MS Windows.
+ * Updated the debug scheme so the tool works in MS Windows.
+ 
+Version 2.1:
+ * Upsourced to the recent version of IUP 3.19.1
+ * Updated the icon and adapting the system fonts.
+
+Version 2.0:
+ * Programmed a GUI based on IUP for X-Window and MS Windows
+ * Ported to Win32 API
+ * Reviewed the original code and update to the new baseline
+
 
 Install
 -------
 
-Download rename distribution then unpack it with tar -zxf:
+Download rename distribution then unpack it with tar -zxf, then make 
+the default build which includes a GUI:
 
     make
-    make install
+
+Or make a command line only tool:
+
+    SYSGUI=CFG_GUI_OFF make
+
+In X Window with GTK2 and GTK3 installed, the rename extension tool will
+pick GTK3 as default. It can be overrided by:
+
+    USE_GTK2=1 make
 
 
 BUGS reporting
