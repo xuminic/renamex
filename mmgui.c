@@ -13,7 +13,7 @@
 #include "mmrc_icon_warning.h"
 
 /* re-use the debug protocols in libcsoup */
-#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(RENAME_MOD_GUI, SLOG_LVL_DEBUG)
+#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(RENAME_MOD_GUI, SLOG_LVL_WARNING)
 #include "libcsoup_debug.h"
 
 #define RENAME_MAIN		"RENAMEGUIOBJ"

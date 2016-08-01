@@ -19,11 +19,10 @@ RM	= rm -f
 
 SYSINC  = -I./libmingw/include -I./libmingw/include/iup
 SYSLDD  = -L./libmingw/lib
-SYSFLAG	= -DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500 \
-	  -DNONDLL #For linking static libgd
-# Options: -mwindows, -mconsole -mwindows, -Wl,--subsystem,windows
-#SYSLIB	= -ljpeg -lpng -lz -lwsock32 -lwldap32 -lregex
+SYSFLAG	= -DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500
 SYSLIB	= -lwsock32 -lwldap32 -lregex
+
+# Options: -mwindows, -mconsole -mwindows, -Wl,--subsystem,windows
 ifeq	($(SYSGUI),CFG_GUI_OFF)
   SYSLIB += -mconsole
 else

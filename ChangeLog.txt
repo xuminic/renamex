@@ -1,6 +1,9 @@
 20160801: Version 2.3
 	* Makefile: Updated in Windows and dual-GTK distrobution.
 	* Makefile: simplest installer to the freedesk desktop.
+	* Makefile: clean up the dead macro in Windows build
+	* main.c: close the debug in Windows
+	* mmgui.c: drop the debug level to warning.
 
 20160729:
 	* Makefile: Updated the build system to support GTK3.
