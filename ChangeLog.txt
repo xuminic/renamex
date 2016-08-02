@@ -1,3 +1,7 @@
+20160802:
+	* config.h: have it removed because it's not really used.
+	Modified other files that relates to config.h
+
 20160801: Version 2.3
 	* Makefile: Updated in Windows and dual-GTK distrobution.
 	* Makefile: simplest installer to the freedesk desktop.

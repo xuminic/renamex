@@ -19,47 +19,15 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <signal.h>
+#include <unistd.h>
 #include <sys/stat.h>
-
-#if HAVE_UNISTD_H
-  #include <sys/types.h>
-  #include <unistd.h>
-#endif
-
-#if STDC_HEADERS
-  #include <string.h>
-#else
-  #ifndef HAVE_STRCHR
-    #define strchr index
-    #define strrchr rindex
-  #endif
-  char *strchr(), *strrchr();
-#endif
-
-#if HAVE_DIRENT_H
-  #include <dirent.h>
-  #define NAMLEN(dirent) strlen((dirent)->d_name)
-#else
-  #define dirent direct
-  #define NAMLEN(dirent) (dirent)->d_namlen
-  #if HAVE_SYS_NDIR_H
-    #include <sys/ndir.h>
-  #endif
-  #if HAVE_SYS_DIR_H
-    #include <sys/dir.h>
-  #endif
-  #if HAVE_NDIR_H
-    #include <ndir.h>
-  #endif
-#endif
+#include <sys/types.h>
+#include <dirent.h>
 
 #include "rename.h"
   

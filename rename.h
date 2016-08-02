@@ -21,13 +21,7 @@
 #ifndef	_RENAME_H_
 #define _RENAME_H_
 
-#if HAVE_REGEX_H
-  //#include <regex.h>
-  #include "regex.h"
-#else
-  #include "regex.h"
-#endif
-
+#include <regex.h>
 #include "libcsoup.h"
 
 #define RENAME_MOD_CORE		SLOG_MODUL_ENUM(3)

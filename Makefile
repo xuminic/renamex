@@ -78,7 +78,7 @@ M_ICON	= apps/rename-extension.png
 
 DEBUG	= -g -O0 -DDEBUG
 #DEBUG	= -O3
-DEFINES = -D$(SYSGUI) -DHAVE_CONFIG_H
+DEFINES = -D$(SYSGUI)
 CFLAGS  = -Wall -Wextra $(DEBUG) $(DEFINES) $(SYSINC) $(SYSFLAG)
 
 
