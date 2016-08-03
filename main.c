@@ -87,7 +87,6 @@ graphical user interfaces.\n\
 http://webserver2.tecgraf.puc-rio.br/iup\n";
 
 RNOPT		sysopt;
-F_PRF_MODL	dbg_trans_modl;
 
 static int rename_free_all(int sig);
 static int cli_set_pattern(RNOPT *opt, char *optarg);
@@ -107,8 +106,8 @@ int main(int argc, char **argv)
 #else
 	dbgc = slog_csoup_open(NULL, NULL);
 #endif
-	dbg_trans_modl = dbgc->f_trans_modu;
-	dbgc->f_trans_modu = rename_debug_trans_module;
+	slog_translate_setup(dbgc, SLOG_TRANSL_MODUL, 
+			rename_debug_trans_module);
 
 	memset(&sysopt, 0, sizeof(RNOPT));
 	sysopt.compare = strncmp;
@@ -358,12 +357,11 @@ static int rename_debug_trans_module(int cw, char *buf, int blen)
 {
 	if (cw & RENAME_MOD_CORE) {
 		csc_strlcat(buf, "[RENAME]", blen);
-	} else if (cw & RENAME_MOD_GUI) {
-		csc_strlcat(buf, "[GUI]", blen);
-	} else {
-		return dbg_trans_modl(cw, buf, blen);
 	}
-	return strlen(buf);
+	if (cw & RENAME_MOD_GUI) {
+		csc_strlcat(buf, "[GUI]", blen);
+	}
+	return SMM_ERR_NULL;
 }
 
 static int debug_main(char *optarg, int argc, char **argv)
