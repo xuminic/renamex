@@ -55,7 +55,7 @@ Section "Rename Extension (required)"
   File "ChangeLog.txt"
   File "README.en.txt"
   File "autotest.sh"
-  File "renamex-*.lsm"
+  File "renamex*.lsm"
   
   ; Write the installation path into the registry
   WriteRegStr HKLM "SOFTWARE\Rename Extension" "Install_Dir" "$INSTDIR"
