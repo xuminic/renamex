@@ -1,3 +1,8 @@
+20160810:
+	* libcsoup: updated to 0.9.6 to fix three bugs
+	* Makefile: Fixed the wrong path and icon cache flushing while
+	installing to Linux.
+
 20160803:
 	* libcsoup: updated to 0.9.3 to support the translator chain in logs.
 

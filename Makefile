@@ -70,9 +70,10 @@ ifeq	($(SYSGUI),CFG_GUI_ON)
 endif
 endif
 
-PREFIX	= /usr/local
-BINDIR	= /usr/local/bin
-MANDIR	= /usr/local/man/man1
+PREFIX  = /usr/local
+BINDIR  = $(PREFIX)/bin
+MANDIR  = $(PREFIX)/share/man/man1
+APPDIR  = $(PREFIX)/share/applications
 P_ICON	= /usr/share/icons/hicolor
 M_ICON	= apps/rename-extension.png
 
@@ -192,7 +193,7 @@ showdll:
 install:
 	install -s renamex $(BINDIR)
 	cp -f renamex.1 $(MANDIR)
-	cp -f renamex.desktop /usr/share/applications
+	cp -f renamex.desktop $(APPDIR)
 	cp -f ./external/icons/rename256.png $(P_ICON)/256x256/$(M_ICON)
 	cp -f ./external/icons/rename128.png $(P_ICON)/128x128/$(M_ICON)
 	convert -resize 48x48 ./external/icons/rename256.png $(P_ICON)/48x48/$(M_ICON)
@@ -200,12 +201,12 @@ install:
 	convert -resize 24x24 ./external/icons/rename256.png $(P_ICON)/24x24/$(M_ICON)
 	convert -resize 22x22 ./external/icons/rename256.png $(P_ICON)/22x22/$(M_ICON)
 	convert -resize 16x16 ./external/icons/rename256.png $(P_ICON)/16x16/$(M_ICON)
-	rm $(P_ICON)/icon-theme.cache
+	gtk-update-icon-cache -f $(P_ICON)
 
 uninstall:
 	rm -f $(BINDIR)/renamex 
 	rm -f $(MANDIR)/renamex.1
-	rm -f /usr/share/applications/renamex.desktop
+	rm -f $(APPDIR)/renamex.desktop
 	rm -f $(P_ICON)/256x256/$(M_ICON)
 	rm -f $(P_ICON)/128x128/$(M_ICON)
 	rm -f $(P_ICON)/48x48/$(M_ICON)
