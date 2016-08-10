@@ -1,11 +1,3 @@
 renamex
-version.mk
 *.exe
 *.[o]
-*.swp
-*.wdep
-external/iup/lib
-external/libcsoup/libcsoup.a
-external/libcsoup/main/csoup
-external/libcsoup/main/main_define.h
-external/libcsoup/main/mkclicmd
