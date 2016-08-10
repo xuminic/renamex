@@ -111,9 +111,27 @@ LIBS	+= -liup -liupimglib
 endif
 LIBS	+= $(SYSLIB)
 
+RELSRC	= Makefile	\
+	  main.c	\
+	  mmgui.c	\
+	  mmrc_icon_dialog.h	\
+	  mmrc_icon_error.h	\
+	  mmrc_icon_info.h	\
+	  mmrc_icon_warning.h	\
+	  rename.c	\
+	  rename.h	\
+	  rename.nsi	\
+	  rename_icon.rc
 
-COMMONS	= COPYING ChangeLog.txt README.en.txt autotest.sh rename.ico \
-	  renamex-*.lsm renamex.1 renamex.pdf
+RELDIST	= COPYING	\
+	  ChangeLog.txt	\
+	  README.en.txt	\
+	  autotest.sh	\
+	  rename.ico	\
+	  renamex.1	\
+	  renamex.desktop	\
+	  renamex.lsm	\
+	  renamex.pdf
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
@@ -154,10 +172,9 @@ release: extclean installer_win
 endif
 	-if [ -d $(RELDIR) ]; then $(RM) -r $(RELDIR); fi
 	-mkdir $(RELDIR)
-	-$(CP) $(COMMONS) $(RELDIR)
-	-$(CP) *.c *.h *.rc *.nsi Makefile $(RELDIR)
-	-$(CP) -a libmingw $(RELDIR)
-	-$(CP) -a external $(RELDIR)
+	-$(CP) $(RELSRC) $(RELDIR)
+	-$(CP) $(RELDIST) $(RELDIR)
+	-$(CP) -a libmingw external $(RELDIR)
 	#-7z a -tzip $(RELDIR).zip $(RELDIR)
 	-tar czf $(RELDIR).tar.gz $(RELDIR)
 	-$(RM) -r $(RELDIR)
@@ -170,7 +187,7 @@ installer_win: release-win
 release-win: 
 	-if [ -d $(RELWIN) ]; then $(RM) -r $(RELWIN); fi
 	-mkdir $(RELWIN)
-	-$(CP) $(COMMONS) $(RELWIN)
+	-$(CP) $(RELSRC) $(RELWIN)
 	SYSGUI=CFG_GUI_OFF make clean
 	SYSGUI=CFG_GUI_OFF make
 	-$(CP) $(PROJECT).exe $(RELWIN)
