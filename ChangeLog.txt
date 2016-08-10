@@ -1,4 +1,5 @@
-20160810:
+
+20160810: Version 2.4
 	* libcsoup: updated to 0.9.6 to fix three bugs
 	* Makefile: Fixed the wrong path and icon cache flushing while
 	installing to Linux.

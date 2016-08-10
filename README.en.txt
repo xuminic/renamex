@@ -25,6 +25,10 @@ Features
 
 Release Notes
 -------------
+Version 2.4:
+ * Fixed the core dump when verbose level reach 7
+ * Fixed the version error of libcsoup.h
+ * Fixed the installer path error in Linux
 
 Version 2.3:
  * Fixed the problem that Ctrl-A could not select-all in MS Windows.
