@@ -1,7 +1,7 @@
 Begin4
 Title:          Rename Extension
-Version:        2.4
-Entered-date:   2016-08-10
+Version:        2.5
+Entered-date:   2017-04-13
 Description:    A file renaming tool. It can rename, lowercase, uppercase 
                 a batch of files, or change their ownership. It's a small 
                 and quick tool written in C and powered by the extended 
@@ -11,10 +11,9 @@ Keywords:       rename, regular expression
 Author:	        "Andy Xuming" <xuming@users.sourceforge.net>
 Maintained-by:  "Andy Xuming" <xuming@users.sourceforge.net>
 Primary-site:   http://rename.sourceforge.net/
-                 976K renamex-2.4-setup.exe
-                 913K renamex-2.4-win32-bin.zip
-                11.6M renamex-2.4.tar.gz
-		   1K rename-2.4.lsm
+                   1M renamex-2.5-setup.exe
+                10.1M renamex-2.5.tar.bz2
+		   1K rename-2.5.lsm
 Alternate-site: ftp://ibiblio.org/pub/linux/utils/file
 Platforms:      Linux,Windows 2000/XP/Windows 7
 Copying-policy: GPLv3+

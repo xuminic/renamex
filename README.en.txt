@@ -25,6 +25,10 @@ Features
 
 Release Notes
 -------------
+Version 2.5:
+ * build system moved to autotool based autoconf/automake
+ * Fixed the uneven vertical size of buttons in GTK3
+
 Version 2.4:
  * Fixed the core dump when verbose level reach 7
  * Fixed the version error of libcsoup.h
