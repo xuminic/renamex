@@ -1,8 +1,63 @@
+/*  mmgui.c - command line mode entry
 
-#include <stdarg.h>
+    Copyright (C) 1998-2017  "Andy Xuming" <xuming@users.sourceforge.net>
+
+    This file is part of RENAME, a utility to help file renaming
+
+    RENAME is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    RENAME is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#ifdef  HAVE_CONFIG_H
+#include <config.h>
+#else
+#error "Run configure first"
+#endif
+
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <stddef.h>
+#else
+# ifdef HAVE_STDLIB_H
+#  include <stdlib.h>
+# endif
+#endif
+#ifdef HAVE_STRING_H
+# if !defined STDC_HEADERS && defined HAVE_MEMORY_H
+#  include <memory.h>
+# endif
+# include <string.h>
+#endif
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+#include <ctype.h>
 #include <stdarg.h>
 
 #include "iup.h"
@@ -638,6 +693,7 @@ static Ihandle *mmgui_button_box(MMGUI *gui)
 	vbox = IupVbox(gui->butt_open, gui->butt_del, gui->butt_run, 
 			gui->butt_about, NULL);
 	IupSetAttribute(vbox, "NGAP", "4");
+	IupSetAttribute(vbox, "NORMALIZESIZE", "VERTICAL");
 
 	IupSetCallback(gui->butt_open, "ACTION",
 			(Icallback) mmgui_button_event_load);

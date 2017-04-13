@@ -1,7 +1,7 @@
 /*
     rename.c -- file rename tool
 
-    Copyright (C) 1998-2011  "Andy Xuming" <xuming@users.sourceforge.net>
+    Copyright (C) 1998-2017  "Andy Xuming" <xuming@users.sourceforge.net>
 
     This file is part of RENAME, a utility to help file renaming
 
@@ -18,19 +18,49 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifdef  HAVE_CONFIG_H
+#include <config.h>
+#else
+#error "Run configure first"
+#endif
 
-#include <ctype.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <dirent.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <stddef.h>
+#else
+# ifdef HAVE_STDLIB_H
+#  include <stdlib.h>
+# endif
+#endif
+#ifdef HAVE_STRING_H
+# if !defined STDC_HEADERS && defined HAVE_MEMORY_H
+#  include <memory.h>
+# endif
+# include <string.h>
+#endif
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+#include <ctype.h>
 
 #include "rename.h"
-  
+
 /* re-use the debug protocols in libcsoup */
 #define CSOUP_DEBUG_LOCAL       SLOG_CWORD(RENAME_MOD_CORE, SLOG_LVL_WARNING)
 #include "libcsoup_debug.h"
@@ -314,6 +344,8 @@ static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour)
 
 static int rename_show(char *dest, char *sour, char *action)
 {
+	(void) dest; (void) sour; (void) action;
+
 	CDB_INFO(("renaming: %s\n", sour));
 	CDB_INFO(("     -->  %s : %s\n", dest, action));
 	return 0;

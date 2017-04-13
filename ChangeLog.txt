@@ -1,3 +1,7 @@
+20170414: Version 2.5
+	* autoconf: build system moved to autotool based.
+	* mmgui: normalized the vertical size of buttons for GTK3
+	* main.c: don't display argv[0] because it brings full path.
 
 20160810: Version 2.4
 	* libcsoup: updated to 0.9.6 to fix three bugs

@@ -27,8 +27,6 @@
 #define RENAME_MOD_CORE		SLOG_MODUL_ENUM(3)
 #define RENAME_MOD_GUI		SLOG_MODUL_ENUM(4)
 
-#define RENAME_VERSION		"2.4"
-  
 #define RNM_ERR_NONE		0
 #define RNM_ERR_SKIP		1
 #define RNM_ERR_EVENT		2

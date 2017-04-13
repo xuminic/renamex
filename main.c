@@ -1,7 +1,7 @@
 
 /*  main.c - command line mode entry
 
-    Copyright (C) 1998-2011  "Andy Xuming" <xuming@users.sourceforge.net>
+    Copyright (C) 1998-2017  "Andy Xuming" <xuming@users.sourceforge.net>
 
     This file is part of RENAME, a utility to help file renaming
 
@@ -19,14 +19,46 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#ifdef  HAVE_CONFIG_H
+#include <config.h>
+#else
+#error "Run configure first"
+#endif
 
-#include <signal.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include <stdio.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#ifdef STDC_HEADERS
+# include <stdlib.h>
+# include <stddef.h>
+#else
+# ifdef HAVE_STDLIB_H
+#  include <stdlib.h>
+# endif
+#endif
+#ifdef HAVE_STRING_H
+# if !defined STDC_HEADERS && defined HAVE_MEMORY_H
+#  include <memory.h>
+# endif
+# include <string.h>
+#endif
+#ifdef HAVE_STRINGS_H
+# include <strings.h>
+#endif
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+#include <ctype.h>
 
 #include "rename.h"
 
@@ -66,7 +98,7 @@ The SW could be:\n\
 	{ 0, NULL, 0, NULL }
 };
 
-const	char	*help_version = "Rename Extension " RENAME_VERSION;
+const	char	*help_version = "Rename Extension " VERSION;
 
 const	char	*help_descript = "\
 Rename files by substituting the specified patterns.\n\n\
@@ -144,7 +176,7 @@ int main(int argc, char **argv)
 			if (!strcmp(optarg, "logfile")) {
 				slog_bind_file(dbgc, "renamex.log");
 			} else {
-				debug_main(optarg, argc-optind,&argv[optind]);
+				debug_main(optarg, argc-optind, &argv[optind]);
 				rc = RNM_ERR_HELP;
 			}
 			break;
@@ -217,7 +249,7 @@ int main(int argc, char **argv)
 #ifdef	CFG_GUI_ON
 		rc = mmgui_run(sysopt.gui, 0, NULL);
 #else
-		CDB_SHOW(("%s: missing file operand\n", argv[0]));
+		CDB_SHOW(("renamex: missing file operand\n"));
 		rc = RNM_ERR_PARAM;
 #endif
 		rename_free_all(0);
@@ -237,7 +269,7 @@ int main(int argc, char **argv)
 			rc = mmgui_run(sysopt.gui, 
 					argc - optind, &argv[optind]);
 #else
-			CDB_SHOW(("%s: missing rename operand\n", argv[0]));
+			CDB_SHOW(("renamex: missing rename operand\n"));
 			rc = RNM_ERR_PARAM;
 #endif
 		}
