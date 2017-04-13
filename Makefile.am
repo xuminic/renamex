@@ -32,7 +32,7 @@ endif
 
 # This list of files for source release
 EXTRA_DIST = config.h.in configure configure.ac config.guess config.sub \
-	     install-sh Makefile.am Makefile.in missing \
+	     aclocal.m4 install-sh Makefile.am Makefile.in missing \
 	     COPYING README.en.txt ChangeLog.txt  external libmingw \
 	     autotest.sh main.c mmgui.c mmrc_icon_dialog.h mmrc_icon_error.h \
 	     mmrc_icon_info.h mmrc_icon_warning.h rename.c rename.h \
@@ -120,9 +120,9 @@ gnome-uninstall: uninstall
 	gtk-update-icon-cache -f /usr/share/icons/hicolor
 
 installer-win: all
-	@echo "OutFile \"$(distdir)-setup.exe\"" > nsis_version.txt
+	@echo "OutFile \"$(distdir)-setup.exe\"" > nsis_version.outfile
 	$(NSIS) rename.nsi
-	@$(RM) nsis_version.txt 
+	@$(RM) nsis_version.outfile
 
 # supportive rule for generating files 
 # since special tools are involved so they can be only internally used.
