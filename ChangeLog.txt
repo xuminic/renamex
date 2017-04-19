@@ -1,3 +1,8 @@
+20170419: Version 2.6
+	* IUP: updated to 3.21 to workaround the missing GTK icons.
+	* IUP: using the officially distributed WIN32 libs from IUP home page.
+	- It looks the "IUP_MessageInfo" issue is still persistent.
+
 20170414: Version 2.5
 	* autoconf: build system moved to autotool based.
 	* mmgui: normalized the vertical size of buttons for GTK3

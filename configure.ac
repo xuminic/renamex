@@ -41,7 +41,7 @@
 #    revoke the install operation
 
 AC_PREREQ([2.68])
-AC_INIT([renamex], [2.5], [xuming@users.sourceforge.net])
+AC_INIT([renamex], [2.6], [xuming@users.sourceforge.net])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([main.c])
 AC_CONFIG_HEADERS([config.h])
@@ -79,8 +79,8 @@ case "$host_os" in
     AC_CHECK_PROG([NSIS], [makensis], [makensis], 
      [AC_MSG_WARN([NSIS package not installed. \
       You may not be able to create the installer executables.])])
-    CPPFLAGS="$CPPFLAGS -I./libmingw/include -I./libmingw/include/iup"
-    LDFLAGS="$LDFLAGS -L./libmingw/lib"
+    CPPFLAGS="$CPPFLAGS -I./libmingw/include -I./libmingw/iup/include"
+    LDFLAGS="$LDFLAGS -L./libmingw/lib -L./libmingw/iup"
     CFLAGS="$CFLAGS -mms-bitfields"
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500"
     POSTLIB="-lregex -mconsole"
