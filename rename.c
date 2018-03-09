@@ -346,8 +346,13 @@ static int rename_show(char *dest, char *sour, char *action)
 {
 	(void) dest; (void) sour; (void) action;
 
+#ifdef	DEBUG
 	CDB_INFO(("renaming: %s\n", sour));
 	CDB_INFO(("     -->  %s : %s\n", dest, action));
+#else
+	printf("renaming: %s\n", sour);
+	printf("     -->  %s : %s\n", dest, action);
+#endif
 	return 0;
 }
 

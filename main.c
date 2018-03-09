@@ -172,8 +172,10 @@ int main(int argc, char **argv)
 			puts(help_descript);
 			rc = RNM_ERR_HELP;
 			break;
-		case 3:
-			if (!strcmp(optarg, "logfile")) {
+		case 3:		/* --debug=xxx */
+			if (optarg == NULL) {
+				break;
+			} else if (!strcmp(optarg, "logfile")) {
 				slog_bind_file(dbgc, "renamex.log");
 			} else {
 				debug_main(optarg, argc-optind, &argv[optind]);
@@ -222,7 +224,8 @@ int main(int argc, char **argv)
 			rc = RNM_ERR_NONE;
 			break;
 		case 't':
-			sysopt.cflags |= RNM_CFLAG_TEST | RNM_CFLAG_VERBOSE;
+			//sysopt.cflags |= RNM_CFLAG_TEST | RNM_CFLAG_VERBOSE;
+			sysopt.cflags |= RNM_CFLAG_TEST;
 			CDB_SET_LEVEL(SLOG_LVL_MODULE);
 			break;
 		case 's':
