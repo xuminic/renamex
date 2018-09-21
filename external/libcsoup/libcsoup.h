@@ -154,7 +154,7 @@ slog(int control_word, char *fmt, ...);
 #define SLOG_LVL_FUNC		7
 #define SLOG_LVL_MASK		7
 #define SLOG_FLUSH		8	/* no prefix */
-#define SLOG_MODUL_MASK		(-1 << 4)
+#define SLOG_MODUL_MASK		(((unsigned)-1) << 4)
 
 #define SLOG_LEVEL_GET(l)	((l) & SLOG_LVL_MASK)
 #define SLOG_LEVEL_SET(l,x)	(((l) & ~SLOG_LVL_MASK) | (x))
@@ -163,7 +163,7 @@ slog(int control_word, char *fmt, ...);
 #define SLOG_MODUL_GET(m)	((m) & SLOG_MODUL_MASK)
 #define SLOG_MODUL_SET(m,x)	((m) | SLOG_MODUL_ENUM(x))
 #define SLOG_MODUL_CLR(m,x)	((m) & ~SLOG_MODUL_ENUM(x))
-#define SLOG_MODUL_ALL(m)	((m) | (-1 << 4))
+#define SLOG_MODUL_ALL(m)	((m) | SLOG_MODUL_MASK)
 
 #define SLOG_CWORD(m,l)		(SLOG_MODUL_GET(m) | SLOG_LEVEL_GET(l))
 

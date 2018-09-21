@@ -75,9 +75,9 @@ renamex_win: $(WIN_OBJS)
 	$(LINK) $^ $(WIN32GUI)
 
 clean-local:
-	-test -e "renamex_win$(EXEEXT)" && rm -f renamex_win$(EXEEXT)
-	-test -e "$(distdir)-setup.exe" && rm -f $(distdir)-setup.exe
-	-test -d "$(distdir)-win32-bin" && rm -rf "$(distdir)-win32-bin"
+	-test -e "renamex_win$(EXEEXT)" || rm -f renamex_win$(EXEEXT)
+	-test -e "$(distdir)-setup.exe" || rm -f $(distdir)-setup.exe
+	-test -d "$(distdir)-win32-bin" || rm -rf "$(distdir)-win32-bin"
 
 libiup:
 	$(IUPCFG) make -C ./external/iup do_all
