@@ -68,7 +68,8 @@
 #include "mmrc_icon_warning.h"
 
 /* re-use the debug protocols in libcsoup */
-#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(RENAME_MOD_GUI, SLOG_LVL_WARNING)
+//#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(RENAME_MOD_GUI, SLOG_LVL_WARNING)
+#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(RENAME_MOD_GUI, SLOG_LVL_FUNC)
 #include "libcsoup_debug.h"
 
 #define RENAME_MAIN		"RENAMEGUIOBJ"
@@ -90,19 +91,23 @@
 #define IUPCOLOR_TEAL		"#008080" 
 #define IUPCOLOR_AQUA		"#00FFFF" 
 
+#define MMGUI_BUTTON_WIDTH	"250"
+#define MMGUI_MPANEL_WIDTH	"300"
 
 typedef	struct	{
 	Ihandle		*dlg_main;
 	Ihandle		*dlg_open;
 	char		inst_id[32];
-	int		magic_width;	/* the width except the list panel */
 
 	/* list panel */
 	Ihandle		*list_oldname;
 	Ihandle		*list_preview;
 	Ihandle		*zbox_extent;
+	Ihandle		*split_box;
 	Ihandle		*status;
 	int		fileno;		/* file's number in the list */
+	int		rt_outrim_width;
+	int		rt_outrim_height;
 
 	/* list panel extension for search and replace */
 	Ihandle		*lable_pattern;
@@ -189,8 +194,9 @@ static int mmgui_rawname_popup(MMGUI *gui, int item, char *text);
 static int mmgui_batch_popup(MMGUI *gui);
 static int mmgui_message_popup(MMGUI *gui, int type, char *title, char *);
 static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname);
-static char *IupTool_FileDlgExtract(char *dfn, char **sp);
-static int IupTool_FileDlgCounting(char *value);
+static char *IupTk_FileDlgExtract(char *dfn, char **sp);
+static int IupTk_FileDlgCounting(char *value);
+static int IupTk_GetSize(Ihandle *ih, char *attr, int *width, int *height);
 
 
 void *mmgui_open(RNOPT *ropt, int *argcs, char ***argvs)
@@ -252,8 +258,8 @@ int mmgui_run(void *guiobj, int argc, char **argv)
 	IupSetAttribute(gui->dlg_main, "RASTERSIZE", "800");
 	IupSetAttribute(gui->dlg_main, RENAME_MAIN, (char*) gui);
 	IupSetHandle(gui->inst_id, gui->dlg_main);
-	IupSetCallback(gui->dlg_main, "RESIZE_CB", 
-			(Icallback) mmgui_event_resize);
+	//IupSetCallback(gui->dlg_main, "RESIZE_CB", 
+	//		(Icallback) mmgui_event_resize);
 
 	/* create the Open-File dialog initially so it can be popup and hide 
 	 * without doing a real destory */
@@ -313,17 +319,38 @@ static int mmgui_reset(MMGUI *gui)
 static int mmgui_event_resize(Ihandle *ih, int width, int height)
 {
 	MMGUI	*gui;
-	char	buf[32], *value;
+	char	buf[32];
+	int	cwid, chei, swid, shei;
 
 	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
 		return IUP_DEFAULT;
 	}
-	CDB_PROG(("mmgui_event_resize: %d x %d\n", width, height));
+	CDB_PROG(("mmgui_event_resize: %dx%d S:%s O:%s P:%s\n", width, height,
+				IupGetAttribute(gui->split_box, "RASTERSIZE"),
+				IupGetAttribute(gui->list_oldname, "RASTERSIZE"),
+				IupGetAttribute(gui->list_preview, "RASTERSIZE")));
 
 	/* magic statement to keep the dialog in shape */
-	IupSetAttribute(ih, "RASTERSIZE", IupGetAttribute(ih, "RASTERSIZE"));
+	//IupSetAttribute(ih, "RASTERSIZE", IupGetAttribute(ih, "RASTERSIZE"));
 
 	/* resize the list panel to make sure it won't growth unexpectly */
+	IupTk_GetSize(ih, "CLIENTSIZE", &cwid, &chei);
+	if (gui->rt_outrim_width == 0) {
+		//IupTk_GetSize(gui->split_box, "RASTERSIZE", &swid, &shei);
+		printf("%p\n", gui->split_box);
+		gui->rt_outrim_width = cwid - swid;
+		gui->rt_outrim_height = chei - shei;
+		CDB_PROG(("mmgui_event_resize: outrim %dx%d\n", 
+					gui->rt_outrim_width, gui->rt_outrim_height));
+	}
+	return IUP_DEFAULT;
+
+	swid = cwid - gui->rt_outrim_width;
+	shei = chei - gui->rt_outrim_height;
+	sprintf(buf, "%dx%d", swid, shei);
+	IupSetAttribute(gui->split_box, "RASTERSIZE", buf);
+	CDB_PROG(("mmgui_event_resize: split %s\n", buf));
+#if 0
 	value = IupGetAttribute(ih, "CLIENTSIZE");
 	width = (int) strtol(value, NULL, 10);
 	if (gui->magic_width == 0) {
@@ -345,9 +372,11 @@ static int mmgui_event_resize(Ihandle *ih, int width, int height)
 					gui->magic_width, height));
 	}
 
-	sprintf(buf, "%d", width - gui->magic_width);
+	sprintf(buf, "%d", width - MMGUI_MPANEL_WIDTH);
+	//CDB_FUNC(("mmgui_event_resize: RASTERSIZE %s\n", buf));
 	IupSetAttribute(gui->list_oldname, "RASTERSIZE", buf);
 	IupSetAttribute(gui->list_preview, "RASTERSIZE", buf);
+#endif
 	return IUP_DEFAULT;
 }
 
@@ -408,7 +437,8 @@ static Ihandle *mmgui_fnlist_box(MMGUI *gui)
 	gui->list_oldname = IupList(NULL);
 	IupSetAttribute(gui->list_oldname, "EXPAND", "YES");
 	IupSetAttribute(gui->list_oldname, "MULTIPLE", "YES");
-	IupSetAttribute(gui->list_oldname, "SCROLLBAR", "YES");
+	//IupSetAttribute(gui->list_oldname, "SCROLLBAR", "YES");
+	//IupSetAttribute(gui->list_oldname, "SCROLLBAR", "VERTICAL");
 	IupSetAttribute(gui->list_oldname, "DROPFILESTARGET", "YES");
 	IupSetAttribute(gui->list_oldname, "ALIGNMENT", "ARIGHT");
 	IupSetAttribute(gui->list_oldname, "CANFOCUS", "YES");
@@ -429,13 +459,19 @@ static Ihandle *mmgui_fnlist_box(MMGUI *gui)
 	
 	gui->list_preview = IupList(NULL);
 	IupSetAttribute(gui->list_preview, "EXPAND", "YES");
-	IupSetAttribute(gui->list_preview, "SCROLLBAR", "YES");
+	//IupSetAttribute(gui->list_preview, "SCROLLBAR", "YES");
+	//IupSetAttribute(gui->list_preview, "SCROLLBAR", "VERTICAL");
 	IupSetAttribute(gui->list_preview, "ALIGNMENT", "ARIGHT");
 	IupSetAttribute(gui->list_preview, "CANFOCUS", "NO");
 	IupSetAttribute(gui->list_preview, "FGCOLOR", IUPCOLOR_BLUE);
 
-	vbox = IupVbox(gui->list_oldname, gui->list_preview, NULL);
-	IupSetAttribute(vbox, "NGAP", "4");
+	//vbox = IupVbox(gui->list_oldname, gui->list_preview, NULL);
+	//IupSetAttribute(vbox, "NGAP", "4");
+	gui->split_box = IupSplit(IupScrollBox(gui->list_oldname), 
+			IupScrollBox(gui->list_preview));
+	IupSetAttribute(gui->split_box, "ORIENTATION", "HORIZONTAL");
+	IupSetAttribute(gui->split_box, "COLOR", "127 127 255");
+	IupSetAttribute(gui->split_box, "VALUE", "500");
 
 	gui->progress = IupProgressBar();
 	IupSetAttribute(gui->progress, "EXPAND", "HORIZONTAL");
@@ -451,7 +487,7 @@ static Ihandle *mmgui_fnlist_box(MMGUI *gui)
 	gui->status = IupLabel("");
 	IupSetAttribute(gui->status, "EXPAND", "HORIZONTAL");
 	
-	vbox = IupVbox(vbox, gui->zbox_extent, gui->status, NULL);
+	vbox = IupVbox(gui->split_box, gui->zbox_extent, gui->status, NULL);
 	IupSetAttribute(vbox, "NGAP", "8");
 	return vbox;
 }
@@ -486,7 +522,7 @@ static int mmgui_fnlist_event_multi_select(Ihandle *ih, char *value)
 	value = IupGetAttribute(gui->list_oldname, "VALUE");
 	CDB_DEBUG(("mmgui_fnlist_event_multi_select: %s\n", value));
 	mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "%d File Selected", 
-			IupTool_FileDlgCounting(value));
+			IupTk_FileDlgCounting(value));
 
 	/* 20160718 Any write to list_oldname will trigger this event
 	 * right in the middle of the process so if called mmgui_event_update
@@ -561,7 +597,7 @@ static int mmgui_fnlist_event_ctrl_a(Ihandle *ih, int c)
 	 * Writing "VALUE" to list control, unlink writing content, won't 
 	 * trigger the multi-select event so I do it manually. */
 	mmgui_fnlist_status(gui, IUPCOLOR_BLACK, "%d File Selected",
-			IupTool_FileDlgCounting(buf));
+			IupTk_FileDlgCounting(buf));
 	mmgui_button_status_update(gui, mmgui_option_collection(gui));
 	mmgui_option_free(gui);
 	smm_free(buf);
@@ -680,15 +716,19 @@ static Ihandle *mmgui_button_box(MMGUI *gui)
 	gui->butt_open = IupButton("Open", NULL);
 	IupSetAttribute(gui->butt_open, "IMAGE", "IUP_FileOpen");
 	IupSetAttribute(gui->butt_open, "EXPAND", "HORIZONTALFREE");
+	IupSetAttribute(gui->butt_open, "RASTERSIZE", MMGUI_BUTTON_WIDTH);
 	gui->butt_del = IupButton("Delete", NULL);
 	IupSetAttribute(gui->butt_del, "IMAGE", "IUP_EditErase");
 	IupSetAttribute(gui->butt_del, "EXPAND", "HORIZONTALFREE");
+	IupSetAttribute(gui->butt_del, "RASTERSIZE", MMGUI_BUTTON_WIDTH);
 	gui->butt_run = IupButton("Rename", NULL);
 	IupSetAttribute(gui->butt_run, "IMAGE", "IUP_ActionOk");
 	IupSetAttribute(gui->butt_run, "EXPAND", "HORIZONTALFREE");
+	IupSetAttribute(gui->butt_run, "RASTERSIZE", MMGUI_BUTTON_WIDTH);
 	gui->butt_about = IupButton("About", NULL);
 	IupSetAttribute(gui->butt_about, "IMAGE", "IUP_MessageInfo");
 	IupSetAttribute(gui->butt_about, "EXPAND", "HORIZONTALFREE");
+	IupSetAttribute(gui->butt_about, "RASTERSIZE", MMGUI_BUTTON_WIDTH);
 
 	vbox = IupVbox(gui->butt_open, gui->butt_del, gui->butt_run, 
 			gui->butt_about, NULL);
@@ -724,7 +764,7 @@ static int mmgui_button_event_load(Ihandle *ih)
 			IupGetAttribute(gui->dlg_open, "DIRECTORY")));
 	dlgrd = IupGetAttribute(gui->dlg_open, "VALUE");
 	CDB_DEBUG(("Open File VALUE: %s\n", dlgrd));
-	while ((fname = IupTool_FileDlgExtract(dlgrd, &sp)) != NULL) {
+	while ((fname = IupTk_FileDlgExtract(dlgrd, &sp)) != NULL) {
 		mmgui_fnlist_append(gui, fname);
 		/* IupList control seems save a copy of its content.
 		 * The 'fname' can not be retrieved by IupGetAttribute() */
@@ -1657,11 +1697,11 @@ static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname)
  *     char *sp = NULL;
  *     dfn = IupGetAttribute(dlg_open, "VALUE");
  *     do {
- *         result = IupTool_FileDlgExtract(dfn, &sp);
+ *         result = IupTk_FileDlgExtract(dfn, &sp);
  *         smm_free(result);
  *     } while (result);
  */
-static char *IupTool_FileDlgExtract(char *dfn, char **sp)
+static char *IupTk_FileDlgExtract(char *dfn, char **sp)
 {
 	char	*p, *rtn;
 	int	path_len, sp_len;
@@ -1705,19 +1745,19 @@ static char *IupTool_FileDlgExtract(char *dfn, char **sp)
 }
 
 #if 0
-/* IupTool_FileDlgExtract_Test("/home/xum1/dwhelper/lan_ke_er.flv");
- * IupTool_FileDlgExtract_Test("/home/xum1/dwhelper|lan_ke_er.flv");
- * IupTool_FileDlgExtract_Test("/home/xum1/dwhelper|
+/* IupTk_FileDlgExtract_Test("/home/xum1/dwhelper/lan_ke_er.flv");
+ * IupTk_FileDlgExtract_Test("/home/xum1/dwhelper|lan_ke_er.flv");
+ * IupTk_FileDlgExtract_Test("/home/xum1/dwhelper|
  * 		file-62.flv|lan_ke_er.flv|Discuz.flv|");
- * IupTool_FileDlgExtract_Test("/home/xum1/dwhelper|
+ * IupTk_FileDlgExtract_Test("/home/xum1/dwhelper|
  * 		file-62.flv|lan_ke_er.flv|Discuz.flv");
  */	
-static void IupTool_FileDlgExtract_Test(char *dfn)
+static void IupTk_FileDlgExtract_Test(char *dfn)
 {
 	char	*sp = NULL, *tmp;
 
 	do {
-		tmp = IupTool_FileDlgExtract(dfn, &sp);
+		tmp = IupTk_FileDlgExtract(dfn, &sp);
 		if (tmp) {
 			printf("Extracted: %s\n", tmp);
 			smm_free(tmp);
@@ -1726,7 +1766,7 @@ static void IupTool_FileDlgExtract_Test(char *dfn)
 }
 #endif
 
-static int IupTool_FileDlgCounting(char *value)
+static int IupTk_FileDlgCounting(char *value)
 {
 	int	i, rc;
 
@@ -1734,5 +1774,25 @@ static int IupTool_FileDlgCounting(char *value)
 		rc += (value[i] == '+') ? 1 : 0;
 	}
 	return rc;
+}
+
+static int IupTk_GetSize(Ihandle *ih, char *attr, int *width, int *height)
+{
+	char	*s;
+	int	wid, hei;
+
+	if ((s = IupGetAttribute(ih, attr)) == NULL) {
+		return -1;
+	}
+	if (sscanf(s, "%dx%d", &wid, &hei) != 2) {
+		return -2;
+	}
+	if (width) {
+		*width = wid;
+	}
+	if (height) {
+		*height = hei;
+	}
+	return 0;
 }
 
