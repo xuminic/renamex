@@ -381,7 +381,6 @@ all: $(BUILT_SOURCES) config.h
 
 .SUFFIXES:
 .SUFFIXES: .c .o .obj
-
 distclean-hdr:
 	-rm -f config.h stamp-h1
 install-binPROGRAMS: $(bin_PROGRAMS)

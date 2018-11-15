@@ -65,7 +65,7 @@ AS_CASE([$enable_debug_build],
 
 AC_ARG_WITH([gui], 
   AS_HELP_STRING([--with-gui], 
-      [Build with the Graphic User Interface [yes] (no|gtk|gtk2|gtk3)]))
+      [Build with the Graphic User Interface [yes]]))
 
 case "$host_os" in
   cygwin | mingw*)
@@ -100,28 +100,19 @@ case "$host_os" in
       AS_CASE([$with_gui],
         [no|No|NO], 
 	  [SYSGUI=CFG_GUI_OFF],
-        [2|gtk2|Gtk2|GTK2], 
+        [yes|Yes|YES|gtk|GTK], 
 	  [PKG_CHECK_MODULES([GTK], [gtk+-2.0], [
               AC_MSG_RESULT([gtk+-2.0])
               IUPCFG="USE_GTK2=1"], 
-            [PKG_CHECK_MODULES([GTK], [gtk+-3.0], 
-              [AC_MSG_WARN([Gtk 2.0 not found. Using Gtk 3.0 instead])],
-	      [SYSGUI=CFG_GUI_OFF])]
+	    [AC_MSG_WARN([Libgtk 2.0 not found. GUI disabled])
+	      SYSGUI=CFG_GUI_OFF]
 	  )],
-	[3|gtk3|Gtk3|GTK3],
-          [PKG_CHECK_MODULES([GTK], [gtk+-3.0], , 
-            [PKG_CHECK_MODULES([GTK], [gtk+-2.0], [
-                AC_MSG_WARN([Gtk 3.0 not found. Using Gtk 2.0 instead])
-	        IUPCFG="USE_GTK2=1"],
-	      [SYSGUI=CFG_GUI_OFF])]
-	  )],
-        [PKG_CHECK_MODULES([GTK], [gtk+-3.0], 
-	  [AC_MSG_NOTICE([gtk+-3.0 found])],
-          [PKG_CHECK_MODULES([GTK], [gtk+-2.0], 
-            [AC_MSG_NOTICE([gtk+-2.0 found]) 
-	      IUPCFG="USE_GTK2=1"],
-	    [SYSGUI=CFG_GUI_OFF])]
-	  )])
+	[PKG_CHECK_MODULES([GTK], [gtk+-2.0], [
+            AC_MSG_RESULT([gtk+-2.0])
+            IUPCFG="USE_GTK2=1"], 
+	  [AC_MSG_WARN([Libgtk 2.0 not found. GUI disabled])
+	    SYSGUI=CFG_GUI_OFF]
+	)])
       AS_IF([! test "$SYSGUI" = CFG_GUI_OFF], [
           CPPFLAGS="$CPPFLAGS $GTK_CFLAGS"
 	  LIBS="$LIBS $GTK_LIBS -lX11"
