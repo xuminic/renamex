@@ -92,7 +92,6 @@
 #define IUPCOLOR_AQUA		"#00FFFF" 
 
 #define MMGUI_BUTTON_WIDTH	"250"
-#define MMGUI_MPANEL_WIDTH	"300"
 
 typedef	struct	{
 	Ihandle		*dlg_main;
@@ -106,8 +105,6 @@ typedef	struct	{
 	Ihandle		*split_box;
 	Ihandle		*status;
 	int		fileno;		/* file's number in the list */
-	int		rt_outrim_width;
-	int		rt_outrim_height;
 
 	/* list panel extension for search and replace */
 	Ihandle		*lable_pattern;
@@ -149,7 +146,6 @@ typedef	struct	{
 
 
 static int mmgui_reset(MMGUI *gui);
-static int mmgui_event_resize(Ihandle *ih, int width, int height);
 static int mmgui_event_timer(Ihandle *ih);
 static int mmgui_event_update(Ihandle *ih, ...);
 static int mmgui_notify(void *opobj, int msg, int v, void *a1, void *a2);
@@ -196,7 +192,6 @@ static int mmgui_message_popup(MMGUI *gui, int type, char *title, char *);
 static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname);
 static char *IupTk_FileDlgExtract(char *dfn, char **sp);
 static int IupTk_FileDlgCounting(char *value);
-static int IupTk_GetSize(Ihandle *ih, char *attr, int *width, int *height);
 
 
 void *mmgui_open(RNOPT *ropt, int *argcs, char ***argvs)
@@ -255,11 +250,10 @@ int mmgui_run(void *guiobj, int argc, char **argv)
 	gui->dlg_main = IupDialog(hbox);
 	IupSetAttribute(gui->dlg_main, "TITLE", "Rename Extension");
 	IupSetAttribute(gui->dlg_main, "ICON", "DLG_ICON");
-	IupSetAttribute(gui->dlg_main, "RASTERSIZE", "800");
+	//IupSetAttribute(gui->dlg_main, "RASTERSIZE", "800");
+	IupSetAttribute(gui->dlg_main, "SIZE", "HALF");
 	IupSetAttribute(gui->dlg_main, RENAME_MAIN, (char*) gui);
 	IupSetHandle(gui->inst_id, gui->dlg_main);
-	//IupSetCallback(gui->dlg_main, "RESIZE_CB", 
-	//		(Icallback) mmgui_event_resize);
 
 	/* create the Open-File dialog initially so it can be popup and hide 
 	 * without doing a real destory */
@@ -313,70 +307,6 @@ static int mmgui_reset(MMGUI *gui)
 	mmgui_option_reset(gui);
 	mmgui_search_reset(gui);
 	mmgui_button_status_update(gui, 0);
-	return IUP_DEFAULT;
-}
-
-static int mmgui_event_resize(Ihandle *ih, int width, int height)
-{
-	MMGUI	*gui;
-	char	buf[32];
-	int	cwid, chei, swid, shei;
-
-	if ((gui = (MMGUI *) IupGetAttribute(ih, RENAME_MAIN)) == NULL) {
-		return IUP_DEFAULT;
-	}
-	CDB_PROG(("mmgui_event_resize: %dx%d S:%s O:%s P:%s\n", width, height,
-				IupGetAttribute(gui->split_box, "RASTERSIZE"),
-				IupGetAttribute(gui->list_oldname, "RASTERSIZE"),
-				IupGetAttribute(gui->list_preview, "RASTERSIZE")));
-
-	/* magic statement to keep the dialog in shape */
-	//IupSetAttribute(ih, "RASTERSIZE", IupGetAttribute(ih, "RASTERSIZE"));
-
-	/* resize the list panel to make sure it won't growth unexpectly */
-	IupTk_GetSize(ih, "CLIENTSIZE", &cwid, &chei);
-	if (gui->rt_outrim_width == 0) {
-		//IupTk_GetSize(gui->split_box, "RASTERSIZE", &swid, &shei);
-		printf("%p\n", gui->split_box);
-		gui->rt_outrim_width = cwid - swid;
-		gui->rt_outrim_height = chei - shei;
-		CDB_PROG(("mmgui_event_resize: outrim %dx%d\n", 
-					gui->rt_outrim_width, gui->rt_outrim_height));
-	}
-	return IUP_DEFAULT;
-
-	swid = cwid - gui->rt_outrim_width;
-	shei = chei - gui->rt_outrim_height;
-	sprintf(buf, "%dx%d", swid, shei);
-	IupSetAttribute(gui->split_box, "RASTERSIZE", buf);
-	CDB_PROG(("mmgui_event_resize: split %s\n", buf));
-#if 0
-	value = IupGetAttribute(ih, "CLIENTSIZE");
-	width = (int) strtol(value, NULL, 10);
-	if (gui->magic_width == 0) {
-		value = IupGetAttribute(gui->list_oldname, "RASTERSIZE");
-		height = (int) strtol(value, NULL, 10);
-		gui->magic_width = width - height;
-
-		/* normalize the buttons against the option box */
-		value = IupGetAttribute(gui->tick_prefix, "RASTERSIZE");
-		height = (int) strtol(value, NULL, 10);
-		value = IupGetAttribute(gui->entry_prefix, "RASTERSIZE");
-		height += (int) strtol(value, NULL, 10);
-		sprintf(buf, "%d", height);
-		IupSetAttribute(gui->butt_open, "RASTERSIZE", buf);
-		IupSetAttribute(gui->butt_del, "RASTERSIZE", buf);
-		IupSetAttribute(gui->butt_run, "RASTERSIZE", buf);
-		IupSetAttribute(gui->butt_about, "RASTERSIZE", buf);
-		CDB_FUNC(("mmgui_event_resize: Magic=%d Button=%d\n",
-					gui->magic_width, height));
-	}
-
-	sprintf(buf, "%d", width - MMGUI_MPANEL_WIDTH);
-	//CDB_FUNC(("mmgui_event_resize: RASTERSIZE %s\n", buf));
-	IupSetAttribute(gui->list_oldname, "RASTERSIZE", buf);
-	IupSetAttribute(gui->list_preview, "RASTERSIZE", buf);
-#endif
 	return IUP_DEFAULT;
 }
 
@@ -437,8 +367,6 @@ static Ihandle *mmgui_fnlist_box(MMGUI *gui)
 	gui->list_oldname = IupList(NULL);
 	IupSetAttribute(gui->list_oldname, "EXPAND", "YES");
 	IupSetAttribute(gui->list_oldname, "MULTIPLE", "YES");
-	//IupSetAttribute(gui->list_oldname, "SCROLLBAR", "YES");
-	//IupSetAttribute(gui->list_oldname, "SCROLLBAR", "VERTICAL");
 	IupSetAttribute(gui->list_oldname, "DROPFILESTARGET", "YES");
 	IupSetAttribute(gui->list_oldname, "ALIGNMENT", "ARIGHT");
 	IupSetAttribute(gui->list_oldname, "CANFOCUS", "YES");
@@ -459,8 +387,6 @@ static Ihandle *mmgui_fnlist_box(MMGUI *gui)
 	
 	gui->list_preview = IupList(NULL);
 	IupSetAttribute(gui->list_preview, "EXPAND", "YES");
-	//IupSetAttribute(gui->list_preview, "SCROLLBAR", "YES");
-	//IupSetAttribute(gui->list_preview, "SCROLLBAR", "VERTICAL");
 	IupSetAttribute(gui->list_preview, "ALIGNMENT", "ARIGHT");
 	IupSetAttribute(gui->list_preview, "CANFOCUS", "NO");
 	IupSetAttribute(gui->list_preview, "FGCOLOR", IUPCOLOR_BLUE);
@@ -1776,23 +1702,4 @@ static int IupTk_FileDlgCounting(char *value)
 	return rc;
 }
 
-static int IupTk_GetSize(Ihandle *ih, char *attr, int *width, int *height)
-{
-	char	*s;
-	int	wid, hei;
-
-	if ((s = IupGetAttribute(ih, attr)) == NULL) {
-		return -1;
-	}
-	if (sscanf(s, "%dx%d", &wid, &hei) != 2) {
-		return -2;
-	}
-	if (width) {
-		*width = wid;
-	}
-	if (height) {
-		*height = hei;
-	}
-	return 0;
-}
 

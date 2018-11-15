@@ -64,6 +64,7 @@
 
 /* re-use the debug protocols in libcsoup */
 #define CSOUP_DEBUG_LOCAL	SLOG_CWORD(RENAME_MOD_CORE, SLOG_LVL_WARNING)
+//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(RENAME_MOD_CORE, SLOG_LVL_FUNC)
 #include "libcsoup_debug.h"
 
 
