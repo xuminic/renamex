@@ -68,8 +68,8 @@
 #include "mmrc_icon_warning.h"
 
 /* re-use the debug protocols in libcsoup */
-//#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(RENAME_MOD_GUI, SLOG_LVL_WARNING)
-#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(RENAME_MOD_GUI, SLOG_LVL_FUNC)
+#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(RENAME_MOD_GUI, SLOG_LVL_WARNING)
+//#define CSOUP_DEBUG_LOCAL       SLOG_CWORD(RENAME_MOD_GUI, SLOG_LVL_FUNC)
 #include "libcsoup_debug.h"
 
 #define RENAME_MAIN		"RENAMEGUIOBJ"
@@ -154,6 +154,7 @@ static int mmgui_fnlist_event_dropfiles(Ihandle *, char *, int,int,int);
 static int mmgui_fnlist_event_multi_select(Ihandle *ih, char *value);
 static int mmgui_fnlist_event_moused(Ihandle *ih, int, int, int, int, char *);
 static int mmgui_fnlist_event_dblclick(Ihandle *ih, int item, char *text);
+static int mmgui_fnlist_event_click(Ihandle *ih, int, int, int, int, char *);
 #if     (defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
 static int mmgui_fnlist_event_ctrl_a(Ihandle *ih, int c);
 #endif
@@ -333,7 +334,6 @@ static int mmgui_event_update(Ihandle *ih, ...)
 		CDB_WARN(("mmgui_event_update: oops!\n"));
 		return IUP_DEFAULT;
 	}
-
 	action = mmgui_option_collection(gui);
 	mmgui_fnlist_update_preview(gui, action);
 	mmgui_button_status_update(gui, action);
@@ -390,6 +390,8 @@ static Ihandle *mmgui_fnlist_box(MMGUI *gui)
 	IupSetAttribute(gui->list_preview, "ALIGNMENT", "ARIGHT");
 	IupSetAttribute(gui->list_preview, "CANFOCUS", "NO");
 	IupSetAttribute(gui->list_preview, "FGCOLOR", IUPCOLOR_BLUE);
+	IupSetCallback(gui->list_preview, "BUTTON_CB",
+			(Icallback) mmgui_fnlist_event_click);
 
 	//vbox = IupVbox(gui->list_oldname, gui->list_preview, NULL);
 	//IupSetAttribute(vbox, "NGAP", "4");
@@ -502,6 +504,17 @@ static int mmgui_fnlist_event_dblclick(Ihandle *ih, int item, char *text)
 	return IUP_DEFAULT;
 }
 
+static int mmgui_fnlist_event_click(Ihandle *ih, 
+		int button, int pressed, int x, int y, char *status)
+{
+	(void)x; (void)y; (void)status; (void)button;	/* stop compiler complains */
+
+	if (pressed) {	/* only act when button is released */
+		return IUP_DEFAULT;
+	}
+	return mmgui_event_update(ih);
+}
+
 #if     (defined(_WIN32) || defined(__WIN32__) || defined(__MINGW32__))
 static int mmgui_fnlist_event_ctrl_a(Ihandle *ih, int c)
 {
@@ -576,6 +589,7 @@ static int mmgui_fnlist_rename(MMGUI *gui, int idx)
 		return IUP_DEFAULT;
 	}
 
+	CDB_PROG(("mmgui_fnlist_rename: %s -> %s\n", srcname, dstname));
 	return mmgui_rename_exec(gui, idx, dstname, srcname);
 	/*if (rename_open_buffer(gui->ropt, srcname) != RNM_ERR_NONE) {
 		printf("mmgui_fnlist_rename: can not rename\n");
@@ -753,16 +767,24 @@ static int mmgui_button_event_rename(Ihandle *ih)
 	gui->progbar_min = 0;
 	gui->progbar_max = gui->fileno;
 
-	value = IupGetAttribute(gui->list_oldname, "VALUE");
+	/* 20181116: when mmgui_rename_exec() updates the file name in the
+	 * list control, apparently this operation changes the contents of
+	 * VALUE attribution, which interrupts the renaming process.
+	 * The contents of VALUE must be copied out to be non-volatile */
+	value = csc_strcpy_alloc(IupGetAttribute(gui->list_oldname, "VALUE"), 0);
+	CDB_PROG(("mmgui_button_event_rename: %s %d\n", value, gui->fileno));
 	vflag = strchr(value, '+');
 	for (i = 0; i < gui->fileno; i++) {
 		if (vflag == NULL) {
 			mmgui_fnlist_rename(gui, i+1);
 		} else if (value[i] == '+') {
 			mmgui_fnlist_rename(gui, i+1);
+		} else {
+			CDB_PROG(("mmgui_button_event_rename: missed %d\n", i));
 		}
 		gui->progbar_now = i + 1; 	/* notify the timer */
 	}
+	smm_free(value);
 	mmgui_batch_popup(gui);
 
 	/* notify the timer the progress is stopped */
