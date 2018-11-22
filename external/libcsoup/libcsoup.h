@@ -27,11 +27,12 @@
 
 #include <stdio.h>
 #include <getopt.h>
+#include <limits.h>
 
 #define LIBCSOUP_VERSION(x,y,z)	(((x)<<24)|((y)<<12)|(z))
 #define LIBCSOUP_VER_MAJOR	0		/* 0-255 */
-#define LIBCSOUP_VER_MINOR	9		/* 0-4095 */
-#define LIBCSOUP_VER_BUGFIX	6		/* 0-4095 */
+#define LIBCSOUP_VER_MINOR	10		/* 0-4095 */
+#define LIBCSOUP_VER_BUGFIX	0		/* 0-4095 */
 
 
 /* Forward declaration the structure of circular doubly linked list to hide
@@ -154,7 +155,7 @@ slog(int control_word, char *fmt, ...);
 #define SLOG_LVL_FUNC		7
 #define SLOG_LVL_MASK		7
 #define SLOG_FLUSH		8	/* no prefix */
-#define SLOG_MODUL_MASK		(((unsigned)-1) << 4)
+#define SLOG_MODUL_MASK		(UINT_MAX << 4)
 
 #define SLOG_LEVEL_GET(l)	((l) & SLOG_LVL_MASK)
 #define SLOG_LEVEL_SET(l,x)	(((l) & ~SLOG_LVL_MASK) | (x))
@@ -406,6 +407,30 @@ int csc_cfg_hex_to_binary(char *src, char *buf, int blen);
 } // __cplusplus defined.
 #endif
 
+/*****************************************************************************
+ * See csc_pack_hex.c: a simple way to pack files to C array in hex.
+ * Definitions and functions for the simple packing hex array.
+ ****************************************************************************/
+typedef int	(*F_PKHEX)(void *frame, char *fname, void *data, long dlen);
+
+struct	phex_idx	{
+	char		*fname;
+	void		*data;
+	long		dlen;
+};
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+void *csc_pack_hex_verify(void *pachex, long *flen, long *fnsize);
+void *csc_pack_hex_find_next(void *pachex);
+void csc_pack_hex_list(void *pachex, F_PKHEX lsfunc);
+void *csc_pack_hex_load(void *pachex, char *path, long *size);
+void *csc_pack_hex_index(void *pachex);
+#ifdef __cplusplus
+} // __cplusplus defined.
+#endif
 
 /*****************************************************************************
  * Miscellaneous Functions.
@@ -430,7 +455,7 @@ int csc_ziptoken(char *sour, char **idx, int ids, char *delim);
 char **csc_ziptoken_copy(char *sour, char *delim, int *ids);
 int csc_isdelim(char *delim, int ch);
 char *csc_cuttoken(char *sour, char **token, char *delim);
-char *csc_gettoken(char *sour, char *buffer, char *delim);
+char *csc_gettoken(char *sour, char *buffer, int blen, char *delim);
 
 /* see csc_cmp_file_extname.c */
 int csc_cmp_file_extname(char *fname, char *ext);
@@ -450,9 +475,17 @@ int csc_strcmp_list(char *dest, char *src, ...);
 /* see csc_strcmp_param.c */
 int csc_strcmp_param(char *s1, char *s2);
 
+/* see csc_strcount_char.c and csc_strcount_str.c */
+int csc_strcount_char(char *s, char *acct);
+int csc_strcount_str(char *s, char *needle);
+
 char *csc_path_basename(char *path, char *buffer, int blen);
 char *csc_path_path(char *path, char *buffer, int blen);
 int csc_strinsert(char *buf, int len, char *ip, int del, char *s);
+
+/* see csc_url_decode.c */
+int csc_url_decode(char *dst, int dlen, char *src);
+char *csc_url_decode_alloc(char *src);
 
 /* see csc_crc*.c */
 unsigned short csc_crc16_byte(unsigned short crc, char data);
@@ -469,8 +502,16 @@ char *csc_iso639_lang_to_iso(char *lang);
 char *csc_iso639_lang_to_short(char *lang);
 char *csc_iso639_iso_to_lang(char *iso);
 
+/* see csc_file_load.c and csc_file_store.c */
 long csc_file_store(char *path, int ovrd, char *src, long len);
 char *csc_file_load(char *path, char *buf, long *len);
+
+/* see csc_tmem.c */
+int csc_tmem_init(void *segment, int len);
+void *csc_tmem_alloc(void *segment, int n);
+int csc_tmem_free(void *segment, void *mem);
+int csc_tmem_dump(void *segment);
+
 #ifdef __cplusplus
 } // __cplusplus defined.
 #endif

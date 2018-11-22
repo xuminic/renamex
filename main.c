@@ -88,6 +88,8 @@ static	struct	cliopt	clist[] = {
 	{   3, "debug",     2, "*" },
 	{ 0, NULL, 0, "\nSEARCH SETTING:\n\
   -s /PATTERN/STRING[/SW]  Replace the matching PATTERN by STRING.\n\
+or\n\
+  -s :PATTERN:STRING[:SW]  In MinGW command line.\n\
 The SW could be:\n\
   [i] ignore case when searching\n\
   [b] backward searching and replacing\n\

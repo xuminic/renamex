@@ -1,3 +1,15 @@
+20181122: Version 2.7
+	* libcsoup: updated to 0.10.0, though not very necessary.
+	* mmgui: full auditing to IupGetAttribute(ih, "VALUE") because the
+	value came out of the IUP control were so volatile that anything
+	longer than one click cycle must be copied out.
+
+20181116: Version 2.7
+	* Fixed: the dialog box suddenly expand while resizing the window.
+	* Fixed: renaming broken in middle while multiple files were chosen.
+	* mmgui: using splitbar instead of the fixed sub-windows.
+	* IUP: disabled the libgtk3 because of the font size inconsistency.
+
 20170419: Version 2.6
 	* IUP: updated to 3.21 to workaround the missing GTK icons.
 	* IUP: using the officially distributed WIN32 libs from IUP home page.

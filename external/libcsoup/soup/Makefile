@@ -15,6 +15,7 @@ SRCS	:= csc_cdll.c		\
 	   csc_extname_filter.c \
 	   csc_file_load.c	\
 	   csc_file_store.c	\
+	   csc_pack_hex.c	\
 	   csc_path_basename.c	\
 	   csc_path_path.c	\
 	   csc_fixtoken.c	\
@@ -26,11 +27,15 @@ SRCS	:= csc_cdll.c		\
 	   csc_strbody.c	\
 	   csc_strcmp_list.c	\
 	   csc_strcmp_param.c	\
+	   csc_strcount_char.c	\
+	   csc_strcount_str.c	\
 	   csc_strcpy_alloc.c	\
 	   csc_strfill.c	\
 	   csc_strinsert.c	\
 	   csc_strlcat.c	\
 	   csc_strlcpy.c	\
+	   csc_tmem.c		\
+	   csc_url_decode.c	\
 	   csc_ziptoken.c
 
 OBJS	:= $(SRCS:.c=.o)

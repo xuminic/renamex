@@ -427,6 +427,7 @@ int rename_open_buffer(RNOPT *opt, char *oldname)
 	fname = csc_path_basename(opt->buffer, NULL, 0);
 	opt->room = RNM_PATH_MAX - strlen(opt->buffer) - 1;
 
+	//printf("rename_open_buffer 1: %s\n", fname);
 	/* ignore the "." and ".." system path */
 	if (!strcmp(fname, ".") || !strcmp(fname, "..")) {
 		return RNM_ERR_OPENFILE;	/* invalided file name */
@@ -447,6 +448,8 @@ int rename_open_buffer(RNOPT *opt, char *oldname)
 		rc = match_extension(opt, fname, flen);
 		break;
 	}
+	//printf("rename_open_buffer 2: %s\n", fname);
+	//printf("rename_open_buffer 3: %s\n", opt->buffer);
 	if (rc < 0) {
 rename_open_buffer_error:
 		CDB_ERROR(("rename_open_buffer: file name truncated\n"));
@@ -700,5 +703,17 @@ static int inject(char *rec, int rlen, int del, int room, char *in, int ilen)
 	memcpy(rec, in, ilen);
 	return room;
 }
+/*
+static int inject(char *rec, int rlen, int del, int room, char *in, int ilen)
+{
+	char	tmp[RNM_PATH_MAX];
 
+	csc_strlcpy(tmp, rec + del, RNM_PATH_MAX);
+	memcpy(rec, in, ilen);
+	strcat(rec, tmp);
+
+	ilen = strlen(rec) - rlen;
+	return room - ilen;
+}
+*/
 

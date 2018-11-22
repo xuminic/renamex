@@ -193,6 +193,7 @@ static int mmgui_message_popup(MMGUI *gui, int type, char *title, char *);
 static int mmgui_rename_exec(MMGUI *gui, int i, char *dstname, char *srcname);
 static char *IupTk_FileDlgExtract(char *dfn, char **sp);
 static int IupTk_FileDlgCounting(char *value);
+static char *IupTk_CopyValue(Ihandle *ih);
 
 
 void *mmgui_open(RNOPT *ropt, int *argcs, char ***argvs)
@@ -528,7 +529,7 @@ static int mmgui_fnlist_event_ctrl_a(Ihandle *ih, int c)
 		return IUP_DEFAULT;
 	}
 
-	buf = csc_strcpy_alloc(IupGetAttribute(gui->list_oldname, "VALUE"), 0);
+	buf = IupTk_CopyValue(gui->list_oldname);
 	memset(buf, '+', strlen(buf));
 	IupSetAttribute(gui->list_oldname, "VALUE", buf);
 
@@ -639,6 +640,7 @@ static int mmgui_fnlist_update_preview(MMGUI *gui, int action)
 			IupSetStrAttributeId(gui->list_preview, 
 					"",  i, opt->buffer);
 		} else {
+			printf("mmgui_fnlist_update_preview: failed [%s]\n", opt->buffer);
 			IupSetStrAttributeId(gui->list_preview, 
 					"",  i, fname);
 		}
@@ -702,7 +704,7 @@ static int mmgui_button_event_load(Ihandle *ih)
 
 	CDB_FUNC(("Last  DIRECTORY: %s\n", 
 			IupGetAttribute(gui->dlg_open, "DIRECTORY")));
-	dlgrd = IupGetAttribute(gui->dlg_open, "VALUE");
+	dlgrd = IupTk_CopyValue(gui->dlg_open);
 	CDB_DEBUG(("Open File VALUE: %s\n", dlgrd));
 	while ((fname = IupTk_FileDlgExtract(dlgrd, &sp)) != NULL) {
 		mmgui_fnlist_append(gui, fname);
@@ -710,6 +712,7 @@ static int mmgui_button_event_load(Ihandle *ih)
 		 * The 'fname' can not be retrieved by IupGetAttribute() */
 		smm_free(fname);
 	}
+	smm_free(dlgrd);
 	return mmgui_event_update(ih);
 }
 
@@ -723,6 +726,8 @@ static int mmgui_button_event_delete(Ihandle *ih)
 		return IUP_DEFAULT;
 	}
 
+	/* every loop removes only one file because the removing action
+	 * changes the list map */
 	while (1) {
 		value = IupGetAttribute(gui->list_oldname, "VALUE");
 		CDB_PROG(("mmgui_button_event_delete: %s\n", value));
@@ -771,7 +776,7 @@ static int mmgui_button_event_rename(Ihandle *ih)
 	 * list control, apparently this operation changes the contents of
 	 * VALUE attribution, which interrupts the renaming process.
 	 * The contents of VALUE must be copied out to be non-volatile */
-	value = csc_strcpy_alloc(IupGetAttribute(gui->list_oldname, "VALUE"), 0);
+	value = IupTk_CopyValue(gui->list_oldname);
 	CDB_PROG(("mmgui_button_event_rename: %s %d\n", value, gui->fileno));
 	vflag = strchr(value, '+');
 	for (i = 0; i < gui->fileno; i++) {
@@ -1047,14 +1052,14 @@ static int mmgui_option_collection(MMGUI *gui)
 	}
 	value = IupGetAttribute(gui->tick_prefix, "VALUE");
 	if (!strcmp(value, "ON")) {
-		opt->prefix = IupGetAttribute(gui->entry_prefix, "VALUE");
+		opt->prefix = IupTk_CopyValue(gui->entry_prefix);
 		if ((opt->pre_len = strlen(opt->prefix)) > 0) {
 			opt->oflags |= RNM_OFLAG_PREFIX;
 		}
 	}
 	value = IupGetAttribute(gui->tick_suffix, "VALUE");
 	if (!strcmp(value, "ON")) {
-		opt->suffix = IupGetAttribute(gui->entry_suffix, "VALUE");
+		opt->suffix = IupTk_CopyValue(gui->entry_suffix);
 		if ((opt->suf_len = strlen(opt->suffix)) > 0) {
 			opt->oflags |= RNM_OFLAG_SUFFIX;
 		}
@@ -1065,7 +1070,7 @@ static int mmgui_option_collection(MMGUI *gui)
 	if (!strcmp(value, "ON")) {
 		opt->patbuf  = NULL;
 		opt->regflag = 0;
-		opt->substit = IupGetAttribute(gui->entry_substit, "VALUE");
+		opt->substit = IupTk_CopyValue(gui->entry_substit);
 		if (opt->substit) {
 			opt->su_len = strlen(opt->substit);
 		}
@@ -1103,7 +1108,7 @@ static int mmgui_option_collection(MMGUI *gui)
 			opt->action = RNM_ACT_REGEX;
 			opt->regflag |= REG_EXTENDED;
 		}
-		opt->pattern = IupGetAttribute(gui->entry_pattern, "VALUE");
+		opt->pattern = IupTk_CopyValue(gui->entry_pattern);
 		if (opt->pattern == NULL) {
 			opt->action = 0;
 		} else if ((opt->pa_len = strlen(opt->pattern)) == 0) {
@@ -1132,6 +1137,26 @@ static int mmgui_option_free(MMGUI *gui)
 	if (opt->action == RNM_ACT_REGEX) {
 		opt->action = 0;
 		regfree(opt->preg);
+	}
+	if (opt->pattern) {
+		smm_free(opt->pattern);
+		opt->pattern = NULL;
+		opt->pa_len = 0;
+	}
+	if (opt->substit) {
+		smm_free(opt->substit);
+		opt->substit = NULL;
+		opt->su_len = 0;
+	}
+	if (opt->prefix) {
+		smm_free(opt->prefix);
+		opt->prefix = NULL;
+		opt->pre_len = 0;
+	}
+	if (opt->suffix) {
+		smm_free(opt->suffix);
+		opt->suffix = NULL;
+		opt->suf_len = 0;
 	}
 	return IUP_DEFAULT;
 }
@@ -1722,6 +1747,11 @@ static int IupTk_FileDlgCounting(char *value)
 		rc += (value[i] == '+') ? 1 : 0;
 	}
 	return rc;
+}
+
+static char *IupTk_CopyValue(Ihandle *ih)
+{
+	return csc_strcpy_alloc(IupGetAttribute(ih, "VALUE"), 0);
 }
 
 

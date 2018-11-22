@@ -4,6 +4,8 @@ ifeq ($(OS), Windows_NT)
   export TEC_UNAME=mingw4
 endif
 
+export USE_GTK2=1
+
 # quick decision which GTK is available
 ifndef	USE_GTK2
 gtkver := $(shell pkg-config gtk+-3.0 --cflags)
