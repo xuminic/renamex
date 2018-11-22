@@ -62,6 +62,8 @@ options and arguments will be passed to the GUI frontend.
 
 .TP
 .BR \-s/PATTERN/STRING[/SW]
+.TP
+.BR \-s:PATTERN:STRING[:SW]
 Substitute PATTERN with STRING in the filenames.
 .B renamex
 will searching the
@@ -71,6 +73,15 @@ in the names. If the
 matches, it will be replaced by the 
 .I STRING
 and then use the system call to change the file name.
+
+Note that in 
+.I MinGW
+command line the path-like string would be automatically expand to something like
+.I -s/C:/MinGW/msys/1.0/pattern/destination/g
+so in that case the colon form 
+.I -s:pattern:destination:g
+is needed.
+
 .B SW
 is the combination of the following switches:
 .RS
@@ -98,7 +109,7 @@ replace 1 to 9 occurrences in the filename. Note that
 .B 0
 is actually the same to the
 .B g
-switch.
+switch. 
 
 .SH "REGULAR EXPRESSION"
 This section about extended regular expression is digisted from the 
