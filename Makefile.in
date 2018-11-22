@@ -915,8 +915,8 @@ clean-local:
 		rm -f "$(distdir)-setup.exe"; \
 	fi; \
 	if test -d "$(distdir)-win32-bin"; then \
-		rm -rf "$(distdir)-win32-bin";
-	fi
+		rm -rf "$(distdir)-win32-bin"; \
+	fi;
 
 libiup:
 	$(IUPCFG) make -C ./external/iup do_all
