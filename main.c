@@ -148,7 +148,7 @@ int main(int argc, char **argv)
 	sysopt.compare = strncmp;
 	sysopt.cflags = RNM_CFLAG_NEVER;
 
-	if ((argp = csc_cli_getopt_open(clist)) == NULL) {
+	if ((argp = csc_cli_getopt_open(clist, &optind)) == NULL) {
 		slog_csoup_close();
 		return -1;
 	}
