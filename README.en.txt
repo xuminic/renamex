@@ -25,6 +25,13 @@ Features
 
 Release Notes
 -------------
+Version 2.7:
+ * Fixed the major problem in the GUI frontend that failed to process more
+   than 7 files in a raw.
+ * IUP updated to 3.21 to workaround the missing GTK icons.
+ * Removed the support to libgtk3.
+ * Updated libcsoup to 0.11.0 so hopefully support Cygwin.
+
 Version 2.5:
  * build system moved to autotool based autoconf/automake
  * Fixed the uneven vertical size of buttons in GTK3
