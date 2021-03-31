@@ -345,7 +345,7 @@ static int rename_execute_stage2(RNOPT *opt, char *dest, char *sour)
 static int rename_show(char *dest, char *sour, char *action)
 {
 	(void) dest; (void) sour; (void) action;
-
+/*
 #ifdef	DEBUG
 	CDB_INFO(("renaming: %s\n", sour));
 	CDB_INFO(("     -->  %s : %s\n", dest, action));
@@ -353,6 +353,9 @@ static int rename_show(char *dest, char *sour, char *action)
 	printf("renaming: %s\n", sour);
 	printf("     -->  %s : %s\n", dest, action);
 #endif
+*/	
+	CDB_SHOW(("renaming: %s\n", sour));
+	CDB_SHOW(("     -->  %s : %s\n", dest, action));
 	return 0;
 }
 
@@ -398,7 +401,7 @@ static int console_notify(RNOPT *opt, int msg, int v, void *a1, void *a2)
 		rename_show(dest, sour, "tested");
 		break;
 	case RNM_MSG_SYS_FAIL:
-		perror("rename");
+		perror((char*)a2);
 		break;
 	case RNM_MSG_RENAME:
 		if (opt->cflags & RNM_CFLAG_VERBOSE) {

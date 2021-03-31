@@ -63,8 +63,12 @@
 #include "rename.h"
 
 /* re-use the debug protocols in libcsoup */
+#if	(DEBUG > 0)
+#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(RENAME_MOD_CORE, DEBUG)
+#elif	defined(DEBUG)
 #define CSOUP_DEBUG_LOCAL	SLOG_CWORD(RENAME_MOD_CORE, SLOG_LVL_WARNING)
-//#define CSOUP_DEBUG_LOCAL	SLOG_CWORD(RENAME_MOD_CORE, SLOG_LVL_FUNC)
+#endif
+
 #include "libcsoup_debug.h"
 
 
@@ -148,7 +152,7 @@ int main(int argc, char **argv)
 	sysopt.compare = strncmp;
 	sysopt.cflags = RNM_CFLAG_NEVER;
 
-	if ((argp = csc_cli_getopt_open(clist)) == NULL) {
+	if ((argp = csc_cli_getopt_open(clist, NULL)) == NULL) {
 		slog_csoup_close();
 		return -1;
 	}
@@ -181,7 +185,7 @@ int main(int argc, char **argv)
 			} else if (!strcmp(optarg, "logfile")) {
 				slog_bind_file(dbgc, "renamex.log");
 			} else {
-				debug_main(optarg, argc-optind, &argv[optind]);
+				debug_main(optarg, argc - optind, &argv[optind]);
 				rc = RNM_ERR_HELP;
 			}
 			break;
@@ -246,7 +250,7 @@ int main(int argc, char **argv)
 
 #ifdef	CFG_GUI_ON
 	if (sysopt.cflags & RNM_CFLAG_GUI) {
-		rc = mmgui_run(sysopt.gui, argc - optind, &argv[optind]);
+		rc = mmgui_run(sysopt.gui, --argc, ++argv);
 		rename_free_all(0);
 		return rc;
 	}
@@ -272,8 +276,7 @@ int main(int argc, char **argv)
 					argv[optind+1], argv[optind]);
 		} else {
 #ifdef	CFG_GUI_ON
-			rc = mmgui_run(sysopt.gui, 
-					argc - optind, &argv[optind]);
+			rc = mmgui_run(sysopt.gui, --argc, ++argv);
 #else
 			CDB_SHOW(("renamex: missing rename operand\n"));
 			rc = RNM_ERR_PARAM;
@@ -295,7 +298,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	CDB_INFO(("Total:%d  Renamed:%d  Failed:%d  No-change:%d  "
+	CDB_SHOW(("Total:%d  Renamed:%d  Failed:%d  No-change:%d  "
 			"Existed:%d\n", sysopt.st_process, sysopt.st_success, 
 			sysopt.st_failed, sysopt.st_same, sysopt.st_skip));
 	rename_free_all(0);
@@ -416,6 +419,7 @@ static int debug_main(char *optarg, int argc, char **argv)
 	if (!strcmp(optarg, "option")) {
 		rename_option_dump(&sysopt);
 	} else if (!strcmp(optarg, "debug")) {
+		CDB_SHOW(("Internal: SHOW\n"));
 		CDB_ERROR(("Internal: ERROR\n"));
 		CDB_WARN(("Internal: Warning\n"));
 		CDB_INFO(("Internal: INFO\n"));
