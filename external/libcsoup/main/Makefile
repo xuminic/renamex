@@ -8,7 +8,7 @@ CP      = cp
 RM      = rm -f
 
 ifndef	CFLAGS
-CFLAGS	= -Wall -Wextra -DDEBUG -DCFG_CDLL_SAFE
+CFLAGS	= -Wall -Wextra -O3 -DDEBUG -DCFG_CDLL_SAFE -DCFG_UNIT_TEST
 endif
 CFLAGS	+= -I.. -I.
 
@@ -17,7 +17,7 @@ EXLIBS	= -lpthread
 endif
 
 SRCS	= main.c fixtoken.c memdump.c slog.c crc.c fontpath.c config.c \
-	  csc_cdll.c csc_cli.c smm.c strings.c packhex.c
+	  csc_cdll.c csc_cli.c smm.c strings.c packhex.c dummy.c mem.c
 
 TARGET	= csoup
 
@@ -25,7 +25,7 @@ TARGET	= csoup
 .PHONY: all clean
 all: $(TARGET)
 
-csoup: $(SRCS) main_define.h packhex.h
+csoup: $(SRCS) main_define.h packhex.h libcsoup
 	$(CC) $(CFLAGS) -L.. -o $@ $(SRCS) -lcsoup $(EXLIBS)
 
 main_define.h: mkclicmd
@@ -36,10 +36,13 @@ mkclicmd: mkclicmd.c
 	$(CC) $(CFLAGS) -L.. -o $@ $< -lcsoup
 
 packhex.h: packhex
-	packhex -i packed_hex * > $@
+	./packhex -i packed_hex *.c > $@
 
 packhex: ../soup/csc_pack_hex.c
 	$(CC) $(CFLAGS) -L.. -DEXECUTABLE -o $@ $< -lcsoup
+
+libcsoup:
+	(cd ..; make libcsoup.a)
 
 universal_crc: universal_crc.c
 	$(CC) $(CFLAGS) -o $@ $<

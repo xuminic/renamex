@@ -41,7 +41,7 @@
 #    revoke the install operation
 
 AC_PREREQ([2.68])
-AC_INIT([renamex], [2.8], [xuming@users.sourceforge.net])
+AC_INIT([renamex], [2.9], [xuming@users.sourceforge.net])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([main.c])
 AC_CONFIG_HEADERS([config.h])
@@ -59,9 +59,9 @@ AC_ARG_ENABLE([debug-build],
   AS_HELP_STRING([--enable-debug-build], 
       [Enable the debug output (yes,no,0-7)]))
 AS_CASE([$enable_debug_build],
-  [yes|Yes|YES], [CFLAGS="-Wall -Wextra -g -DDEBUG=3 -O0"],
-  [1|2|3|4|5|6|7], [CFLAGS="-Wall -Wextra -g -DDEBUG=$enable_debug_build -O0"],
-  [CFLAGS="-Wall -Wextra -O4"])
+  [yes|Yes|YES], [CFLAGS="-Wall -Wextra -Wno-cast-function-type -g -DDEBUG=3 -O0"],
+  [1|2|3|4|5|6|7], [CFLAGS="-Wall -Wextra -Wno-cast-function-type -g -DDEBUG=$enable_debug_build -O0"],
+  [CFLAGS="-Wall -Wextra -Wno-cast-function-type -O3"])
 
 AC_ARG_WITH([gui], 
   AS_HELP_STRING([--with-gui], 

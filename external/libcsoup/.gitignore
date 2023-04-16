@@ -1,0 +1,15 @@
+libcsoup.a
+csoup
+*.o
+*.exe
+main/mkclicmd
+main/main_define.h
+doc/html
+doc/latex
+libcsoup-*
+main/My
+main/MyProduct
+main/logfile
+main/longpath
+main/packhex
+main/packhex.h

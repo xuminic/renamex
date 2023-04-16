@@ -168,7 +168,7 @@ int main(int argc, char **argv)
 		switch (c) {
 		case 1:
 			if (optarg == NULL) {
-				csc_cli_print(clist, NULL);
+				csc_cli_print(clist, 0, NULL);
 			} else if (!strcmp(optarg, "credit")) {
 				puts(help_credits);
 			}
