@@ -168,7 +168,7 @@ AC_SUBST(POSTLIB)
 AC_SUBST(RELEASE)
 
 # This is for Win32 GUI porting only
-WIN32GUI="$LIBS -liup -liupimglib -mwindows -lkernel32 -luser32 \
+WIN32GUI="-liup -liupimglib $LIBS -mwindows -lkernel32 -luser32 \
   -lgdi32 -lwinspool -lcomdlg32 -ladvapi32 -lshell32 -lole32 -loleaut32 \
   -luuid -lcomctl32"
 AC_SUBST(WIN32GUI)

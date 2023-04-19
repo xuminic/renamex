@@ -9,7 +9,7 @@ ACLOCAL_AMFLAGS = -I m4 --install
 SUBDIRS = .
 
 DEFS	+= $(SYSDEFS)
-LIBS	+= $(POSTLIB)
+LIBS	= $(POSTLIB) $(LIBS)
 
 if	XAM_MSWIN
 bin_PROGRAMS	= renamex 
