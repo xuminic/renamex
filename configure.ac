@@ -141,6 +141,7 @@ AC_CHECK_LIB([csoup], [smm_init],, [
   PREFLIB="$PREFLIB libcsoup"
   AC_MSG_NOTICE([The libcsoup will be built soon.])])
 
+LIBS="$POSTLIB $LIBS"
 AC_CHECK_LIB([regex], [re_comp])
 
 # Checks for header files.
@@ -164,11 +165,10 @@ AC_CHECK_FUNCS([memmove memset re_comp regcomp strchr strrchr strstr strtol])
 AC_SUBST(IUPCFG)
 AC_SUBST(SYSDEFS)
 AC_SUBST(PREFLIB)
-AC_SUBST(POSTLIB)
 AC_SUBST(RELEASE)
 
 # This is for Win32 GUI porting only
-WIN32GUI="-liup -liupimglib $LIBS -mwindows -lkernel32 -luser32 \
+WIN32GUI="$LIBS -mwindows -lkernel32 -luser32 \
   -lgdi32 -lwinspool -lcomdlg32 -ladvapi32 -lshell32 -lole32 -loleaut32 \
   -luuid -lcomctl32"
 AC_SUBST(WIN32GUI)

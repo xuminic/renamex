@@ -627,7 +627,6 @@ am__EXEEXT_TRUE
 LTLIBOBJS
 WIN32GUI
 RELEASE
-POSTLIB
 PREFLIB
 SYSDEFS
 IUPCFG
@@ -4548,6 +4547,7 @@ $as_echo "$as_me: The libcsoup will be built soon." >&6;}
 fi
 
 
+LIBS="$POSTLIB $LIBS"
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for re_comp in -lregex" >&5
 $as_echo_n "checking for re_comp in -lregex... " >&6; }
 if ${ac_cv_lib_regex_re_comp+:} false; then :
@@ -5210,9 +5210,8 @@ done
 
 
 
-
 # This is for Win32 GUI porting only
-WIN32GUI="-liup -liupimglib $LIBS -mwindows -lkernel32 -luser32 \
+WIN32GUI="$LIBS -mwindows -lkernel32 -luser32 \
   -lgdi32 -lwinspool -lcomdlg32 -ladvapi32 -lshell32 -lole32 -loleaut32 \
   -luuid -lcomctl32"
 

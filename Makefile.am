@@ -9,7 +9,6 @@ ACLOCAL_AMFLAGS = -I m4 --install
 SUBDIRS = .
 
 DEFS	+= $(SYSDEFS)
-LIBS	= $(POSTLIB) $(LIBS)
 
 if	XAM_MSWIN
 bin_PROGRAMS	= renamex 
@@ -46,7 +45,7 @@ var:
 	@echo IUPCFG = $(IUPCFG)
 	@echo COMPILE = $(COMPILE)
 	@echo LINK = $(LINK)
-	@echo RELEASE = $(RELEASE) : $(PREFLIB) : $(POSTLIB)
+	@echo RELEASE = $(RELEASE) : $(PREFLIB)
 
 help:
 	@echo "Useful targets other than 'all'"
