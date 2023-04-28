@@ -152,7 +152,8 @@ AC_CHECK_LIB([csoup], [smm_init],, [
 
 AC_CHECK_LIB([regex], [re_comp])
 
-LIBS="$POSTLIB $LIBS"
+# IUP 3.30 requires -lm
+LIBS="$POSTLIB $LIBS -lm"
 
 # Checks for header files.
 # AC_INCLUDES_DEFAULT can not output header defines automatically
