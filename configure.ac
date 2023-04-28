@@ -98,21 +98,30 @@ case "$host_os" in
       SYSGUI=CFG_GUI_ON
       LDFLAGS="$LDFLAGS -L./external/iup/lib"
       AS_CASE([$with_gui],
-        [no|No|NO], 
-	  [SYSGUI=CFG_GUI_OFF],
-        [yes|Yes|YES|gtk|GTK], 
-	  [PKG_CHECK_MODULES([GTK], [gtk+-2.0], [
+        [no|No|NO],
+          [SYSGUI=CFG_GUI_OFF],
+        [2|gtk2|Gtk2|GTK2],
+          [PKG_CHECK_MODULES([GTK], [gtk+-2.0], [
               AC_MSG_RESULT([gtk+-2.0])
-              IUPCFG="USE_GTK2=1"], 
-	    [AC_MSG_WARN([Libgtk 2.0 not found. GUI disabled])
-	      SYSGUI=CFG_GUI_OFF]
-	  )],
-	[PKG_CHECK_MODULES([GTK], [gtk+-2.0], [
-            AC_MSG_RESULT([gtk+-2.0])
-            IUPCFG="USE_GTK2=1"], 
-	  [AC_MSG_WARN([Libgtk 2.0 not found. GUI disabled])
-	    SYSGUI=CFG_GUI_OFF]
-	)])
+              IUPCFG="USE_GTK2=1"],
+            [PKG_CHECK_MODULES([GTK], [gtk+-3.0],
+              [AC_MSG_WARN([Gtk 2.0 not found. Using Gtk 3.0 instead])],
+              [SYSGUI=CFG_GUI_OFF])]
+          )],
+        [3|gtk3|Gtk3|GTK3],
+          [PKG_CHECK_MODULES([GTK], [gtk+-3.0], ,
+            [PKG_CHECK_MODULES([GTK], [gtk+-2.0], [
+                AC_MSG_WARN([Gtk 3.0 not found. Using Gtk 2.0 instead])
+                IUPCFG="USE_GTK2=1"],
+              [SYSGUI=CFG_GUI_OFF])]
+          )],
+        [PKG_CHECK_MODULES([GTK], [gtk+-3.0],
+          [AC_MSG_NOTICE([gtk+-3.0 found])],
+          [PKG_CHECK_MODULES([GTK], [gtk+-2.0],
+            [AC_MSG_NOTICE([gtk+-2.0 found]) 
+              IUPCFG="USE_GTK2=1"],
+            [SYSGUI=CFG_GUI_OFF])]
+          )])
       AS_IF([! test "$SYSGUI" = CFG_GUI_OFF], [
           CPPFLAGS="$CPPFLAGS $GTK_CFLAGS"
 	  LIBS="$LIBS $GTK_LIBS -lX11"
@@ -141,8 +150,9 @@ AC_CHECK_LIB([csoup], [smm_init],, [
   PREFLIB="$PREFLIB libcsoup"
   AC_MSG_NOTICE([The libcsoup will be built soon.])])
 
-LIBS="$POSTLIB $LIBS"
 AC_CHECK_LIB([regex], [re_comp])
+
+LIBS="$POSTLIB $LIBS"
 
 # Checks for header files.
 # AC_INCLUDES_DEFAULT can not output header defines automatically
