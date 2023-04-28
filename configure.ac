@@ -41,7 +41,7 @@
 #    revoke the install operation
 
 AC_PREREQ([2.68])
-AC_INIT([renamex], [2.9], [xuming@users.sourceforge.net])
+AC_INIT([renamex], [2.10], [xuming@users.sourceforge.net])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([main.c])
 AC_CONFIG_HEADERS([config.h])
