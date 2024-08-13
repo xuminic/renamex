@@ -250,7 +250,7 @@ int mmgui_run(void *guiobj, int argc, char **argv)
 	
 	IupSetHandle("DLG_ICON", IupImageRGBA(128, 128, mmrc_icon_dialog));
 	gui->dlg_main = IupDialog(hbox);
-	IupSetAttribute(gui->dlg_main, "TITLE", "Rename Extension");
+	IupSetAttribute(gui->dlg_main, "TITLE", "Rename Express");
 	IupSetAttribute(gui->dlg_main, "ICON", "DLG_ICON");
 	//IupSetAttribute(gui->dlg_main, "RASTERSIZE", "800");
 	IupSetAttribute(gui->dlg_main, "SIZE", "HALF");

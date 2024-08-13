@@ -105,7 +105,7 @@ The SW could be:\n\
 	{ 0, NULL, 0, NULL }
 };
 
-const	char	*help_version = "Rename Extension " VERSION;
+const	char	*help_version = "Rename Express " VERSION;
 
 const	char	*help_descript = "\
 Rename files by substituting the specified patterns.\n\n\

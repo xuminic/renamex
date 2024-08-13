@@ -1,9 +1,9 @@
 # https://developer.gnome.org/integration-guide/stable/index.html.en
 [Desktop Entry]
-Name=Rename Extension
+Name=Rename Express
 Comment=Batch rename filenames
 Exec=renamex
-Icon=rename-extension
+Icon=rename-express
 Type=Application
 Terminal=false
 Categories=GTK;GNOME;Utility;FileTools;
