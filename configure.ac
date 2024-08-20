@@ -67,6 +67,10 @@ AC_ARG_WITH([gui],
   AS_HELP_STRING([--with-gui], 
       [Build with the Graphic User Interface [yes]]))
 
+# Checks for library functions.
+AC_FUNC_STRTOD
+AC_CHECK_FUNCS([memmove memset regcomp strchr strrchr strstr strtol])
+
 case "$host_os" in
   cygwin | mingw*)
     SYSTOOL=mingw
@@ -150,7 +154,7 @@ AC_CHECK_LIB([csoup], [smm_init],, [
   PREFLIB="$PREFLIB libcsoup"
   AC_MSG_NOTICE([The libcsoup will be built soon.])])
 
-AC_CHECK_LIB([regex], [re_comp])
+#AC_CHECK_LIB([regex], [re_comp])
 
 # IUP 3.30 requires -lm
 LIBS="$POSTLIB $LIBS -lm"
@@ -164,10 +168,6 @@ AC_CHECK_HEADERS([sys/time.h],,,[AC_INCLUDES_DEFAULT])
 AC_C_INLINE
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
-
-# Checks for library functions.
-AC_FUNC_STRTOD
-AC_CHECK_FUNCS([memmove memset re_comp regcomp strchr strrchr strstr strtol])
 
 # Just for checking the function of AC_DEFINE().
 # It can add an object in config.h.in by autoheader and output what I need.

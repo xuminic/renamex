@@ -9,9 +9,6 @@
 /* Define to 1 if you have the `iup' library (-liup). */
 #undef HAVE_LIBIUP
 
-/* Define to 1 if you have the `regex' library (-lregex). */
-#undef HAVE_LIBREGEX
-
 /* Define to 1 if you have the `memmove' function. */
 #undef HAVE_MEMMOVE
 
@@ -23,9 +20,6 @@
 
 /* Define to 1 if you have the `regcomp' function. */
 #undef HAVE_REGCOMP
-
-/* Define to 1 if you have the `re_comp' function. */
-#undef HAVE_RE_COMP
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
