@@ -73,7 +73,7 @@ rename_icon.o: rename_icon.rc
 renamex_win: $(WIN_OBJS)
 	$(LINK) $^ $(WIN32GUI)
 
-clean-local:
+clean-local: extclean
 	if test -f "renamex_win$(EXEEXT)"; then \
 		rm -f "renamex_win$(EXEEXT)"; \
 	fi; \
@@ -83,6 +83,7 @@ clean-local:
 	if test -d "$(distdir)-win32-bin"; then \
 		rm -rf "$(distdir)-win32-bin"; \
 	fi;
+
 
 libiup:
 	$(IUPCFG) make -C ./external/iup do_all

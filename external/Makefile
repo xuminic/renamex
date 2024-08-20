@@ -42,6 +42,9 @@ libregex_clean:
 
 clean:
 	$(IUPCFG) make -C ./iup clean
+	if [ -d ./iup/src/dep ]; then \
+		rm -rf ./iup/src/dep; \
+	fi
 	make -C ./libcsoup clean
 
 mingw_all: libcsoup libiup libregex
