@@ -1,8 +1,14 @@
 
-# The line from 387, "am--refresh: Makefile" to 429, 
-# "$(srcdir)/config.h.in:  $(am__configure_deps)" need to be manually
-# removed after every 'automake' to prevent the automatic checking the 
-# irrelevant files# like m4, configure.ac, etc while type-in make commands.
+# Those lines from 
+# 387, "am--refresh: Makefile" (note: include)
+# to 
+# 429, "$(srcdir)/config.h.in:  $(am__configure_deps)"    (note: exclude)
+# shall be manually removed after invoking 'automake' everytime.
+# Otherwise the makefile scripts would check the irrelevant files
+# like m4, configure.ac, etc and spit something like:
+#   cd . && /bin/bash ./renamex/missing automake-1.16 --foreign
+#   ./renamex/missing: line 81: automake-1.16: command not found
+
 
 AUTOMAKE_OPTIONS = no-dependencies foreign
 ACLOCAL_AMFLAGS = -I m4 --install
