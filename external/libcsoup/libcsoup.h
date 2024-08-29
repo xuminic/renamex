@@ -6,7 +6,7 @@
 
    \author "Andy Xuming" <xuming@users.sourceforge.net>
 */
-/* Copyright (C) 2013  "Andy Xuming" <xuming@users.sourceforge.net>
+/* Copyright (C) 2013-2023  "Andy Xuming" <xuming@users.sourceforge.net>
 
    CSOUP is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -31,8 +31,8 @@
 
 #define LIBCSOUP_VERSION(x,y,z)	(((x)<<24)|((y)<<12)|(z))
 #define LIBCSOUP_VER_MAJOR	1		/* 0-255 */
-#define LIBCSOUP_VER_MINOR	1		/* 0-4095 */
-#define LIBCSOUP_VER_BUGFIX	2		/* 0-4095 */
+#define LIBCSOUP_VER_MINOR	2		/* 0-4095 */
+#define LIBCSOUP_VER_BUGFIX	8		/* 0-4095 */
 
 
 /* Forward declaration the structure of circular doubly linked list to hide
@@ -97,6 +97,7 @@ void *csc_cli_qopt_open(int argc, char **argv);
 int csc_cli_qopt_close(void *ropt);
 int csc_cli_qopt_optind(void *ropt);
 int csc_cli_qopt_optopt(void *ropt);
+char *csc_cli_qopt_optlast(void *ropt);
 char *csc_cli_qopt_optarg(void *ropt);
 int csc_cli_qopt(void *ropt, struct cliopt *optbl);
 
@@ -304,15 +305,30 @@ int csc_cdl_list_state(CSCLNK **anchor);
 #define CSC_MEMDUMP_TYPE_EE	0x50	/* float, size depend on BIT_MASK */
 #define CSC_MEMDUMP_TYPE_MASK	0xf0	
 
-#define CSC_MEMDUMP_WID_MASK	0xf00	/* always plus 2 */
-#define CSC_MEMDUMP_WIDTH(n)	(((n)<<8) & CSC_MEMDUMP_WID_MASK)
+#define CSC_MEMDUMP_NO_GLYPH	0x0100	/* don't show ASC glyphes */
+#define CSC_MEMDUMP_NO_ADDR	0x0200	/* don't show address */
+#define CSC_MEMDUMP_NO_FILLING	0x0400	/* don't fill leading 0 */
+#define CSC_MEMDUMP_NO_SPACE	0x0800	/* don't fill space between numbers */
+#define CSC_MEMDUMP_ALIGN_LEFT	0x1000	/* align to left */
+#define CSC_MEMDUMP_REVERSE	0x2000	/* reverse display */
+#define CSC_MEMDUMP_CTL_MASK	0xff00
 
-#define CSC_MEMDUMP_NO_GLYPH	0x1000	/* don't show ASC glyphes */
-#define CSC_MEMDUMP_NO_ADDR	0x2000	/* don't show address */
-#define CSC_MEMDUMP_NO_FILLING	0x4000	/* don't fill leading 0 */
-#define CSC_MEMDUMP_NO_SPACE	0x8000	/* don't fill space between numbers */
-#define CSC_MEMDUMP_ALIGN_LEFT	0x10000	/* align to left */
-#define CSC_MEMDUMP_REVERSE	0x20000	/* reverse display */
+/* the width mask is used to make up the width in the last line of the print,
+ * like 16 hex number a line, but the last line has only 5 members.
+ * the limit of the make up is 8 bit, 255 members */
+#if	(UINT_MAX > 65536)	/* only for 32-bit or 64-bit C */
+#define CSC_MEMDUMP_WID_MASK	0xf0000
+#define CSC_MEMDUMP_WIDTH(n)	(((n)<<16) & CSC_MEMDUMP_WID_MASK)
+#define CSC_MEMDUMP_WIDGET(f)	(((f) & CSC_MEMDUMP_WID_MASK) >> 16)
+#define CSC_MEMDUMP_MKUP_MSK	0xff00000
+#define CSC_MEMDUMP_SETMKUP(f,n)  ((((n)<<20) & CSC_MEMDUMP_MKUP_MSK) | ((f) & ~CSC_MEMDUMP_MKUP_MSK))
+#define CSC_MEMDUMP_GETMKUP(f)	(((f)&CSC_MEMDUMP_MKUP_MSK) >> 20)
+#else
+#define CSC_MEMDUMP_WIDTH(n)	0
+#define CSC_MEMDUMP_WIDGET(f)	0
+#define CSC_MEMDUMP_SETMKUP(f,n) (f)
+#define CSC_MEMDUMP_GETMKUP(f)	0
+#endif
 
 #ifdef __cplusplus
 extern "C"
@@ -427,7 +443,7 @@ int csc_cfg_hex_to_binary(char *src, char *buf, int blen);
  * See csc_pack_hex.c: a simple way to pack files to C array in hex.
  * Definitions and functions for the simple packing hex array.
  ****************************************************************************/
-typedef int	(*F_PKHEX)(void *frame, char *fname, void *data, long dlen);
+typedef int	(*F_PKHEX)(void *pobj, void *frame, char *fname, void *data, long dlen);
 
 struct	phex_idx	{
 	char		*fname;
@@ -441,7 +457,7 @@ extern "C"
 #endif
 void *csc_pack_hex_verify(void *pachex, long *flen, long *fnsize);
 void *csc_pack_hex_find_next(void *pachex);
-void csc_pack_hex_list(void *pachex, F_PKHEX lsfunc);
+void csc_pack_hex_list(void *pachex, F_PKHEX lsfunc, void *pobj);
 void *csc_pack_hex_load(void *pachex, char *path, long *size);
 void *csc_pack_hex_index(void *pachex);
 #ifdef __cplusplus
@@ -498,6 +514,8 @@ void *csc_pack_hex_index(void *pachex);
 #define CSC_MERR_RANGE		-4
 #define CSC_MERR_TYPE		-5
 
+typedef int	(*F_MEM)(void *heap, void *mctl, void *pobj);
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -506,7 +524,8 @@ extern "C"
 void *csc_tmem_init(void *heap, size_t len, int flags);
 void *csc_tmem_alloc(void *heap, size_t n);
 int csc_tmem_free(void *heap, void *mem);
-void *csc_tmem_scan(void *heap, int (*used)(void*), int (*loose)(void*));
+void *csc_tmem_scan(void *heap, F_MEM used, F_MEM loose, void *pobj);
+void *csc_tmem_memory(void *heap, void *mctl, size_t *osize);
 size_t csc_tmem_attrib(void *heap, void *mem, int *state);
 void *csc_tmem_front_guard(void *heap, void *mem, int *xsize);
 void *csc_tmem_back_guard(void *heap, void *mem, int *xsize);
@@ -515,7 +534,8 @@ void *csc_tmem_back_guard(void *heap, void *mem, int *xsize);
 void *csc_dmem_init(void *heap, size_t len, int flags);
 void *csc_dmem_alloc(void *heap, size_t n);
 int csc_dmem_free(void *heap, void *mem);
-void *csc_dmem_scan(void *heap, int (*used)(void*), int (*loose)(void*));
+void *csc_dmem_scan(void *heap, F_MEM used, F_MEM loose, void *pobj);
+void *csc_dmem_memory(void *heap, void *mctl, size_t *osize);
 size_t csc_dmem_attrib(void *heap, void *mem, int *state);
 void *csc_dmem_front_guard(void *heap, void *mem, int *xsize);
 void *csc_dmem_back_guard(void *heap, void *mem, int *xsize);
@@ -524,7 +544,8 @@ void *csc_dmem_back_guard(void *heap, void *mem, int *xsize);
 void *csc_bmem_init(void *heap, size_t len, int flags);
 void *csc_bmem_alloc(void *heap, size_t n);
 int csc_bmem_free(void *heap, void *mem);
-void *csc_bmem_scan(void *heap, int (*used)(void*), int (*loose)(void*));
+void *csc_bmem_scan(void *heap, F_MEM used, F_MEM loose, void *pobj);
+void *csc_bmem_memory(void *heap, void *mctl, size_t *osize);
 size_t csc_bmem_attrib(void *heap, void *mem, int *state);
 void *csc_bmem_front_guard(void *heap, void *mem, int *xsize);
 void *csc_bmem_back_guard(void *heap, void *mem, int *xsize);
@@ -546,22 +567,70 @@ int csc_extname_filter_match(void *efft, char *fname);
 int csc_extname_filter_export(void *efft, char *buf, int blen);
 char *csc_extname_filter_export_alloc(void *efft);
 
-char *csc_strfill(char *s, int padto, int ch);
 size_t csc_strlcat(char *dst, const char *src, size_t siz);
 size_t csc_strlcpy(char *dst, const char *src, size_t siz);
+void *csc_strlmove(void *dest, size_t dlen, const void *sour, size_t slen);
 char *csc_strcpy_alloc(const char *src, int extra);
+char *csc_strfill(char *s, int padto, int ch);
+int csc_memcpy(char *dest, int dlen, char *from, char *to);
+int csc_strrpch(char *s, int num, int oldc, int newc);
+
+char *csc_strchr(char *s, char *cset);
+char *csc_strrchr(char *s, char *cset);
+
+char *csc_strrstr(char *haystack, char *endp, char *needle);
+char *csc_strstr(char *s, char **endp, char *slist[]);
+char *csc_strstr_list(char *s, char **endp, ...);
+
+int csc_strlcmp(const char *s1, const char *s2);
+int csc_strlcmp_sub(const char *s1, const char *s2);
+int csc_strlcmp_list(char *dest, char *src, ...);
+int csc_strlcmp_body(const char *s1, const char *s2);
+
+int csc_strrcmp(const char *s1, const char *s2);
+int csc_strrcmp_nc(const char *s1, const char *s2);
+int csc_strrcmp_list(char *dest, char *src, ...);
+int csc_strrcmp_list_nc(char *dest, char *src, ...);
+int csc_strrcmp_arry(char *dest, char **src);
+int csc_strcmp_list(char *dest, char *src, ...);
+int csc_strcmp_list_nc(char *dest, char *src, ...);
+
 int csc_fixtoken(char *sour, char **idx, int ids, char *delim);
-char **csc_fixtoken_copy(char *sour, char *delim, int *ids);
+char **csc_fixtoken_alloc(char *sour, char *delim, int *ids);
 int csc_ziptoken(char *sour, char **idx, int ids, char *delim);
-char **csc_ziptoken_copy(char *sour, char *delim, int *ids);
+char **csc_ziptoken_alloc(char *sour, char *delim, int *ids);
 int csc_isdelim(char *delim, int ch);
 char *csc_cuttoken(char *sour, char **token, char *delim);
 char *csc_gettoken(char *sour, char *buffer, int blen, char *delim);
 
-/* see csc_cmp_file_extname.c */
-int csc_cmp_file_extname(char *fname, char *ext);
-int csc_cmp_file_extlist(char *fname, char **ext);
-int csc_cmp_file_extargs(char *fname, char *ext, ...);
+char *csc_token_pick_ro(char *s, int sep, int idx, int *len);
+char *csc_token_pick(char *s, int sep, int idx);
+char *csc_token_pick_alloc(char *s, int sep, int idx, int extra);
+char *csc_token_pick_copy(char *s, int sep, int idx, char *buf, int blen);
+
+char *csc_token_tail_ro(char *s, int sep, int *len);
+char *csc_token_tail(char *s, int sep);
+char *csc_token_tail_alloc(char *s, int sep, int extra);
+char *csc_token_tail_copy(char *s, int sep, char *buf, int blen);
+
+char *csc_trim_body_ro(char *s, char *cset, int *len);
+char *csc_trim_body(char *s, char *cset);
+char *csc_trim_body_alloc(char *s, char *cset, int extra);
+char *csc_trim_body_copy(char *s, char *cset, char *buf, int blen);
+
+char *csc_trim_head(char *s, char *cset);
+char *csc_trim_tail_ro(char *s, char *cset, int *len);
+char *csc_trim_tail(char *s, char *cset);
+char *csc_trim_tail_alloc(char *s, char *cset, int extra);
+char *csc_trim_tail_copy(char *s, char *cset, char *buf, int blen);
+
+char *csc_url_amper(char *url, char *buffer, int blen);
+char *csc_url_amper_wb(char *url);
+char *csc_url_amper_alloc(char *url, int extra);
+
+char *csc_htm_com_pick(char *s, char *from, char *to, char *buf, int blen);
+char *csc_htm_doc_pick(char *s, char **sp, char *from, char *to, char *buf, int blen);
+char *csc_htm_tag_pick(char *s, char *from, char *to, char *buf, int blen);
 
 /* see csc_strbival.c */
 int csc_strbival_int(char *s, char *delim, int *opt);
@@ -569,12 +638,6 @@ long csc_strbival_long(char *s, char *delim, long *opt);
 
 /* see csc_strbody.c */
 char *csc_strbody(char *s, int *len);
-
-/* see csoup_strcmp_list.c */
-int csc_strcmp_list(char *dest, char *src, ...);
-
-/* see csc_strcmp_param.c */
-int csc_strcmp_param(char *s1, char *s2);
 
 /* see csc_strcount_char.c and csc_strcount_str.c */
 int csc_strcount_char(char *s, char *acct);

@@ -4612,7 +4612,7 @@ fi
     ;;
   *)
     SYSTOOL=unix
-    CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup/include"
+    CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup-porting/iup/include"
     LDFLAGS="$LDFLAGS -L./external/libcsoup"
     # Extract the first word of "pkg-config", so it can be a program name with args.
 set dummy pkg-config; ac_word=$2
@@ -4657,7 +4657,7 @@ fi
 $as_echo "$as_me: WARNING: pkg-config is not found -- command line interface only" >&2;}
     else
       SYSGUI=CFG_GUI_ON
-      LDFLAGS="$LDFLAGS -L./external/iup/lib"
+      LDFLAGS="$LDFLAGS -L./external/iup-porting/lib"
 
 
 

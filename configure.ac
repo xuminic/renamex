@@ -92,7 +92,7 @@ case "$host_os" in
     ;;
   *)
     SYSTOOL=unix
-    CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup/include"
+    CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup-porting/iup/include"
     LDFLAGS="$LDFLAGS -L./external/libcsoup"
     AC_CHECK_PROG([PKGCONFIG], [pkg-config], [pkg-config], [])
     if test "x$PKGCONFIG" = x; then
@@ -100,7 +100,7 @@ case "$host_os" in
       AC_MSG_WARN([pkg-config is not found -- command line interface only])
     else
       SYSGUI=CFG_GUI_ON
-      LDFLAGS="$LDFLAGS -L./external/iup/lib"
+      LDFLAGS="$LDFLAGS -L./external/iup-porting/lib"
       AS_CASE([$with_gui],
         [no|No|NO],
           [SYSGUI=CFG_GUI_OFF],

@@ -1,5 +1,5 @@
 
-IUPLIBP	= $(shell echo ./iup/lib/*)
+IUPLIBP	= $(shell echo ./iup-porting/iup/lib/*)
 INSTALL	= ../libmingw
 
 ifdef	USE_GTK2
@@ -18,14 +18,14 @@ all: libcsoup libiup
 endif
 
 libcsoup:
-	if [ ! -f ./libcsoup/libcsoup.a ]; then \
-		make -C ./libcsoup all; \
-	fi
+	@echo Check Libcsoup presence
+	if [ ! -d libcsoup ]; then git clone https://github.com/xuminic/libcsoup.git; fi
+	if [ ! -f ./libcsoup/libcsoup.a ]; then make -C ./libcsoup all; fi
 
 libiup:
-	if [ ! -f $(IUPLIBP)/libiup.a ]; then \
-		$(IUPCFG) make -C ./iup do_all; \
-	fi
+	@echo Check IUP presence
+	if [ ! -d iup-porting ]; then git clone https://github.com/xuminic/iup-porting.git; fi
+	if [ ! -f $(IUPLIBP)/libiup.a ]; then $(IUPCFG) make -C ./iup-porting; fi
 
 libregex:
 	if [ ! -f ./regex-20090805/Makefile ]; then \
@@ -41,10 +41,7 @@ libregex_clean:
 	fi
 
 clean:
-	$(IUPCFG) make -C ./iup clean
-	if [ -d ./iup/src/dep ]; then \
-		rm -rf ./iup/src/dep; \
-	fi
+	$(IUPCFG) make -C ./iup-porting clean
 	make -C ./libcsoup clean
 
 mingw_all: libcsoup libiup libregex
