@@ -20,12 +20,12 @@ endif
 libcsoup:
 	@echo Check Libcsoup presence
 	if [ ! -d libcsoup ]; then git clone https://github.com/xuminic/libcsoup.git; fi
-	if [ ! -f ./libcsoup/libcsoup.a ]; then make -C ./libcsoup all; fi
+	if [ -d libcsoup ]; then make -C ./libcsoup all; fi
 
 libiup:
 	@echo Check IUP presence
 	if [ ! -d iup-porting ]; then git clone https://github.com/xuminic/iup-porting.git; fi
-	if [ ! -f $(IUPLIBP)/libiup.a ]; then $(IUPCFG) make -C ./iup-porting; fi
+	if [ -d iup-porting ]; then $(IUPCFG) make -C ./iup-porting; fi
 
 libregex:
 	if [ ! -f ./regex-20090805/Makefile ]; then \
@@ -41,8 +41,8 @@ libregex_clean:
 	fi
 
 clean:
-	$(IUPCFG) make -C ./iup-porting clean
-	make -C ./libcsoup clean
+	if [ -d libcsoup ]; then make -C ./libcsoup clean; fi
+	if [ -d iup-porting ]; then make -C ./iup-porting clean; fi
 
 mingw_all: libcsoup libiup libregex
 
