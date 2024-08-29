@@ -89,6 +89,7 @@ clean-local:
 	if test -d "$(distdir)-win32-bin"; then \
 		rm -rf "$(distdir)-win32-bin"; \
 	fi;
+	rm -rf autom4te.cache
 
 distclean-recursive: extclean
 

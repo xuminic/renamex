@@ -1,4 +1,2 @@
-iup-3.21
-libcsoup-0.9.2
 https://sourceforge.net/projects/mingw/files/MSYS/Base/regex/regex-1.20090805-2
 http://findicons.com/
