@@ -93,18 +93,6 @@ clean-local:
 
 distclean-recursive: extclean
 
-libiup:
-	$(IUPCFG) make -C ./external/iup-porting all
-
-libiup-clean:
-	$(IUPCFG) make -C ./external/iup-porting clean
-
-libcsoup:
-	make -C ./external/libcsoup all
-
-libcsoup-clean:
-	make -C ./external/libcsoup clean
-
 release: $(RELEASE)
 	tar jxf $(distdir).tar.bz2
 	rm -rf $(distdir)/libmingw

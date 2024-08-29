@@ -136,28 +136,19 @@ case "$host_os" in
 
     # Checks for IUP libraries. Rebuild them if they don't exist.
     AS_IF([test "$SYSGUI" = CFG_GUI_ON], [
-      AC_CHECK_LIB([iup], [IupOpen],, [
-        POSTLIB="$POSTLIB -liup"
-        PREFLIB="$PREFLIB libiup"
-        AC_MSG_NOTICE([The libiup will be built soon.])],
-        [$LIBGUI])
-      POSTLIB="$POSTLIB -liupimglib"])
+      POSTLIB="$POSTLIB -liup -liupimglib"])
     ;;
 esac
 
 AM_CONDITIONAL([XAM_MSWIN], [test x$SYSTOOL = xmingw])
 AM_CONDITIONAL([XAM_GUI], [test x$SYSGUI = xCFG_GUI_ON])
 
-# Checks for libraries.
-AC_CHECK_LIB([csoup], [smm_init],, [
-  POSTLIB="$POSTLIB -lcsoup"
-  PREFLIB="$PREFLIB libcsoup"
-  AC_MSG_NOTICE([The libcsoup will be built soon.])])
 
 #AC_CHECK_LIB([regex], [re_comp])
 
 # IUP 3.30 requires -lm
-LIBS="$POSTLIB $LIBS -lm"
+LIBS="$POSTLIB $LIBS -lcsoup -lm"
+PREFLIB="$PREFLIB extlib"
 
 # Checks for header files.
 # AC_INCLUDES_DEFAULT can not output header defines automatically
