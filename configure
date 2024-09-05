@@ -4822,6 +4822,9 @@ then :
 fi
 
 
+CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup-porting/iup/include"
+LDFLAGS="$LDFLAGS -L./external/libcsoup"
+
 case "$host_os" in
   cygwin | mingw*)
     SYSTOOL=mingw
@@ -4923,8 +4926,6 @@ printf "%s\n" "no" >&6; }
 fi
 
 
-    CPPFLAGS="$CPPFLAGS -I./libmingw/include -I./libmingw/iup/include"
-    LDFLAGS="$LDFLAGS -L./libmingw/lib -L./libmingw/iup"
     CFLAGS="$CFLAGS -mms-bitfields"
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500"
     POSTLIB="-lregex -mconsole"
@@ -4932,8 +4933,6 @@ fi
     ;;
   *)
     SYSTOOL=unix
-    CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup-porting/iup/include"
-    LDFLAGS="$LDFLAGS -L./external/libcsoup"
     # Extract the first word of "pkg-config", so it can be a program name with args.
 set dummy pkg-config; ac_word=$2
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -5785,15 +5784,14 @@ fi
     fi
     SYSDEFS="-D$SYSGUI"
     RELEASE="extclean dist-bzip2"
-
-    # Checks for IUP libraries. Rebuild them if they don't exist.
-    if test "$SYSGUI" = CFG_GUI_ON
-then :
-
-      POSTLIB="$POSTLIB -liup -liupimglib"
-fi
     ;;
 esac
+
+if test "$SYSGUI" = CFG_GUI_ON
+then :
+
+  POSTLIB="$POSTLIB -liup -liupimglib"
+fi
 
  if test x$SYSTOOL = xmingw; then
   XAM_MSWIN_TRUE=
@@ -5817,7 +5815,7 @@ fi
 
 # IUP 3.30 requires -lm
 LIBS="$POSTLIB $LIBS -lcsoup -lm"
-PREFLIB="$PREFLIB extlib"
+PREFLIB="extlib $PREFLIB"
 
 # Checks for header files.
 # AC_INCLUDES_DEFAULT can not output header defines automatically

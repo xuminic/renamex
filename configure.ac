@@ -71,6 +71,9 @@ AC_ARG_WITH([gui],
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([memmove memset regcomp strchr strrchr strstr strtol])
 
+CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup-porting/iup/include"
+LDFLAGS="$LDFLAGS -L./external/libcsoup"
+
 case "$host_os" in
   cygwin | mingw*)
     SYSTOOL=mingw
@@ -83,8 +86,6 @@ case "$host_os" in
     AC_CHECK_PROG([NSIS], [makensis], [makensis], 
      [AC_MSG_WARN([NSIS package not installed. \
       You may not be able to create the installer executables.])])
-    CPPFLAGS="$CPPFLAGS -I./libmingw/include -I./libmingw/iup/include"
-    LDFLAGS="$LDFLAGS -L./libmingw/lib -L./libmingw/iup"
     CFLAGS="$CFLAGS -mms-bitfields"
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500"
     POSTLIB="-lregex -mconsole"
@@ -92,8 +93,6 @@ case "$host_os" in
     ;;
   *)
     SYSTOOL=unix
-    CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup-porting/iup/include"
-    LDFLAGS="$LDFLAGS -L./external/libcsoup"
     AC_CHECK_PROG([PKGCONFIG], [pkg-config], [pkg-config], [])
     if test "x$PKGCONFIG" = x; then
       SYSGUI=CFG_GUI_OFF
@@ -133,12 +132,11 @@ case "$host_os" in
     fi
     SYSDEFS="-D$SYSGUI" 
     RELEASE="extclean dist-bzip2"
-
-    # Checks for IUP libraries. Rebuild them if they don't exist.
-    AS_IF([test "$SYSGUI" = CFG_GUI_ON], [
-      POSTLIB="$POSTLIB -liup -liupimglib"])
     ;;
 esac
+
+AS_IF([test "$SYSGUI" = CFG_GUI_ON], [
+  POSTLIB="$POSTLIB -liup -liupimglib"])
 
 AM_CONDITIONAL([XAM_MSWIN], [test x$SYSTOOL = xmingw])
 AM_CONDITIONAL([XAM_GUI], [test x$SYSGUI = xCFG_GUI_ON])
@@ -148,7 +146,7 @@ AM_CONDITIONAL([XAM_GUI], [test x$SYSGUI = xCFG_GUI_ON])
 
 # IUP 3.30 requires -lm
 LIBS="$POSTLIB $LIBS -lcsoup -lm"
-PREFLIB="$PREFLIB extlib"
+PREFLIB="extlib $PREFLIB"
 
 # Checks for header files.
 # AC_INCLUDES_DEFAULT can not output header defines automatically
