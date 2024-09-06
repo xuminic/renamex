@@ -89,7 +89,6 @@ case "$host_os" in
     CFLAGS="$CFLAGS -mms-bitfields"
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500"
     POSTLIB="-lregex -mconsole"
-    RELEASE="extclean dist-bzip2 installer-win"
     case "$MSYSTEM" in
       MINGW32) WIN_UNAME=win32 ;;
       UCRT64) WIN_UNAME=ucrt64 ;;
@@ -136,7 +135,6 @@ case "$host_os" in
       ])
     fi
     SYSDEFS="-D$SYSGUI" 
-    RELEASE="extclean dist-bzip2"
     ;;
 esac
 
@@ -170,7 +168,6 @@ AC_TYPE_SSIZE_T
 AC_SUBST(IUPCFG)
 AC_SUBST(SYSDEFS)
 AC_SUBST(PREFLIB)
-AC_SUBST(RELEASE)
 
 # This is for Win32 GUI porting only
 WIN32GUI="$LIBS -mwindows -lkernel32 -luser32 \

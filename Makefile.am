@@ -51,7 +51,7 @@ var:
 	@echo IUPCFG = $(IUPCFG)
 	@echo COMPILE = $(COMPILE)
 	@echo LINK = $(LINK)
-	@echo RELEASE = $(RELEASE) : $(PREFLIB)
+	@echo PREFLIB = $(PREFLIB)
 	@echo WIN_UNAME = $(WIN_UNAME)
 
 help:
@@ -62,9 +62,7 @@ help:
 	@echo " install           install the renamex to PREFIX/bin"
 	@echo " gnome-install     also install the support files to GNOME desktop"
 	@echo " gnome-uninstall   remove the support files of GNOME desktop"
-	@echo " dist-gzip         create the source tar ball with .tar.gz"
-	@echo " release           create the source tar ball compressed by bzip2"
-	@echo "                   as well as an installer in Windows (nsis required)"
+	@echo " release           create the source tar ball with all dependencies"
 	@echo " installer-win     create an installer in Windows (nsis required)"
 	@echo " showdll           display the linked DLLs in Windows"
 
@@ -74,41 +72,17 @@ main_con.o : main.c
 main_win.o : main.c
 	$(COMPILE) -DCFG_GUI_ON -c -o $@ $<
 
-rename_icon.o: rename_icon.rc
-	$(WINDRES) $< -o $@
-
-renamex_win: $(WIN_OBJS)
-	$(LINK) $^ $(WIN32GUI)
-
-clean-local:
-	if test -f "renamex_win$(EXEEXT)"; then \
-		rm -f "renamex_win$(EXEEXT)"; \
-	fi; \
-	if test -f "$(distdir)-setup.exe"; then \
-		rm -f "$(distdir)-setup.exe"; \
-	fi; \
-	if test -d "$(distdir)-$(WIN_UNAME)-bin"; then \
-		rm -rf "$(distdir)-$(WIN_UNAME)-bin"; \
-	fi;
+distclean-recursive: extclean
 	rm -rf autom4te.cache
 
-distclean-recursive: extclean
-
-release: $(RELEASE)
-	echo tar jxf $(distdir).tar.bz2
-	echo tar cjf $(distdir)-src.tar.bz2 $(distdir)
-	echo rm -rf $(distdir)
-
-if	XAM_MSWIN
-all-local:
-	if test -d "$(distdir)-$(WIN_UNAME)-bin"; then \
-	  rm -rf "$(distdir)-$(WIN_UNAME)-bin"; \
-	fi; \
-	mkdir "$(distdir)-$(WIN_UNAME)-bin"; \
-	cp -a renamex.1 renamex.pdf rename.ico "$(distdir)-$(WIN_UNAME)-bin"; \
-	cp -a renamex*.exe autotest.sh "$(distdir)-$(WIN_UNAME)-bin"; \
-	cp -a COPYING ChangeLog.txt README.md "$(distdir)-$(WIN_UNAME)-bin"
-endif
+release: clean extclean
+	rm -rf "$(distdir)"
+	mkdir "$(distdir)"
+	cp -a $(EXTRA_DIST) "$(distdir)"
+	rm -rf "$(distdir)/external/libcsoup/.git"
+	rm -rf "$(distdir)/external/iup-porting/.git"
+	tar cjf "$(distdir)-src.tar.bz2" "$(distdir)"
+	rm -rf "$(distdir)"
 
 gnome-install: install
 	$(INSTALL_DATA) renamex.desktop /usr/share/applications
@@ -124,11 +98,6 @@ gnome-uninstall: uninstall
 	  rm -f /usr/share/icons/hicolor/"$$res"x"$$res"/apps/renamex.png; \
 	done
 	gtk-update-icon-cache -f /usr/share/icons/hicolor
-
-installer-win: all
-	@echo "OutFile \"$(distdir)-setup.exe\"" > nsis_version.outfile
-	$(NSIS) rename.nsi
-	@$(RM) nsis_version.outfile
 
 # supportive rule for generating files 
 # since special tools are involved so they can be only internally used.
@@ -150,6 +119,38 @@ extlib:
 extclean:
 	$(IUPCFG) make -C external clean
 
+if	XAM_MSWIN
+clean-local:
+	if test -f "renamex_win$(EXEEXT)"; then \
+		rm -f "renamex_win$(EXEEXT)"; \
+	fi; \
+	if test -f "$(distdir)-setup.exe"; then \
+		rm -f "$(distdir)-setup.exe"; \
+	fi; \
+	if test -d "$(distdir)-$(WIN_UNAME)-bin"; then \
+		rm -rf "$(distdir)-$(WIN_UNAME)-bin"; \
+	fi;
+
+all-local:
+	if test -d "$(distdir)-$(WIN_UNAME)-bin"; then \
+	  rm -rf "$(distdir)-$(WIN_UNAME)-bin"; \
+	fi; \
+	mkdir "$(distdir)-$(WIN_UNAME)-bin"; \
+	cp -a renamex.1 renamex.pdf rename.ico "$(distdir)-$(WIN_UNAME)-bin"; \
+	cp -a renamex*.exe autotest.sh "$(distdir)-$(WIN_UNAME)-bin"; \
+	cp -a COPYING ChangeLog.txt README.md "$(distdir)-$(WIN_UNAME)-bin"
+
+rename_icon.o: rename_icon.rc
+	$(WINDRES) $< -o $@
+
+renamex_win: $(WIN_OBJS)
+	$(LINK) $^ $(WIN32GUI)
+
+installer-win: all
+	@echo "OutFile \"$(distdir)-setup.exe\"" > nsis_version.outfile
+	$(NSIS) rename.nsi
+	@$(RM) nsis_version.outfile
+
 # show DLLs linked to renamex in MSWindows
 showdll:
 	@if [ -f renamex.exe ]; then \
@@ -160,4 +161,4 @@ showdll:
 		echo "[renamex_win.exe]:"; \
 		objdump -p renamex_win.exe | grep 'DLL Name:'; \
 	fi
-
+endif

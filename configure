@@ -652,7 +652,6 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 WIN32GUI
-RELEASE
 PREFLIB
 SYSDEFS
 IUPCFG
@@ -4930,7 +4929,6 @@ fi
     CFLAGS="$CFLAGS -mms-bitfields"
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500"
     POSTLIB="-lregex -mconsole"
-    RELEASE="extclean dist-bzip2 installer-win"
     case "$MSYSTEM" in
       MINGW32) WIN_UNAME=win32 ;;
       UCRT64) WIN_UNAME=ucrt64 ;;
@@ -5789,7 +5787,6 @@ then :
 fi
     fi
     SYSDEFS="-D$SYSGUI"
-    RELEASE="extclean dist-bzip2"
     ;;
 esac
 
@@ -5904,7 +5901,6 @@ fi
 # Just for checking the function of AC_DEFINE().
 # It can add an object in config.h.in by autoheader and output what I need.
 # AC_DEFINE([HAVE_GUI],[1],[GUI is required])
-
 
 
 
