@@ -72,7 +72,7 @@ AC_FUNC_STRTOD
 AC_CHECK_FUNCS([memmove memset regcomp strchr strrchr strstr strtol])
 
 CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup-porting/iup/include"
-LDFLAGS="$LDFLAGS -L./external/libcsoup"
+LDFLAGS="$LDFLAGS -L./external/libcsoup -L./external/iup-porting/lib"
 
 case "$host_os" in
   cygwin | mingw*)
@@ -90,6 +90,12 @@ case "$host_os" in
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500"
     POSTLIB="-lregex -mconsole"
     RELEASE="extclean dist-bzip2 installer-win"
+    case "$MSYSTEM" in
+      MINGW32) WIN_UNAME=win32 ;;
+      UCRT64) WIN_UNAME=ucrt64 ;;
+      *) WIN_UNAME=win64 ;;
+    esac
+    AC_SUBST(WIN_UNAME)
     ;;
   *)
     SYSTOOL=unix
@@ -99,7 +105,6 @@ case "$host_os" in
       AC_MSG_WARN([pkg-config is not found -- command line interface only])
     else
       SYSGUI=CFG_GUI_ON
-      LDFLAGS="$LDFLAGS -L./external/iup-porting/lib"
       AS_CASE([$with_gui],
         [no|No|NO],
           [SYSGUI=CFG_GUI_OFF],

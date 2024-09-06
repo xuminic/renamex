@@ -38,7 +38,7 @@ endif
 # This list of files for source release
 EXTRA_DIST = config.h.in configure configure.ac config.guess config.sub \
 	     aclocal.m4 install-sh Makefile.am Makefile.in missing \
-	     COPYING README.en.txt ChangeLog.txt  external libmingw \
+	     COPYING README.md ChangeLog.txt  external \
 	     autotest.sh main.c mmgui.c mmrc_icon_dialog.h mmrc_icon_error.h \
 	     mmrc_icon_info.h mmrc_icon_warning.h rename.c rename.h \
 	     rename.ico rename_icon.rc rename.nsi renamex.1 renamex.desktop \
@@ -52,6 +52,7 @@ var:
 	@echo COMPILE = $(COMPILE)
 	@echo LINK = $(LINK)
 	@echo RELEASE = $(RELEASE) : $(PREFLIB)
+	@echo WIN_UNAME = $(WIN_UNAME)
 
 help:
 	@echo "Useful targets other than 'all'"
@@ -86,28 +87,27 @@ clean-local:
 	if test -f "$(distdir)-setup.exe"; then \
 		rm -f "$(distdir)-setup.exe"; \
 	fi; \
-	if test -d "$(distdir)-win32-bin"; then \
-		rm -rf "$(distdir)-win32-bin"; \
+	if test -d "$(distdir)-$(WIN_UNAME)-bin"; then \
+		rm -rf "$(distdir)-$(WIN_UNAME)-bin"; \
 	fi;
 	rm -rf autom4te.cache
 
 distclean-recursive: extclean
 
 release: $(RELEASE)
-	tar jxf $(distdir).tar.bz2
-	rm -rf $(distdir)/libmingw
-	tar cjf $(distdir)-src.tar.bz2 $(distdir)
-	rm -rf $(distdir)
+	echo tar jxf $(distdir).tar.bz2
+	echo tar cjf $(distdir)-src.tar.bz2 $(distdir)
+	echo rm -rf $(distdir)
 
 if	XAM_MSWIN
 all-local:
-	if test -d "$(distdir)-win32-bin"; then \
-	  rm -rf "$(distdir)-win32-bin"; \
+	if test -d "$(distdir)-$(WIN_UNAME)-bin"; then \
+	  rm -rf "$(distdir)-$(WIN_UNAME)-bin"; \
 	fi; \
-	mkdir "$(distdir)-win32-bin"; \
-	cp -a renamex.1 renamex.pdf rename.ico "$(distdir)-win32-bin"; \
-	cp -a renamex*.exe autotest.sh "$(distdir)-win32-bin"; \
-	cp -a COPYING ChangeLog.txt README.en.txt "$(distdir)-win32-bin"
+	mkdir "$(distdir)-$(WIN_UNAME)-bin"; \
+	cp -a renamex.1 renamex.pdf rename.ico "$(distdir)-$(WIN_UNAME)-bin"; \
+	cp -a renamex*.exe autotest.sh "$(distdir)-$(WIN_UNAME)-bin"; \
+	cp -a COPYING ChangeLog.txt README.md "$(distdir)-$(WIN_UNAME)-bin"
 endif
 
 gnome-install: install

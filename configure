@@ -666,6 +666,7 @@ PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
 PKGCONFIG
+WIN_UNAME
 NSIS
 WINDRES
 LIBOBJS
@@ -4823,7 +4824,7 @@ fi
 
 
 CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup-porting/iup/include"
-LDFLAGS="$LDFLAGS -L./external/libcsoup"
+LDFLAGS="$LDFLAGS -L./external/libcsoup -L./external/iup-porting/lib"
 
 case "$host_os" in
   cygwin | mingw*)
@@ -4930,6 +4931,12 @@ fi
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500"
     POSTLIB="-lregex -mconsole"
     RELEASE="extclean dist-bzip2 installer-win"
+    case "$MSYSTEM" in
+      MINGW32) WIN_UNAME=win32 ;;
+      UCRT64) WIN_UNAME=ucrt64 ;;
+      *) WIN_UNAME=win64 ;;
+    esac
+
     ;;
   *)
     SYSTOOL=unix
@@ -4981,7 +4988,6 @@ fi
 printf "%s\n" "$as_me: WARNING: pkg-config is not found -- command line interface only" >&2;}
     else
       SYSGUI=CFG_GUI_ON
-      LDFLAGS="$LDFLAGS -L./external/iup-porting/lib"
 
 
 
