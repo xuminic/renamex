@@ -795,16 +795,15 @@ maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
 	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
-@XAM_MSWIN_FALSE@clean-local:
 clean: clean-recursive
 
-clean-am: clean-binPROGRAMS clean-generic clean-local mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
-	distclean-hdr distclean-tags
+	distclean-hdr distclean-local distclean-tags
 
 dvi: dvi-recursive
 
@@ -871,21 +870,21 @@ uninstall-am: uninstall-binPROGRAMS
 
 .PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am all-local \
 	am--refresh check check-am clean clean-binPROGRAMS \
-	clean-cscope clean-generic clean-local cscope cscopelist-am \
-	ctags ctags-am dist dist-all dist-bzip2 dist-gzip dist-lzip \
-	dist-shar dist-tarZ dist-xz dist-zip dist-zstd distcheck \
-	distclean distclean-compile distclean-generic distclean-hdr \
-	distclean-tags distcleancheck distdir distuninstallcheck dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-binPROGRAMS install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am install-man \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	installdirs-am maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-compile mostlyclean-generic pdf pdf-am \
-	ps ps-am tags tags-am uninstall uninstall-am \
-	uninstall-binPROGRAMS
+	clean-cscope clean-generic cscope cscopelist-am ctags ctags-am \
+	dist dist-all dist-bzip2 dist-gzip dist-lzip dist-shar \
+	dist-tarZ dist-xz dist-zip dist-zstd distcheck distclean \
+	distclean-compile distclean-generic distclean-hdr \
+	distclean-local distclean-tags distcleancheck distdir \
+	distuninstallcheck dvi dvi-am html html-am info info-am \
+	install install-am install-binPROGRAMS install-data \
+	install-data-am install-dvi install-dvi-am install-exec \
+	install-exec-am install-html install-html-am install-info \
+	install-info-am install-man install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip installcheck \
+	installcheck-am installdirs installdirs-am maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
+	uninstall-am uninstall-binPROGRAMS
 
 .PRECIOUS: Makefile
 
@@ -918,10 +917,12 @@ main_con.o : main.c
 main_win.o : main.c
 	$(COMPILE) -DCFG_GUI_ON -c -o $@ $<
 
-distclean-recursive: extclean
-	rm -rf autom4te.cache
+@XAM_MSWIN_TRUE@distclean-local: extclean distclean-win
+@XAM_MSWIN_TRUE@	rm -rf autom4te.cache
+@XAM_MSWIN_FALSE@distclean-local: extclean
+@XAM_MSWIN_FALSE@	rm -rf autom4te.cache
 
-release: clean extclean
+release: extclean
 	rm -rf "$(distdir)"
 	mkdir "$(distdir)"
 	cp -a $(EXTRA_DIST) "$(distdir)"
@@ -965,17 +966,6 @@ extlib:
 extclean:
 	$(IUPCFG) make -C external clean
 
-@XAM_MSWIN_TRUE@clean-local:
-@XAM_MSWIN_TRUE@	if test -f "renamex_win$(EXEEXT)"; then \
-@XAM_MSWIN_TRUE@		rm -f "renamex_win$(EXEEXT)"; \
-@XAM_MSWIN_TRUE@	fi; \
-@XAM_MSWIN_TRUE@	if test -f "$(distdir)-setup.exe"; then \
-@XAM_MSWIN_TRUE@		rm -f "$(distdir)-setup.exe"; \
-@XAM_MSWIN_TRUE@	fi; \
-@XAM_MSWIN_TRUE@	if test -d "$(distdir)-$(WIN_UNAME)-bin"; then \
-@XAM_MSWIN_TRUE@		rm -rf "$(distdir)-$(WIN_UNAME)-bin"; \
-@XAM_MSWIN_TRUE@	fi;
-
 @XAM_MSWIN_TRUE@all-local:
 @XAM_MSWIN_TRUE@	if test -d "$(distdir)-$(WIN_UNAME)-bin"; then \
 @XAM_MSWIN_TRUE@	  rm -rf "$(distdir)-$(WIN_UNAME)-bin"; \
@@ -985,6 +975,17 @@ extclean:
 @XAM_MSWIN_TRUE@	cp -a renamex*.exe autotest.sh "$(distdir)-$(WIN_UNAME)-bin"; \
 @XAM_MSWIN_TRUE@	cp -a COPYING ChangeLog.txt README.md "$(distdir)-$(WIN_UNAME)-bin"
 
+@XAM_MSWIN_TRUE@distclean-win:
+@XAM_MSWIN_TRUE@	if test -f "renamex_win$(EXEEXT)"; then \
+@XAM_MSWIN_TRUE@		rm -f "renamex_win$(EXEEXT)"; \
+@XAM_MSWIN_TRUE@	fi; \
+@XAM_MSWIN_TRUE@	if test -f "$(distdir)-$(WIN_UNAME)-setup.exe"; then \
+@XAM_MSWIN_TRUE@		rm -f "$(distdir)-$(WIN_UNAME)-setup.exe"; \
+@XAM_MSWIN_TRUE@	fi; \
+@XAM_MSWIN_TRUE@	if test -d "$(distdir)-$(WIN_UNAME)-bin"; then \
+@XAM_MSWIN_TRUE@		rm -rf "$(distdir)-$(WIN_UNAME)-bin"; \
+@XAM_MSWIN_TRUE@	fi;
+
 @XAM_MSWIN_TRUE@rename_icon.o: rename_icon.rc
 @XAM_MSWIN_TRUE@	$(WINDRES) $< -o $@
 
@@ -992,7 +993,7 @@ extclean:
 @XAM_MSWIN_TRUE@	$(LINK) $^ $(WIN32GUI)
 
 @XAM_MSWIN_TRUE@installer-win: all
-@XAM_MSWIN_TRUE@	@echo "OutFile \"$(distdir)-setup.exe\"" > nsis_version.outfile
+@XAM_MSWIN_TRUE@	@echo "OutFile \"$(distdir)-$(WIN_UNAME)-setup.exe\"" > nsis_version.outfile
 @XAM_MSWIN_TRUE@	$(NSIS) rename.nsi
 @XAM_MSWIN_TRUE@	@$(RM) nsis_version.outfile
 

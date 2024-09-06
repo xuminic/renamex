@@ -72,10 +72,15 @@ main_con.o : main.c
 main_win.o : main.c
 	$(COMPILE) -DCFG_GUI_ON -c -o $@ $<
 
-distclean-recursive: extclean
+if	XAM_MSWIN
+distclean-local: extclean distclean-win
 	rm -rf autom4te.cache
+else
+distclean-local: extclean
+	rm -rf autom4te.cache
+endif
 
-release: clean extclean
+release: extclean
 	rm -rf "$(distdir)"
 	mkdir "$(distdir)"
 	cp -a $(EXTRA_DIST) "$(distdir)"
@@ -120,17 +125,6 @@ extclean:
 	$(IUPCFG) make -C external clean
 
 if	XAM_MSWIN
-clean-local:
-	if test -f "renamex_win$(EXEEXT)"; then \
-		rm -f "renamex_win$(EXEEXT)"; \
-	fi; \
-	if test -f "$(distdir)-setup.exe"; then \
-		rm -f "$(distdir)-setup.exe"; \
-	fi; \
-	if test -d "$(distdir)-$(WIN_UNAME)-bin"; then \
-		rm -rf "$(distdir)-$(WIN_UNAME)-bin"; \
-	fi;
-
 all-local:
 	if test -d "$(distdir)-$(WIN_UNAME)-bin"; then \
 	  rm -rf "$(distdir)-$(WIN_UNAME)-bin"; \
@@ -140,6 +134,17 @@ all-local:
 	cp -a renamex*.exe autotest.sh "$(distdir)-$(WIN_UNAME)-bin"; \
 	cp -a COPYING ChangeLog.txt README.md "$(distdir)-$(WIN_UNAME)-bin"
 
+distclean-win:
+	if test -f "renamex_win$(EXEEXT)"; then \
+		rm -f "renamex_win$(EXEEXT)"; \
+	fi; \
+	if test -f "$(distdir)-$(WIN_UNAME)-setup.exe"; then \
+		rm -f "$(distdir)-$(WIN_UNAME)-setup.exe"; \
+	fi; \
+	if test -d "$(distdir)-$(WIN_UNAME)-bin"; then \
+		rm -rf "$(distdir)-$(WIN_UNAME)-bin"; \
+	fi;
+
 rename_icon.o: rename_icon.rc
 	$(WINDRES) $< -o $@
 
@@ -147,7 +152,7 @@ renamex_win: $(WIN_OBJS)
 	$(LINK) $^ $(WIN32GUI)
 
 installer-win: all
-	@echo "OutFile \"$(distdir)-setup.exe\"" > nsis_version.outfile
+	@echo "OutFile \"$(distdir)-$(WIN_UNAME)-setup.exe\"" > nsis_version.outfile
 	$(NSIS) rename.nsi
 	@$(RM) nsis_version.outfile
 
