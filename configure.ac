@@ -71,9 +71,6 @@ AC_ARG_WITH([gui],
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([memmove memset strchr strrchr strstr strtol])
 
-CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup-porting/iup/include"
-LDFLAGS="$LDFLAGS -L./external/libcsoup -L./external/iup-porting/lib"
-
 case "$host_os" in
   cygwin | mingw*)
     SYSTOOL=mingw
@@ -88,13 +85,9 @@ case "$host_os" in
       You may not be able to create the installer executables.])])
     CFLAGS="$CFLAGS -mms-bitfields"
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500"
-    LIBS="$LIBS -lregex -mconsole"
+    LIBS="$LIBS -mconsole"
     case "$MSYSTEM" in
-      MINGW32) 
-	 WIN_UNAME=win32
-	 CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
-	 LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
-	 ;;
+      MINGW32) WIN_UNAME=win32 ;;
       UCRT64) WIN_UNAME=ucrt64 ;;
       *) WIN_UNAME=win64 ;;
     esac
@@ -144,18 +137,26 @@ esac
 
 EXTARGET="libcsoup"
 EXTCLEAN="libcsoup_clean"
+CPPFLAGS="$CPPFLAGS -I./external/libcsoup"
+LDFLAGS="$LDFLAGS -L./external/libcsoup"
+EXTLIBS="-lcsoup"
 
 #AC_CHECK_LIB([regex], [regcomp])
 AC_CHECK_FUNC(regcomp, , [
   EXTARGET="$EXTARGET libregex"
   EXTCLEAN="$EXTCLEAN libregex_clean"
+  CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
+  LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
+  EXTLIBS="$EXTLIBS -lregex"
 ])
 
 # IUP 3.30 requires -lm
 AS_IF([test "$SYSGUI" = CFG_GUI_ON], [
   EXTARGET="$EXTARGET libiup"
   EXTCLEAN="$EXTCLEAN libiup_clean"
-  LIBS="$LIBS -liup -liupimglib -lcsoup -lm"
+  CPPFLAGS="$CPPFLAGS -I./external/iup-porting/iup/include"
+  LDFLAGS="$LDFLAGS -L./external/iup-porting/lib"
+  EXTLIBS="$EXTLIBS -liup -liupimglib -lm"
 ])
 
 AM_CONDITIONAL([XAM_MSWIN], [test x$SYSTOOL = xmingw])
@@ -184,10 +185,12 @@ AC_SUBST(EXTARGET)
 AC_SUBST(EXTCLEAN)
 
 # This is for Win32 GUI porting only
-WIN32GUI="$LIBS -mwindows -lkernel32 -luser32 \
-  -lgdi32 -lwinspool -lcomdlg32 -ladvapi32 -lshell32 -lole32 -loleaut32 \
-  -luuid -lcomctl32"
+WIN32GUI="$EXTLIBS -mwindows -lkernel32 -luser32 -lgdi32 -lwinspool \
+	-lcomdlg32 -ladvapi32 -lshell32 -lole32 -loleaut32 -luuid -lcomctl32"
 AC_SUBST(WIN32GUI)
+
+# This can be the requirement for Win32 console (IUP doesn't matter)
+LIBS="$EXTLIBS $LIBS"
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
