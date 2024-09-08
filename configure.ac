@@ -143,15 +143,11 @@ EXTLIBS="-lcsoup"
 
 #AC_CHECK_LIB([regex], [regcomp])
 AC_CHECK_FUNC(regcomp, , [
-  AC_CHECK_LIB(regex, regcomp, [
-    EXTLIBS="$EXTLIBS -lregex"
-  ], [
-    EXTARGET="$EXTARGET libregex"
-    EXTCLEAN="$EXTCLEAN libregex_clean"
-    CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
-    LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
-    EXTLIBS="$EXTLIBS -lregex"
-  ])
+  EXTARGET="$EXTARGET libregex"
+  EXTCLEAN="$EXTCLEAN libregex_clean"
+  CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
+  LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
+  EXTLIBS="$EXTLIBS -lregex"
 ])
 
 # IUP 3.30 requires -lm
