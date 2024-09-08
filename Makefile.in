@@ -264,6 +264,8 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
+EXTARGET = @EXTARGET@
+EXTCLEAN = @EXTCLEAN@
 GTK_CFLAGS = @GTK_CFLAGS@
 GTK_LIBS = @GTK_LIBS@
 INSTALL = @INSTALL@
@@ -898,6 +900,7 @@ var:
 	@echo LINK = $(LINK)
 	@echo PREFLIB = $(PREFLIB)
 	@echo WIN_UNAME = $(WIN_UNAME)
+	@echo EXTARGET = $(EXTARGET) / $(EXTCLEAN) 
 
 help:
 	@echo "Useful targets other than 'all'"
@@ -961,10 +964,10 @@ gtkicons:
 	done
 
 extlib:
-	$(IUPCFG) make -C external all
+	$(IUPCFG) make -C external $(EXTARGET)
 
 extclean:
-	$(IUPCFG) make -C external clean
+	$(IUPCFG) make -C external $(EXTCLEAN)
 
 @XAM_MSWIN_TRUE@all-local:
 @XAM_MSWIN_TRUE@	if test -d "$(distdir)-$(WIN_UNAME)-bin"; then \

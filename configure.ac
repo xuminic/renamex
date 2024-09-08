@@ -69,7 +69,7 @@ AC_ARG_WITH([gui],
 
 # Checks for library functions.
 AC_FUNC_STRTOD
-AC_CHECK_FUNCS([memmove memset regcomp strchr strrchr strstr strtol])
+AC_CHECK_FUNCS([memmove memset strchr strrchr strstr strtol])
 
 CPPFLAGS="$CPPFLAGS -I./external/libcsoup -I./external/iup-porting/iup/include"
 LDFLAGS="$LDFLAGS -L./external/libcsoup -L./external/iup-porting/lib"
@@ -88,9 +88,13 @@ case "$host_os" in
       You may not be able to create the installer executables.])])
     CFLAGS="$CFLAGS -mms-bitfields"
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500"
-    POSTLIB="-lregex -mconsole"
+    LIBS="$LIBS -lregex -mconsole"
     case "$MSYSTEM" in
-      MINGW32) WIN_UNAME=win32 ;;
+      MINGW32) 
+	 WIN_UNAME=win32
+	 CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
+	 LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
+	 ;;
       UCRT64) WIN_UNAME=ucrt64 ;;
       *) WIN_UNAME=win64 ;;
     esac
@@ -138,17 +142,25 @@ case "$host_os" in
     ;;
 esac
 
+EXTARGET="libcsoup"
+EXTCLEAN="libcsoup_clean"
+
+#AC_CHECK_LIB([regex], [regcomp])
+AC_CHECK_FUNC(regcomp, , [
+  EXTARGET="$EXTARGET libregex"
+  EXTCLEAN="$EXTCLEAN libregex_clean"
+])
+
+# IUP 3.30 requires -lm
 AS_IF([test "$SYSGUI" = CFG_GUI_ON], [
-  POSTLIB="$POSTLIB -liup -liupimglib"])
+  EXTARGET="$EXTARGET libiup"
+  EXTCLEAN="$EXTCLEAN libiup_clean"
+  LIBS="$LIBS -liup -liupimglib -lcsoup -lm"
+])
 
 AM_CONDITIONAL([XAM_MSWIN], [test x$SYSTOOL = xmingw])
 AM_CONDITIONAL([XAM_GUI], [test x$SYSGUI = xCFG_GUI_ON])
 
-
-#AC_CHECK_LIB([regex], [re_comp])
-
-# IUP 3.30 requires -lm
-LIBS="$POSTLIB $LIBS -lcsoup -lm"
 PREFLIB="extlib $PREFLIB"
 
 # Checks for header files.
@@ -168,6 +180,8 @@ AC_TYPE_SSIZE_T
 AC_SUBST(IUPCFG)
 AC_SUBST(SYSDEFS)
 AC_SUBST(PREFLIB)
+AC_SUBST(EXTARGET)
+AC_SUBST(EXTCLEAN)
 
 # This is for Win32 GUI porting only
 WIN32GUI="$LIBS -mwindows -lkernel32 -luser32 \

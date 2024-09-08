@@ -81,6 +81,11 @@ Or make a command line only tool:
     SYSGUI=CFG_GUI_OFF make
 
 
+## Install in Windows
+
+### The Pre-built Installer
+
+### Build from source code
 
 
 

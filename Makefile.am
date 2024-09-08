@@ -53,6 +53,7 @@ var:
 	@echo LINK = $(LINK)
 	@echo PREFLIB = $(PREFLIB)
 	@echo WIN_UNAME = $(WIN_UNAME)
+	@echo EXTARGET = $(EXTARGET) / $(EXTCLEAN) 
 
 help:
 	@echo "Useful targets other than 'all'"
@@ -119,10 +120,10 @@ gtkicons:
 	done
 
 extlib:
-	$(IUPCFG) make -C external all
+	$(IUPCFG) make -C external $(EXTARGET)
 
 extclean:
-	$(IUPCFG) make -C external clean
+	$(IUPCFG) make -C external $(EXTCLEAN)
 
 if	XAM_MSWIN
 all-local:

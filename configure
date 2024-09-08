@@ -652,6 +652,8 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 WIN32GUI
+EXTCLEAN
+EXTARGET
 PREFLIB
 SYSDEFS
 IUPCFG
@@ -4790,12 +4792,6 @@ then :
   printf "%s\n" "#define HAVE_MEMSET 1" >>confdefs.h
 
 fi
-ac_fn_c_check_func "$LINENO" "regcomp" "ac_cv_func_regcomp"
-if test "x$ac_cv_func_regcomp" = xyes
-then :
-  printf "%s\n" "#define HAVE_REGCOMP 1" >>confdefs.h
-
-fi
 ac_fn_c_check_func "$LINENO" "strchr" "ac_cv_func_strchr"
 if test "x$ac_cv_func_strchr" = xyes
 then :
@@ -4928,9 +4924,13 @@ fi
 
     CFLAGS="$CFLAGS -mms-bitfields"
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500"
-    POSTLIB="-lregex -mconsole"
+    LIBS="$LIBS -lregex -mconsole"
     case "$MSYSTEM" in
-      MINGW32) WIN_UNAME=win32 ;;
+      MINGW32)
+	 WIN_UNAME=win32
+	 CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
+	 LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
+	 ;;
       UCRT64) WIN_UNAME=ucrt64 ;;
       *) WIN_UNAME=win64 ;;
     esac
@@ -5790,10 +5790,30 @@ fi
     ;;
 esac
 
+EXTARGET="libcsoup"
+EXTCLEAN="libcsoup_clean"
+
+#AC_CHECK_LIB([regex], [regcomp])
+ac_fn_c_check_func "$LINENO" "regcomp" "ac_cv_func_regcomp"
+if test "x$ac_cv_func_regcomp" = xyes
+then :
+
+else $as_nop
+
+  EXTARGET="$EXTARGET libregex"
+  EXTCLEAN="$EXTCLEAN libregex_clean"
+
+fi
+
+
+# IUP 3.30 requires -lm
 if test "$SYSGUI" = CFG_GUI_ON
 then :
 
-  POSTLIB="$POSTLIB -liup -liupimglib"
+  EXTARGET="$EXTARGET libiup"
+  EXTCLEAN="$EXTCLEAN libiup_clean"
+  LIBS="$LIBS -liup -liupimglib -lcsoup -lm"
+
 fi
 
  if test x$SYSTOOL = xmingw; then
@@ -5813,11 +5833,6 @@ else
 fi
 
 
-
-#AC_CHECK_LIB([regex], [re_comp])
-
-# IUP 3.30 requires -lm
-LIBS="$POSTLIB $LIBS -lcsoup -lm"
 PREFLIB="extlib $PREFLIB"
 
 # Checks for header files.
@@ -5901,6 +5916,8 @@ fi
 # Just for checking the function of AC_DEFINE().
 # It can add an object in config.h.in by autoheader and output what I need.
 # AC_DEFINE([HAVE_GUI],[1],[GUI is required])
+
+
 
 
 
