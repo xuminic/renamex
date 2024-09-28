@@ -76,6 +76,9 @@ main_win.o : main.c
 if	XAM_MSWIN
 distclean-local: extclean distclean-win
 	rm -rf autom4te.cache
+
+clean-local:
+	rm -f "renamex_win$(EXEEXT)"
 else
 distclean-local: extclean
 	rm -rf autom4te.cache

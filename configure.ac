@@ -160,8 +160,8 @@ CPPFLAGS="$CPPFLAGS -I./external/libcsoup"
 LDFLAGS="$LDFLAGS -L./external/libcsoup"
 EXTLIBS="$EXTLIBS -lcsoup"
 
-#AC_CHECK_LIB([regex], [regcomp])
-AC_CHECK_FUNC(regcomp, , [
+#AC_CHECK_FUNC(regcomp, , [
+AC_CHECK_LIB([regex], [regcomp], , [
   EXTARGET="$EXTARGET libregex"
   EXTCLEAN="$EXTCLEAN libregex_clean"
   CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
