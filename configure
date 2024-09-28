@@ -5846,9 +5846,8 @@ fi
 printf "%s\n" "$ac_cv_lib_regex_regcomp" >&6; }
 if test "x$ac_cv_lib_regex_regcomp" = xyes
 then :
-  printf "%s\n" "#define HAVE_LIBREGEX 1" >>confdefs.h
 
-  LIBS="-lregex $LIBS"
+  EXTLIBS="$EXTLIBS -lregex"
 
 else $as_nop
 
