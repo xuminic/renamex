@@ -87,18 +87,21 @@ case "$host_os" in
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500"
     LIBS="$LIBS -mconsole"
     EXTLIBS="$EXTLIBS -liup -liupimglib -lm"
-    CPPFLAGS="$CPPFLAGS -I./external/iup-porting/iup/include"
     case "$MSYSTEM" in
       MINGWXP) WIN_UNAME=win32 
+        CPPFLAGS="$CPPFLAGS -I./external/iup-porting/WinXP_mingw4_lib/include"
         LDFLAGS="$LDFLAGS -L./external/iup-porting/WinXP_mingw4_lib"
 	      ;;
       MINGW32) WIN_UNAME=win32 
+	CPPFLAGS="$CPPFLAGS -I./external/iup-porting/Win32_mingw6_lib/include"
 	LDFLAGS="$LDFLAGS -L./external/iup-porting/Win32_mingw6_lib"
 	      ;;
       UCRT64) WIN_UNAME=ucrt64 
+	CPPFLAGS="$CPPFLAGS -I./external/iup-porting/Win64_mingw6_lib/include"
 	LDFLAGS="$LDFLAGS -L./external/iup-porting/Win64_mingw6_lib"
 	      ;;
       *) WIN_UNAME=win64 
+	CPPFLAGS="$CPPFLAGS -I./external/iup-porting/Win64_mingw6_lib/include"
 	LDFLAGS="$LDFLAGS -L./external/iup-porting/Win64_mingw6_lib"
 	      ;;
     esac
@@ -137,6 +140,7 @@ case "$host_os" in
               IUPCFG="USE_GTK2=1"],
             [SYSGUI=CFG_GUI_OFF])]
           )])
+      # IUP 3.30 requires -lm
       AS_IF([! test "$SYSGUI" = CFG_GUI_OFF], [
           CPPFLAGS="$CPPFLAGS $GTK_CFLAGS -I./external/iup-porting/iup/include"
 	  LIBS="$LIBS $GTK_LIBS -lX11"
@@ -155,15 +159,6 @@ EXTCLEAN="$EXTCLEAN libcsoup_clean"
 CPPFLAGS="$CPPFLAGS -I./external/libcsoup"
 LDFLAGS="$LDFLAGS -L./external/libcsoup"
 EXTLIBS="$EXTLIBS -lcsoup"
-
-# IUP 3.30 requires -lm
-#AS_IF([test "$SYSGUI" = CFG_GUI_ON], [
-#  EXTARGET="$EXTARGET libiup"
-#  EXTCLEAN="$EXTCLEAN libiup_clean"
-#  CPPFLAGS="$CPPFLAGS -I./external/iup-porting/iup/include"
-#  LDFLAGS="$LDFLAGS -L./external/iup-porting/lib"
-#  EXTLIBS="$EXTLIBS -liup -liupimglib -lm"
-#])
 
 #AC_CHECK_LIB([regex], [regcomp])
 AC_CHECK_FUNC(regcomp, , [
