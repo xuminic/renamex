@@ -86,11 +86,21 @@ case "$host_os" in
     CFLAGS="$CFLAGS -mms-bitfields"
     SYSDEFS="-DUNICODE -D_UNICODE -D_WIN32_IE=0x0500 -DWINVER=0x500"
     LIBS="$LIBS -mconsole"
+    EXTLIBS="$EXTLIBS -liup -liupimglib -lm"
+    CPPFLAGS="$CPPFLAGS -I./external/iup-porting/iup/include"
     case "$MSYSTEM" in
-      MINGWXP) WIN_UNAME=win32 ;;
-      MINGW32) WIN_UNAME=win32 ;;
-      UCRT64) WIN_UNAME=ucrt64 ;;
-      *) WIN_UNAME=win64 ;;
+      MINGWXP) WIN_UNAME=win32 
+        LDFLAGS="$LDFLAGS -L./external/iup-porting/WinXP_mingw4_lib"
+	      ;;
+      MINGW32) WIN_UNAME=win32 
+	LDFLAGS="$LDFLAGS -L./external/iup-porting/Win32_mingw6_lib"
+	      ;;
+      UCRT64) WIN_UNAME=ucrt64 
+	LDFLAGS="$LDFLAGS -L./external/iup-porting/Win64_mingw6_lib"
+	      ;;
+      *) WIN_UNAME=win64 
+	LDFLAGS="$LDFLAGS -L./external/iup-porting/Win64_mingw6_lib"
+	      ;;
     esac
     AC_SUBST(WIN_UNAME)
     ;;
@@ -128,28 +138,32 @@ case "$host_os" in
             [SYSGUI=CFG_GUI_OFF])]
           )])
       AS_IF([! test "$SYSGUI" = CFG_GUI_OFF], [
-          CPPFLAGS="$CPPFLAGS $GTK_CFLAGS"
+          CPPFLAGS="$CPPFLAGS $GTK_CFLAGS -I./external/iup-porting/iup/include"
 	  LIBS="$LIBS $GTK_LIBS -lX11"
+          EXTARGET="$EXTARGET libiup"
+          EXTCLEAN="$EXTCLEAN libiup_clean"
+          LDFLAGS="$LDFLAGS -L./external/iup-porting/lib"
+          EXTLIBS="$EXTLIBS -liup -liupimglib -lm"
       ])
     fi
     SYSDEFS="-D$SYSGUI" 
     ;;
 esac
 
-EXTARGET="libcsoup"
-EXTCLEAN="libcsoup_clean"
+EXTARGET="$EXTARGET libcsoup"
+EXTCLEAN="$EXTCLEAN libcsoup_clean"
 CPPFLAGS="$CPPFLAGS -I./external/libcsoup"
 LDFLAGS="$LDFLAGS -L./external/libcsoup"
-EXTLIBS="-lcsoup"
+EXTLIBS="$EXTLIBS -lcsoup"
 
 # IUP 3.30 requires -lm
-AS_IF([test "$SYSGUI" = CFG_GUI_ON], [
-  EXTARGET="$EXTARGET libiup"
-  EXTCLEAN="$EXTCLEAN libiup_clean"
-  CPPFLAGS="$CPPFLAGS -I./external/iup-porting/iup/include"
-  LDFLAGS="$LDFLAGS -L./external/iup-porting/lib"
-  EXTLIBS="$EXTLIBS -liup -liupimglib -lm"
-])
+#AS_IF([test "$SYSGUI" = CFG_GUI_ON], [
+#  EXTARGET="$EXTARGET libiup"
+#  EXTCLEAN="$EXTCLEAN libiup_clean"
+#  CPPFLAGS="$CPPFLAGS -I./external/iup-porting/iup/include"
+#  LDFLAGS="$LDFLAGS -L./external/iup-porting/lib"
+#  EXTLIBS="$EXTLIBS -liup -liupimglib -lm"
+#])
 
 #AC_CHECK_LIB([regex], [regcomp])
 AC_CHECK_FUNC(regcomp, , [
