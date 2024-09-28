@@ -22,7 +22,7 @@ GUI frontend for user-friendly operation.
 - support MS Windows and Linux/Unix
 - support both CLI and GUI mode
 
-## Install in Linux
+## Build in Linux
 Clone the source code from the repo, for example:
 ```
 git clone https://github.com/xuminic/renamex.git
@@ -81,12 +81,231 @@ Or make a command line only tool:
     SYSGUI=CFG_GUI_OFF make
 
 
-## Install in Windows
+## Build in Windows
+### Windows 10 and higher (todo)
+1. Install MSYS2 (the build system and command line console)
+
+2. Install tool chains
+Install tool chains for MINGW32/MINGW64/UCRT:
+```
+pacman -S mingw-w64-i686-gcc mingw-w64-x86_64-gcc mingw-w64-ucrt-x86_64-gcc
+pacman -S mingw-w64-i686-gdb mingw-w64-x86_64-gdb mingw-w64-ucrt-x86_64-gdb
+pacman -S mingw32/mingw-w64-i686-nsis ucrt64/mingw-w64-ucrt-x86_64-nsis
+```
+
+3. Build the program
+For example in MINGW32, using the default configuration:
+```
+git clone https://github.com/xuminic/renamex.git
+cd renamex
+./configure
+make
+```
+When successful the build process would generate two executable files and
+one install directory, for example:
+```
+renamex.exe
+renamex_win.exe
+renamex-2.11-win32-bin
+```
+where `renamex.exe` is a command line tool and `renamex_win.exe` is a Windows program.
+All executable program and documents are grouped in the `renamex-2.11-win32-bin` folder.
+Rename Express uses the native Windows API only so these executable programs are "green"
+and portable, can be moved to anywhere to run.
+
+4. Generate the Windows Installer (Optional)
+
+Though the Rename Express is "green" and portal, it can still generate a traditional
+Windows Installer by NSIS. Using this command:
+```
+make installer-win
+```
+it will generate a file like `renamex-2.11-win32-setup.exe`.
+
+### Windows 7
+1. Install MSYS2 (the build system and command line console)
+
+MSYS2 does no longer support Windows 7. The
+[2022-10-28](https://github.com/msys2/msys2-installer/releases/tag/2022-10-28)
+is the last version for Windows 7. Install this version with required tools.
+
+2. Lock the runtime
+
+After installation of the `2022-10-28`, first thing is to lock the
+`msys2-runtime` under `3.4.10-2`. Otherwise any upgrade or installation might introduce
+the DLLs which Windows 7 can not link.
+
+Run this command, but do NOT update anything, simply cancel the update.
+```
+pacman -Syu      # DO NOT DO UPDATE. It will receive the metadata; that's all
+```
+then upgrade the `msys2-runtime` to `3.4.10-2`:
+```
+pacman --noconfirm -S msys2-runtime-3.4 msys2-runtime-3.4-devel
+```
+
+3. OpenSSH
+
+The OpenSSH 9.8 in MSYS2 2022-10-28 is so broken that can not be fixed by updating 
+to a higher version. It kept seeking the unexisted file `msys_cryto_3.0.dll`. 
+Extracting `msys_cryto_3.0.dll` from other package won't help. The DLL can not work.
+The only way worked for me was rolling back to 9.1p1-1:
+```
+pacman -Rdd openssh
+wget https://repo.msys2.org/msys/x86_64/openssh-9.1p1-1-x86_64.pkg.tar.zst
+pacman -U openssh-9.1p1-1-x86_64.pkg.tar.zst
+```
+
+4. DO NOT UPDATE
+
+Since fixed the runtime and openssh version, make it secure by being ignored in package
+list. Edit the `/etc/pacman.conf`:
+```
+IgnorePkg = msys2-runtime openssh
+```
+Note that updating via `pacman -Syu` is doable now, but it breaks many packages.
+So better avoid doing it.
+
+5. Install tool chains
+Install tool chains for MINGW32/MINGW64/UCRT:
+```
+pacman -S mingw-w64-i686-gcc mingw-w64-x86_64-gcc mingw-w64-ucrt-x86_64-gcc
+pacman -S mingw-w64-i686-gdb mingw-w64-x86_64-gdb mingw-w64-ucrt-x86_64-gdb
+pacman -S mingw32/mingw-w64-i686-nsis ucrt64/mingw-w64-ucrt-x86_64-nsis
+```
+
+6. Build the program
+For example in MINGW32, using the default configuration:
+```
+git clone https://github.com/xuminic/renamex.git
+cd renamex
+./configure
+make
+```
+When successful the build process would generate two executable files and
+one install directory, for example:
+```
+renamex.exe
+renamex_win.exe
+renamex-2.11-win32-bin
+```
+where `renamex.exe` is a command line tool and `renamex_win.exe` is a Windows program.
+All executable program and documents are grouped in the `renamex-2.11-win32-bin` folder.
+Rename Express uses the native Windows API only so these executable programs are "green"
+and portable, can be moved to anywhere to run.
+
+7. Generate the Windows Installer (Optional)
+
+Though the Rename Express is "green" and portal, it can still generate a traditional
+Windows Installer by NSIS. Using this command:
+```
+make installer-win
+```
+it will generate a file like `renamex-2.11-win32-setup.exe`.
+
+
+### Windows XP (32-bit)
+1. Install MinGW (the build system and command line console)
+
+Download the installer which still supports Windows XP from
+[MinGW - Minimalist GNU for Windows Files](https://sourceforge.net/projects/mingw/files/)
+and install everything within.
+
+2. Install Git
+
+Download Git from
+[Git for Windows 2.10.0](https://github.com/git-for-windows/git/releases/tag/v2.10.0.windows.1)
+and install it.
+
+3. Install NSIS (Optional)
+
+NSIS is used to generate the Windows Installer for distributing the software.
+Download NSIS from
+[NSIS: Nullsoft Scriptable Install System](https://sourceforge.net/projects/nsis).
+Not sure what the highest version for Windows XP. At least my `2.46` worked fine.
+
+4. Export the environment variable for Windows XP
+
+To build the Rename Express in the MinGW console, the `MSYSTEM` need to be set to `MINGWXP`
+```
+export MSYSTEM=MINGWXP
+```
+
+5. Prepare the `config.h.in`
+
+The `gawk 3.1.7` in MinGW seems not handling the CRLF line ends very well. 
+The `configure` generates invalid `config.h`. 
+The workaround is to pre-process the files with `dos2unix`.
+```
+git clone https://github.com/xuminic/renamex.git
+cd renamex
+dos2unix config.h.in
+dos2unix external/regex-20090805/config.h.in
+```
+
+6. Build the program
+Using the default configuration:
+```
+./configure
+make
+```
+When successful the build process would generate two executable files and
+one install directory, for example:
+```
+renamex.exe
+renamex_win.exe
+renamex-2.11-win32-bin
+```
+where `renamex.exe` is a command line tool and `renamex_win.exe` is a Windows program.
+All executable program and documents are grouped in the `renamex-2.11-win32-bin` folder.
+Rename Express uses the native Windows API only so these executable programs are "green"
+and portable, can be moved to anywhere to run.
+
+7. Generate the Windows Installer (Optional)
+
+Though the Rename Express is "green" and portal, it can still generate a traditional
+Windows Installer by NSIS. Using this command:
+```
+make installer-win
+```
+it will generate a file like `renamex-2.11-win32-setup.exe`.
+
+
 
 ### The Pre-built Installer
 
 ### Build from source code
+Currently the Rename Express can be built with MinGW32 and MinGW64. 
+UCRT64 and Cygwin are not supported yet.
 
+Clone the source code from the repo, for example:
+```
+git clone https://github.com/xuminic/renamex.git
+cd renamex
+```
+Or download the release package:
+```
+wget https://master.dl.sourceforge.net/project/rename/renamex-2.7.tar.bz2
+tar jxf renamex-2.7.tar.bz2
+cd renamex-2.7
+```
+
+Using the default configuration:
+```
+./configure
+make
+```
+
+By default the build process would generate two executable files and 
+one install directory, for example:
+```
+renamex.exe
+renamex_win.exe
+renamex-2.11-win32-bin
+```
+where `renamex.exe` is a command line tool and `renamex_win.exe` is a Windows program.
+Rename Express uses the native Windows API only so these executable programs are "green"
+and portable, can be moved to anywhere to run.
 
 
 
