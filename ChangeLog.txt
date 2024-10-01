@@ -1,3 +1,9 @@
+20240930: Version 2.11
+	* build system: upgraded for recent Linux and Windows.
+	* libcsoup: removed from the source pack; using github instead
+	* iup-porting: removed from the source pack; using github instead
+	* skipped other minor versions.
+
 20181122: Version 2.7
 	* libcsoup: updated to 0.10.0, though not very necessary.
 	* mmgui: full auditing to IupGetAttribute(ih, "VALUE") because the

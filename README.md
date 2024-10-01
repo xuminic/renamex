@@ -9,11 +9,11 @@ renaming tools built with shell scripts.
 Powered by regular expressions, Rename Express enables advanced search and 
 substitution of string patterns across large file sets. 
 It supports both MS Windows and Linux/Unix platforms, and includes a portable 
-GUI frontend for user-friendly operation.
+GUI front-end for user-friendly operation.
 
 ## Features
 - directly search and replace substrings within filenames
-- using regular expression to search and replace subtrings within filenames
+- using regular expression to search and replace sub-strings within filenames
 - convert filenames to uppercase or lowercase
 - fast renames large quantities of files
 - recursively processing directories and subdirectories
@@ -40,16 +40,16 @@ Using the default configuration:
 ./configure
 make
 ```
-Depending on your system, if the libgtk_dev has been installed, it builds the
+Depending on your system, if the `libgtk_dev` has been installed, it builds the
 runtime with the GUI function. Otherwise it would build a CLI tool only.
 
 To build the `rename express` with GUI, the following dependencies are required:
 
-- libgtk-3-dev
+- `libgtk-3-dev`
 
 or
 
-- libgtk2.0-dev
+- `libgtk2.0-dev`
 
 The dependencies can be recognized by the output of `configure`, for example:
 ```
@@ -62,14 +62,14 @@ configure: The libiup will be built soon.
 ...
 ```
 If both `libgtk-3-dev` and `libgtk2.0-dev` were installed, the `libgtk-3-dev` will 
-be prioritized by defaul, unless manually overrided by:
+be prioritized by default, unless manually overriden by:
 ```
 ./configure
 USE_GTK2=1 make
 ```
-which would link the libgtk2.0 instead.
+which would link the `libgtk2.0` instead.
 
-If you wish to build a CLI only program even if the libgtk_dev had been installed, 
+If you wish to build a CLI only program even if the `libgtk_dev` had been installed, 
 you may use the `--with-gui` option:
 ```
 ./configure --with-gui=no
@@ -86,6 +86,7 @@ Or make a command line only tool:
 1. Install MSYS2 (the build system and command line console)
 
 2. Install tool chains
+
 Install tool chains for MINGW32/MINGW64/UCRT:
 ```
 pacman -S mingw-w64-i686-gcc mingw-w64-x86_64-gcc mingw-w64-ucrt-x86_64-gcc
@@ -94,6 +95,7 @@ pacman -S mingw32/mingw-w64-i686-nsis ucrt64/mingw-w64-ucrt-x86_64-nsis
 ```
 
 3. Build the program
+
 For example in MINGW32, using the default configuration:
 ```
 git clone https://github.com/xuminic/renamex.git
@@ -137,7 +139,7 @@ the DLLs which Windows 7 can not link.
 
 Run this command, but do NOT update anything, simply cancel the update.
 ```
-pacman -Syu      # DO NOT DO UPDATE. It will receive the metadata; that's all
+pacman -Syu      # DO NOT DO UPDATE. Let it receive the metadata then quit; that's all
 ```
 then upgrade the `msys2-runtime` to `3.4.10-2`:
 ```
@@ -146,10 +148,11 @@ pacman --noconfirm -S msys2-runtime-3.4 msys2-runtime-3.4-devel
 
 3. OpenSSH
 
-The OpenSSH 9.8 in MSYS2 2022-10-28 is so broken that can not be fixed by updating 
-to a higher version. It kept seeking the unexisted file `msys_cryto_3.0.dll`. 
-Extracting `msys_cryto_3.0.dll` from other package won't help. The DLL can not work.
-The only way worked for me was rolling back to 9.1p1-1:
+The OpenSSH 9.8 in MSYS2 2022-10-28 was very broken. 
+It kept seeking a nonexistent file `msys_cryto_3.0.dll`. 
+Extracting the `msys_cryto_3.0.dll` from higher version won't help. 
+The `ssh` stop complaining the DLL yet display nothing instead.
+The only workaround for me was rolling back to 9.1p1-1:
 ```
 pacman -Rdd openssh
 wget https://repo.msys2.org/msys/x86_64/openssh-9.1p1-1-x86_64.pkg.tar.zst
@@ -167,6 +170,7 @@ Note that updating via `pacman -Syu` is doable now, but it breaks many packages.
 So better avoid doing it.
 
 5. Install tool chains
+
 Install tool chains for MINGW32/MINGW64/UCRT:
 ```
 pacman -S mingw-w64-i686-gcc mingw-w64-x86_64-gcc mingw-w64-ucrt-x86_64-gcc
@@ -175,6 +179,7 @@ pacman -S mingw32/mingw-w64-i686-nsis ucrt64/mingw-w64-ucrt-x86_64-nsis
 ```
 
 6. Build the program
+
 For example in MINGW32, using the default configuration:
 ```
 git clone https://github.com/xuminic/renamex.git
@@ -244,6 +249,7 @@ dos2unix external/regex-20090805/config.h.in
 ```
 
 6. Build the program
+
 Using the default configuration:
 ```
 ./configure

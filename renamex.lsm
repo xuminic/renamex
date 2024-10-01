@@ -1,7 +1,7 @@
 Begin4
 Title:          Rename Express
-Version:        2.7
-Entered-date:   2018-11-22
+Version:        2.11
+Entered-date:   2024-09-30
 Description:    A versatile file renaming tool which does to rename, 
                 convert to lowercase or uppercase of batches of files. 
 		It's lightweight and very fast. Supports regular 
@@ -11,9 +11,11 @@ Keywords:       rename, regular expression
 Author:	        "Andy Xuming" <xuming@users.sourceforge.net>
 Maintained-by:  "Andy Xuming" <xuming@users.sourceforge.net>
 Primary-site:   http://rename.sourceforge.net/
-                   1M renamex-2.7-setup.exe
-                  13M renamex-2.7.tar.bz2
-		   1K rename-2.7.lsm
+                 1.4M renamex-2.11-win32-setup.exe
+		 1.1M renamex-2.11-win64-setup.exe
+		 877K renamex-2.11-winxp-setup.exe
+                  24M renamex-2.11-src.tar.bz2
+		   1K rename-2.11.lsm
 Alternate-site: ftp://ibiblio.org/pub/linux/utils/file
 Platforms:      Linux,Windows 2000/XP/Windows 7
 Copying-policy: GPLv3+
