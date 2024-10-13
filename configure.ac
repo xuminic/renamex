@@ -93,18 +93,26 @@ case "$host_os" in
         LDFLAGS="$LDFLAGS -L./external/iup-porting/WinXP_mingw4_lib"
 	      ;;
       MINGW32) WIN_UNAME=win32 
+	EXTARGET="$EXTARGET libregex"
+	EXTCLEAN="$EXTCLEAN libregex_clean"
 	CPPFLAGS="$CPPFLAGS -I./external/iup-porting/Win32_mingw6_lib/include"
 	LDFLAGS="$LDFLAGS -L./external/iup-porting/Win32_mingw6_lib"
 	      ;;
-      UCRT64) WIN_UNAME=ucrt64 
+      UCRT64) WIN_UNAME=ucrt64
+	EXTARGET="$EXTARGET libregex"
+	EXTCLEAN="$EXTCLEAN libregex_clean"
 	CPPFLAGS="$CPPFLAGS -I./external/iup-porting/Win64_mingw6_lib/include"
 	LDFLAGS="$LDFLAGS -L./external/iup-porting/Win64_mingw6_lib"
 	      ;;
       *) WIN_UNAME=win64 
+	EXTARGET="$EXTARGET libregex"
+	EXTCLEAN="$EXTCLEAN libregex_clean"
 	CPPFLAGS="$CPPFLAGS -I./external/iup-porting/Win64_mingw6_lib/include"
 	LDFLAGS="$LDFLAGS -L./external/iup-porting/Win64_mingw6_lib"
 	      ;;
     esac
+    CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
+    LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
     AC_SUBST(WIN_UNAME)
     ;;
   *)
@@ -160,16 +168,21 @@ CPPFLAGS="$CPPFLAGS -I./external/libcsoup"
 LDFLAGS="$LDFLAGS -L./external/libcsoup"
 EXTLIBS="$EXTLIBS -lcsoup"
 
-#AC_CHECK_FUNC(regcomp, , [
-AC_CHECK_LIB([regex], [regcomp], [
-  EXTLIBS="$EXTLIBS -lregex"
-], [
-  EXTARGET="$EXTARGET libregex"
-  EXTCLEAN="$EXTCLEAN libregex_clean"
-  CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
-  LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
-  EXTLIBS="$EXTLIBS -lregex"
-])
+# Do NOT check libregex
+# For Windows XP, it's included in the IUP porting
+# For Windows 32/64, the MSYS2 libregex is not natively portable, which requires libsystre-0.dll
+# So no need to check libregex, always have it rebuilt in MSYS2
+#AC_CHECK_LIB([regex], [regcomp], [
+#  EXTLIBS="$EXTLIBS -lregex"
+#], [
+#  EXTARGET="$EXTARGET libregex"
+#  EXTCLEAN="$EXTCLEAN libregex_clean"
+#  CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
+#  LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
+#  EXTLIBS="$EXTLIBS -lregex"
+#])
+EXTLIBS="$EXTLIBS -lregex"
+
 
 AM_CONDITIONAL([XAM_MSWIN], [test x$SYSTOOL = xmingw])
 AM_CONDITIONAL([XAM_GUI], [test x$SYSGUI = xCFG_GUI_ON])

@@ -4929,18 +4929,26 @@ fi
         LDFLAGS="$LDFLAGS -L./external/iup-porting/WinXP_mingw4_lib"
 	      ;;
       MINGW32) WIN_UNAME=win32
+	EXTARGET="$EXTARGET libregex"
+	EXTCLEAN="$EXTCLEAN libregex_clean"
 	CPPFLAGS="$CPPFLAGS -I./external/iup-porting/Win32_mingw6_lib/include"
 	LDFLAGS="$LDFLAGS -L./external/iup-porting/Win32_mingw6_lib"
 	      ;;
       UCRT64) WIN_UNAME=ucrt64
+	EXTARGET="$EXTARGET libregex"
+	EXTCLEAN="$EXTCLEAN libregex_clean"
 	CPPFLAGS="$CPPFLAGS -I./external/iup-porting/Win64_mingw6_lib/include"
 	LDFLAGS="$LDFLAGS -L./external/iup-porting/Win64_mingw6_lib"
 	      ;;
       *) WIN_UNAME=win64
+	EXTARGET="$EXTARGET libregex"
+	EXTCLEAN="$EXTCLEAN libregex_clean"
 	CPPFLAGS="$CPPFLAGS -I./external/iup-porting/Win64_mingw6_lib/include"
 	LDFLAGS="$LDFLAGS -L./external/iup-porting/Win64_mingw6_lib"
 	      ;;
     esac
+    CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
+    LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
 
     ;;
   *)
@@ -5808,56 +5816,20 @@ CPPFLAGS="$CPPFLAGS -I./external/libcsoup"
 LDFLAGS="$LDFLAGS -L./external/libcsoup"
 EXTLIBS="$EXTLIBS -lcsoup"
 
-#AC_CHECK_FUNC(regcomp, , [
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for regcomp in -lregex" >&5
-printf %s "checking for regcomp in -lregex... " >&6; }
-if test ${ac_cv_lib_regex_regcomp+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lregex  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-char regcomp ();
-int
-main (void)
-{
-return regcomp ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_lib_regex_regcomp=yes
-else $as_nop
-  ac_cv_lib_regex_regcomp=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_regex_regcomp" >&5
-printf "%s\n" "$ac_cv_lib_regex_regcomp" >&6; }
-if test "x$ac_cv_lib_regex_regcomp" = xyes
-then :
-
-  EXTLIBS="$EXTLIBS -lregex"
-
-else $as_nop
-
-  EXTARGET="$EXTARGET libregex"
-  EXTCLEAN="$EXTCLEAN libregex_clean"
-  CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
-  LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
-  EXTLIBS="$EXTLIBS -lregex"
-
-fi
+# Do NOT check libregex
+# For Windows XP, it's included in the IUP porting
+# For Windows 32/64, the MSYS2 libregex is not natively portable, which requires libsystre-0.dll
+# So no need to check libregex, always have it rebuilt in MSYS2
+#AC_CHECK_LIB([regex], [regcomp], [
+#  EXTLIBS="$EXTLIBS -lregex"
+#], [
+#  EXTARGET="$EXTARGET libregex"
+#  EXTCLEAN="$EXTCLEAN libregex_clean"
+#  CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
+#  LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
+#  EXTLIBS="$EXTLIBS -lregex"
+#])
+EXTLIBS="$EXTLIBS -lregex"
 
 
  if test x$SYSTOOL = xmingw; then
