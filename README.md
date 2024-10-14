@@ -277,8 +277,16 @@ make installer-win
 it will generate a file like `renamex-2.11-win32-setup.exe`.
 
 
+### The Pre-built Packages and Installers
+- `renamex-*.*-src-all.tar.bz2`: the source code tar ball with every dependencies included; can be built without Internet.
+- `renamex-*.*-src.tar.bz2`: the source code tar ball with Github dependencies
+- `renamex-*.*-win32-bin.zip`: the executable files package for 32-bit Windows, Windows 7 and above
+- `renamex-*.*-win32-setup.exe`: the installer for 32-bit Windows, Windows 7 and above
+- `renamex-*.*-win64-bin.zip`: the executable files package for 64-bit Windows, Windows 7 and above
+- `renamex-*.*-win64-setup.exe`: the installer for 64-bit Windows, Windows 7 and above
+- `renamex-*.*-winxp-bin.zip`: the executable files package for Windows XP, 32-bit
+- `renamex-*.*-winxp-setup.exe`: the installer for Windows XP, 32-bit
 
-### The Pre-built Installer
 
 ### Build from source code
 Currently the Rename Express can be built with MinGW32 and MinGW64. 
