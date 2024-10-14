@@ -373,14 +373,15 @@ SUBDIRS = .
 @XAM_GUI_TRUE@@XAM_MSWIN_TRUE@WIN_OBJS = main_win.o rename.o mmgui.o rename_icon.o
 
 # This list of files for source release
-EXTRA_DIST = config.h.in configure configure.ac config.guess config.sub \
+SOURCE_DIST = config.h.in configure configure.ac config.guess config.sub \
 	     aclocal.m4 install-sh Makefile.am Makefile.in missing \
-	     COPYING README.md ChangeLog.txt  external \
-	     autotest.sh main.c mmgui.c mmrc_icon_dialog.h mmrc_icon_error.h \
+	     COPYING README.md ChangeLog.txt autotest.sh main.c mmgui.c \
+	     mmrc_icon_dialog.h mmrc_icon_error.h \
 	     mmrc_icon_info.h mmrc_icon_warning.h rename.c rename.h \
 	     rename.ico rename_icon.rc rename.nsi renamex.1 renamex.desktop \
 	     renamex.lsm renamex.pdf
 
+EXTRA_DIST = ./external/icons ./external/Makefile ./external/regex-20090805 ./external/version.txt
 all: $(BUILT_SOURCES) config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -911,7 +912,8 @@ help:
 	@echo " install           install the renamex to PREFIX/bin"
 	@echo " gnome-install     also install the support files to GNOME desktop"
 	@echo " gnome-uninstall   remove the support files of GNOME desktop"
-	@echo " release           create the source tar ball with all dependencies"
+	@echo " release           create the source tar ball"
+	@echo " mega-release      create the source tar ball with all dependencies"
 	@echo " installer-win     create an installer in Windows (nsis required)"
 	@echo " showdll           display the linked DLLs in Windows"
 
@@ -929,13 +931,23 @@ main_win.o : main.c
 @XAM_MSWIN_FALSE@distclean-local: extclean
 @XAM_MSWIN_FALSE@	rm -rf autom4te.cache
 
-release: extclean
+release:
 	rm -rf "$(distdir)"
 	mkdir "$(distdir)"
-	cp -a $(EXTRA_DIST) "$(distdir)"
+	mkdir "$(distdir)/external"
+	cp -a $(SOURCE_DIST) "$(distdir)"
+	cp -a $(EXTRA_DIST) "$(distdir)/external"
+	tar cjf "$(distdir)-src.tar.bz2" "$(distdir)"
+	rm -rf "$(distdir)"
+
+mega-release: extclean
+	rm -rf "$(distdir)"
+	mkdir "$(distdir)"
+	cp -a $(SOURCE_DIST) "$(distdir)"
+	cp -a external "$(distdir)"
 	rm -rf "$(distdir)/external/libcsoup/.git"
 	rm -rf "$(distdir)/external/iup-porting/.git"
-	tar cjf "$(distdir)-src.tar.bz2" "$(distdir)"
+	tar cjf "$(distdir)-src-all.tar.bz2" "$(distdir)"
 	rm -rf "$(distdir)"
 
 gnome-install: install

@@ -4949,6 +4949,7 @@ fi
     esac
     CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
     LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
+    EXTLIBS="$EXTLIBS -lregex"
 
     ;;
   *)
@@ -5829,7 +5830,6 @@ EXTLIBS="$EXTLIBS -lcsoup"
 #  LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
 #  EXTLIBS="$EXTLIBS -lregex"
 #])
-EXTLIBS="$EXTLIBS -lregex"
 
 
  if test x$SYSTOOL = xmingw; then

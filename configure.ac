@@ -113,6 +113,7 @@ case "$host_os" in
     esac
     CPPFLAGS="$CPPFLAGS -I./external/regex-20090805/lib"
     LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
+    EXTLIBS="$EXTLIBS -lregex"
     AC_SUBST(WIN_UNAME)
     ;;
   *)
@@ -181,7 +182,6 @@ EXTLIBS="$EXTLIBS -lcsoup"
 #  LDFLAGS="$LDFLAGS -L./external/regex-20090805/.libs"
 #  EXTLIBS="$EXTLIBS -lregex"
 #])
-EXTLIBS="$EXTLIBS -lregex"
 
 
 AM_CONDITIONAL([XAM_MSWIN], [test x$SYSTOOL = xmingw])
