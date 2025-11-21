@@ -53,6 +53,7 @@
 #define RNM_CFLAG_VERBOSE	0x200	/* verbose mode */
 #define RNM_CFLAG_TEST		0x400	/* test mode only */
 #define RNM_CFLAG_GUI		0x800	/* GUI mode */
+#define RNM_CFLAG_MSKMATCH	0x1000	/* mask matching mode */
 
 
 #define	RNM_OFLAG_NONE		0	/* do not change output filename */
@@ -117,9 +118,12 @@ typedef	struct	{
 	int	rpnum;		/* replace occurance number*/
 	int	rpfrom;		/* replace from which occurance */
 
-	char	*maskbuf;
+	char	**maskref;	/* reference list for mask matching */
+	int	mr_len;		/* length of the reference list */
+	char	*maskbuf;	/* buffer for handling the mask pattern */
 	char	*mskpat1;
 	char	*mskpat2;
+
 
 	/* runtime area */
 	int	(*compare)(const char *s1, const char *s2, size_t n);
@@ -148,6 +152,7 @@ extern	const	char	*help_credits;
 int rename_enfile(RNOPT *opt, char *filename);
 int rename_entry(RNOPT *opt, char *filename);
 int rename_executing(RNOPT *opt, char *dest, char *sour);
+char *rename_mask_match(RNOPT *opt, char *oldname);
 int rename_open_buffer(RNOPT *opt, char *oldname);
 int rename_compile_regex(RNOPT *opt);
 int rename_status_clean(RNOPT *opt);

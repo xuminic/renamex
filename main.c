@@ -1,7 +1,7 @@
 
 /*  main.c - command line mode entry
 
-    Copyright (C) 1998-2017  "Andy Xuming" <xuming@users.sourceforge.net>
+    Copyright (C) 1998-2025  "Andy Xuming" <xuming@users.sourceforge.net>
 
     This file is part of RENAME, a utility to help file renaming
 
@@ -17,6 +17,25 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+/* Mask matching mode:
+ * How to change the file
+ *   S01E02 CHS.ass
+ * according to the reference name
+ *   Season E02 - Roast BasiliskOmeletKakiage.mkv
+ * to
+ *   Season E02 - Roast BasiliskOmeletKakiage.ass
+ *
+ * Command line:
+ *   -m/S01/CHS -s/mkv/ass *.mkv - *.ass
+ *
+ * Steps:
+ * 1. matching: "S01E02 CHS.ass" with "S01/CHS"
+ * 2. masking: S01"E02 "CHS -> "E02 "
+ * 3. searching reference name list
+ * 4. matching "E02 " in "Season E02 - Roast BasiliskOmeletKakiage.mkv"
+ * 5. modify name by "-s/mkv/ass" -> "Season E02 - Roast BasiliskOmeletKakiage.ass"
+ * 6. rename: "S01E02 CHS.ass" -> "Season E02 - Roast BasiliskOmeletKakiage.ass"
 */
 
 #ifdef  HAVE_CONFIG_H
@@ -136,8 +155,8 @@ static int cli_set_pattern(RNOPT *opt, char *optarg);
 static int cli_set_mask(RNOPT *opt, char *optarg);
 static int rename_debug_trans_module(int cw, char *buf, int blen);
 static int debug_main(RNOPT *opt, int argc, char **argv);
-static char *strcpy_stop(char *dest, char **sour, int stop);
-static char *strcpy_char(char *dest, char **sour, int c);
+//static char *strcpy_stop(char *dest, char **sour, int stop);
+//static char *strcpy_char(char *dest, char **sour, int c);
 
 int main(int argc, char **argv)
 {
@@ -250,6 +269,7 @@ int main(int argc, char **argv)
 			break;
 		case 'm':
 			rc = cli_set_mask(&sysopt, optarg);
+			sysopt.cflags |= RNM_CFLAG_MSKMATCH;
 			break;
 		}
 		if (rc != RNM_ERR_NONE) {
@@ -303,12 +323,27 @@ int main(int argc, char **argv)
 		rename_free_all(0);
 		return RNM_ERR_REGPAT;
 	}
-	for (c = optind; c < argc; c++) {
+
+	c = optind;
+	if (sysopt.cflags & RNM_CFLAG_MSKMATCH) {
+		/* collecting the reference file list for mask matching */
+		sysopt.maskref = malloc((argc - optind) * sizeof(char*));
+		if (sysopt.maskref == NULL) {
+			CDB_SHOW(("renamex: low memory\n"));
+        	        return RNM_ERR_LOWMEM;
+		}
+		for (sysopt.mr_len = 0; (c < argc) && strcmp(argv[c], "-"); c++) {
+			sysopt.maskref[sysopt.mr_len++] = argv[c];
+		}
+		c++;	/* skip the '-' */
+	}
+	while (c < argc) {
 		if (infile) {
 			rename_enfile(&sysopt, argv[c]);
 		} else {
 			rename_entry(&sysopt, argv[c]);
 		}
+		c++;
 	}
 
 	CDB_SHOW(("Total:%d  Renamed:%d  Failed:%d  No-change:%d  "
@@ -332,6 +367,9 @@ static int rename_free_all(int sig)
 	}
 	if (sysopt.maskbuf) {
 		sysopt.maskbuf = smm_free(sysopt.maskbuf);
+	}
+	if (sysopt.maskref) {
+		sysopt.maskref = smm_free(sysopt.maskref);
 	}
 	if (sysopt.rtpath) {
 		smm_cwd_pop(sysopt.rtpath);
@@ -505,6 +543,7 @@ static int debug_main(RNOPT *opt, int argc, char **argv)
 	return 0;
 }
 
+/*
 static char *strcpy_stop(char *dest, char **sour, int stop)
 {
 	while (**sour != 0) {
@@ -533,4 +572,5 @@ static char *strcpy_char(char *dest, char **sour, int c)
 	*dest++ = 0;
 	return dest;
 }
+*/
 

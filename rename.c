@@ -101,6 +101,7 @@ int rename_enfile(RNOPT *opt, char *filename)
 
 int rename_entry(RNOPT *opt, char *filename)
 {
+	char	*morpher;
 	int	rc;
 
 	if (opt->cflags & RNM_CFLAG_RECUR)  {
@@ -108,8 +109,21 @@ int rename_entry(RNOPT *opt, char *filename)
 			rename_recursive(opt, filename);
 		}
 	}
-	if ((rc = rename_open_buffer(opt, filename)) == RNM_ERR_NONE) {
-		rc = rename_executing(opt, opt->buffer, filename);
+
+	if (opt->cflags & RNM_CFLAG_MSKMATCH) {
+		morpher = rename_mask_match(opt, filename);
+	} else {
+		morpher = filename;
+	}
+	if (morpher == NULL) {
+		opt->st_process++;
+		opt->st_same++;
+		rc = RNM_ERR_OPENFILE;
+	} else {
+		if ((rc = rename_open_buffer(opt, morpher)) == RNM_ERR_NONE) {
+			rc = rename_executing(opt, opt->buffer, filename);
+			//printf("MORPH: %s\n", opt->buffer);
+		}
 	}
 	return rc;
 }
@@ -420,6 +434,39 @@ static int console_notify(RNOPT *opt, int msg, int v, void *a1, void *a2)
 /****************************************************************************
  * Core functions of Rename
  ****************************************************************************/
+/* matching: "S01E02 CHS.ass" with "S01/CHS" */
+char *rename_mask_match(RNOPT *opt, char *oldname)
+{
+	char	*p, *mask;
+	int	i;
+
+	/* indicate the expected filename, not the whole path */
+	csc_strlcpy(opt->buffer, oldname, RNM_PATH_MAX);
+	mask = csc_path_basename(opt->buffer, NULL, 0);
+
+	if (opt->mskpat1 && *opt->mskpat1) {
+		if ((mask = strstr(mask, opt->mskpat1)) == NULL) {
+			return NULL;
+		}
+		mask += strlen(opt->mskpat1);	/* beginning of the mask */
+	}
+
+	if (opt->mskpat2 && *opt->mskpat2) {
+		if ((p = strstr(mask + 1, opt->mskpat2)) == NULL) {
+			return NULL;
+		}
+		*p = 0;
+	}
+
+	//printf("Mask: %s\n", mask);
+	for (i = 0; i < opt->mr_len; i++) {
+		if (strstr(opt->maskref[i], mask)) {
+			return opt->maskref[i];
+		}
+	}
+	return NULL;
+}
+
 int rename_open_buffer(RNOPT *opt, char *oldname)
 {
 	char	*fname;
