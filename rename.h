@@ -117,6 +117,10 @@ typedef	struct	{
 	int	rpnum;		/* replace occurance number*/
 	int	rpfrom;		/* replace from which occurance */
 
+	char	*maskbuf;
+	char	*mskpat1;
+	char	*mskpat2;
+
 	/* runtime area */
 	int	(*compare)(const char *s1, const char *s2, size_t n);
 	int	(*notify)(void *opt, int msg, int v, void *dest, void *sour);

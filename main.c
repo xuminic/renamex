@@ -80,6 +80,7 @@ static	struct	cliopt	clist[] = {
 	{ 'u', "uppercase", 0, "Uppercase the file name" },
 	{ 'p', "prefix",    1, "Add prefix to the file name" },
 	{ 'x', "suffix",    1, "Add suffix to the file name" },
+	{ 'm', "mask",      1, "Set the matching mask" },
 	{ 's', "search",    1, "search and replace in the file name" },
 #ifdef	CFG_GUI_ON
 	{ 'G', "gui",       0, "start the GUI mode" },
@@ -90,10 +91,13 @@ static	struct	cliopt	clist[] = {
 	{   1, "help",      2, "Display the help message" },
 	{   2, "version",   0, "Display the version message" },
 	{   3, "debug",     2, "*" },
-	{ 0, NULL, 0, "\nSEARCH SETTING:\n\
-  -s /PATTERN/STRING[/SW]  Replace the matching PATTERN by STRING.\n\
+	{   0, NULL,        0, "\n\
+SEARCH & MATCH SETTING:\n\
+  -s /PATTERN/STRING[/SW]          Replace the matching PATTERN by STRING.\n\
+  -m /PATTERN1/PATTERN2            Set the matching mask.\n\
 or\n\
-  -s :PATTERN:STRING[:SW]  In MinGW command line.\n\
+  -s :PATTERN:STRING[:SW]          In MinGW command line.\n\
+  -m :PATTERN1:PATTERN2            In MinGW command line.\n\
 The SW could be:\n\
   [i] ignore case when searching\n\
   [b] backward searching and replacing\n\
@@ -109,7 +113,7 @@ const	char	*help_version = "Rename Express " VERSION;
 
 const	char	*help_descript = "\
 Rename files by substituting the specified patterns.\n\n\
-Copyright (C) 1998-2016 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
+Copyright (C) 1998-2025 \"Andy Xuming\" <xuming@users.sourceforge.net>\n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n";
@@ -129,8 +133,11 @@ RNOPT		sysopt;
 
 static int rename_free_all(int sig);
 static int cli_set_pattern(RNOPT *opt, char *optarg);
+static int cli_set_mask(RNOPT *opt, char *optarg);
 static int rename_debug_trans_module(int cw, char *buf, int blen);
-static int debug_main(char *optarg, int argc, char **argv);
+static int debug_main(RNOPT *opt, int argc, char **argv);
+static char *strcpy_stop(char *dest, char **sour, int stop);
+static char *strcpy_char(char *dest, char **sour, int c);
 
 int main(int argc, char **argv)
 {
@@ -179,13 +186,16 @@ int main(int argc, char **argv)
 			puts(help_descript);
 			rc = RNM_ERR_HELP;
 			break;
-		case 3:		/* --debug=xxx */
-			if (optarg == NULL) {
-				break;
-			} else if (!strcmp(optarg, "logfile")) {
+		case 3:		/* let "--debug=a b c" equal to "--debug a b c" */
+			if (optarg) {	/* like "--debug=a b c" */
+				optind--;
+			} else {
+				optarg = argv[optind];
+			}
+			if (!strcmp(optarg, "logfile")) {
 				slog_bind_file(dbgc, "renamex.log");
 			} else {
-				debug_main(optarg, argc - optind, &argv[optind]);
+				debug_main(&sysopt, argc - optind, &argv[optind]);
 				rc = RNM_ERR_HELP;
 			}
 			break;
@@ -237,6 +247,9 @@ int main(int argc, char **argv)
 			break;
 		case 's':
 			rc = cli_set_pattern(&sysopt, optarg);
+			break;
+		case 'm':
+			rc = cli_set_mask(&sysopt, optarg);
 			break;
 		}
 		if (rc != RNM_ERR_NONE) {
@@ -316,6 +329,9 @@ static int rename_free_all(int sig)
 	}
 	if (sysopt.patbuf) {
 		sysopt.patbuf = smm_free(sysopt.patbuf);
+	}
+	if (sysopt.maskbuf) {
+		sysopt.maskbuf = smm_free(sysopt.maskbuf);
 	}
 	if (sysopt.rtpath) {
 		smm_cwd_pop(sysopt.rtpath);
@@ -398,6 +414,36 @@ static int cli_set_pattern(RNOPT *opt, char *optarg)
 	return RNM_ERR_NONE;
 }
 
+/* the mask accept the vi style, like
+ *   -m/pattern1/pattern2
+ * or colon because MinGW would auto expand the path like
+ *   -m/pattern1/pattern2
+ * in MinGW it will turned into something like
+ *   -m/C:/MinGW/msys/1.0/pattern1/pattern2
+ * so instead we can use
+ *   -m:pattern1:pattern2
+ */
+static int cli_set_mask(RNOPT *opt, char *optarg)
+{
+	char	*idx[4];
+
+	/* skip the first separater */
+	if ((*optarg == '/') || (*optarg == ':')) {
+		optarg++;
+	}
+
+	opt->maskbuf = csc_strcpy_alloc(optarg, 0);
+	csc_fixtoken(opt->maskbuf, idx, 4, "/:");
+    	opt->mskpat1 = idx[0];
+	opt->mskpat2 = idx[1];
+
+	if (!opt->mskpat1 || !opt->mskpat1) {
+		opt->maskbuf = smm_free(opt->maskbuf);
+		return RNM_ERR_PARAM;
+	}
+	return RNM_ERR_NONE;
+}
+
 static int rename_debug_trans_module(int cw, char *buf, int blen)
 {
 	if (cw & RENAME_MOD_CORE) {
@@ -409,16 +455,22 @@ static int rename_debug_trans_module(int cw, char *buf, int blen)
 	return SMM_ERR_NULL;
 }
 
-static int debug_main(char *optarg, int argc, char **argv)
+static int debug_main(RNOPT *opt, int argc, char **argv)
 {
 	FILE	*fp;
+	char	*cmd;
 	int	i;
 
-	//printf("%s %d %s\n", optarg, argc, argv[0]);
+	cmd = argv[0];
+	if (**argv == '-') {
+		cmd = &argv[0][8];
+	}
+
+	//printf("%s %d %s\n", cmd, argc, argv[0]);
 	/* debug functions doesn't need parameters */
-	if (!strcmp(optarg, "option")) {
-		rename_option_dump(&sysopt);
-	} else if (!strcmp(optarg, "debug")) {
+	if (!strcmp(cmd, "option")) {
+		rename_option_dump(opt);
+	} else if (!strcmp(cmd, "debug")) {
 		CDB_SHOW(("Internal: SHOW\n"));
 		CDB_ERROR(("Internal: ERROR\n"));
 		CDB_WARN(("Internal: Warning\n"));
@@ -427,33 +479,58 @@ static int debug_main(char *optarg, int argc, char **argv)
 		CDB_PROG(("Internal: PROG\n"));
 		CDB_MODL(("Internal: MODule\n"));
 		CDB_FUNC(("Internal: function\n"));
-	}
-
-	/* debug functions doesn't need one parameters */
-	if (argc < 1) {
-		return -1;	/* parameters missing */
-	}
-	if (!strcmp(optarg, "create")) {
-		fp = smm_fopen(argv[0], "w");
+	} else if (!strcmp(cmd, "create") && (argc > 1)) {
+		fp = smm_fopen(argv[1], "w");
 		if (fp == NULL) {
-			printf("fopen: %s\n", argv[0]);
+			printf("fopen: %s\n", argv[1]);
 		} else {
 			fclose(fp);
 		}
-	} else if (!strcmp(optarg, "verify")) {
-		fp = smm_fopen(argv[0], "r");
+	} else if (!strcmp(cmd, "verify") && (argc > 1)) {
+		fp = smm_fopen(argv[1], "r");
 		if (fp == NULL) {
 			printf("fopen: not found\n");
 		} else {
 			fclose(fp);
 			return 1;
 		}
-	} else if (!strcmp(optarg, "rawname")) {
+	} else if (!strcmp(cmd, "rawname")) {
 		for (i = 0; i < argc; i++) {
 			csc_memdump(argv[i], strlen(argv[i]), 
 					16, CSC_MEMDUMP_NO_ADDR);
 		}
+	} else if (rename_open_buffer(opt, cmd) == RNM_ERR_NONE) {
+		puts(opt->buffer);
 	}
 	return 0;
+}
+
+static char *strcpy_stop(char *dest, char **sour, int stop)
+{
+	while (**sour != 0) {
+		if (**sour == '\\') {
+			(*sour)++; *dest++ = **sour;
+			if (**sour == 0) {
+				return dest;
+			}
+		} else if (**sour == stop) {
+			break;
+		} else {
+			*dest++ = **sour;
+		}
+		(*sour)++;
+	}
+	*dest++ = 0;
+	return dest;
+}
+
+static char *strcpy_char(char *dest, char **sour, int c)
+{
+	while (**sour == c) {
+		*dest++ = **sour;
+		(*sour)++;
+	}
+	*dest++ = 0;
+	return dest;
 }
 
