@@ -111,6 +111,29 @@ is actually the same to the
 .B g
 switch. 
 
+.RE
+.TP
+.BR \-m/PAT_BEGIN/PAT_END
+.TP
+.BR \-m:PAT_BEGIN:PAT_END
+Set the begin and end patterns for 
+.B Pattern Matching
+mode. In this mode, 
+.B renamex
+searches the file name for 
+.I PAT_BEGIN
+and
+.I PAT_END
+, and extracts the key segment between them to match against the reference list.
+
+Note that in 
+.I MinGW
+command line the path-like string would be automatically expand to something like
+.I -m/C:/MinGW/msys/1.0/pattern1/pattern2
+so in that case the colon form 
+.I -m:pattern1:pattern2
+is needed.
+
 .SH "REGULAR EXPRESSION"
 This section about extended regular expression is digisted from the 
 manpage of 
@@ -280,6 +303,58 @@ versions
 .BR \e( ,
 and
 .BR \e) .
+
+
+.SH PATTERN MATCHING
+Pattern Matching mode allows you to rename related groups of files by extracting
+a key identifier from one set and using it to locate matching filenames in
+another set. This is useful when two groups of files share a common code, such
+as episode numbers, but follow different naming conventions.
+
+For example, given video files:
+
+    Season 01 - E01 This is file 1.mkv
+    Season 01 - E02 This is file 2.mkv
+    Season 01 - E03 This is file 3.mkv
+
+and subtitle files:
+
+    S01E01 english.ass
+    S01E02 english.ass
+    S01E03 english.ass
+
+the goal is to rename the .ass files so they match the naming style of the .mkv
+files.
+
+.SS Command Example
+    renamex -m/S01/english -s/mkv/ass/1 *.mkv - *.ass
+
+.SS Breakdown
+-m/S01/english  
+    Extracts the text between "S01" and "english" (e.g., "E01"), used as the
+    matching key.
+
+-s/mkv/ass/1  
+    Replaces "mkv" with "ass" in the reference filename.
+
+*.mkv  
+    Reference file list.
+
+-  
+    Separator between reference files and target files.
+
+*.ass  
+    Target file list.
+
+.SS How It Works
+For each target file (e.g., "S01E01 english.ass"), renamex extracts the key
+segment ("E01"), searches the reference list for a filename containing that key,
+and then applies the substitution rule to produce the new name, such as:
+
+    Season 01 - E01 This is file 1.ass
+
+Finally, renamex renames the original .ass file to the newly matched filename.
+
 
 .SH "SEE ALSO"
 mv(1), chown(1), regex(7), regex(3)

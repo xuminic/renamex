@@ -15,6 +15,7 @@ GUI front-end for user-friendly operation.
 - directly search and replace substrings within filenames
 - using regular expression to search and replace sub-strings within filenames
 - convert filenames to uppercase or lowercase
+- Pattern Matching mode can match differently named groups by shared identifier
 - fast renames large quantities of files
 - recursively processing directories and subdirectories
 - supports renaming by reading filenames from a file
@@ -366,5 +367,28 @@ Test mode only. Simulate the rename process but no files would be
 actually changed.
 ```
 renamex -t -s/^[A-Z].+file/nofile/xg *
+```
+
+Pattern matching mode, for two sets of files like
+```
+Season 01 - E01 This is file 1.mkv
+Season 01 - E02 This is file 2.mkv
+Season 01 - E03 This is file 3.mkv
+```
+and
+```
+S01E01 english.ass
+S01E02 english.ass
+S01E03 english.ass
+```
+This command
+```
+renamex -m/S01/english -s/mkv/ass/1 *.mkv - *.ass
+```
+can rename the `.ass` set to
+```
+Season 01 - E01 This is file 1.ass
+Season 01 - E02 This is file 2.ass
+Season 01 - E03 This is file 3.ass
 ```
 
