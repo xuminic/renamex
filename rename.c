@@ -115,6 +115,7 @@ int rename_entry(RNOPT *opt, char *filename)
 	} else {
 		morpher = filename;
 	}
+	//printf("Found: %s\n", morpher);
 	if (morpher == NULL) {
 		opt->st_process++;
 		opt->st_same++;
@@ -460,8 +461,12 @@ char *rename_mask_match(RNOPT *opt, char *oldname)
 
 	//printf("Mask: %s\n", mask);
 	for (i = 0; i < opt->mr_len; i++) {
-		if (strstr(opt->maskref[i], mask)) {
-			return opt->maskref[i];
+		if (opt->maskref[i] && strstr(opt->maskref[i], mask)) {
+			/* remove the matched reference file name to provent
+			 * its being match again */
+			p = opt->maskref[i];
+			opt->maskref[i] = NULL;
+			return p;
 		}
 	}
 	return NULL;

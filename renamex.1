@@ -355,6 +355,13 @@ and then applies the substitution rule to produce the new name, such as:
 
 Finally, renamex renames the original .ass file to the newly matched filename.
 
+.SS Testing before you go
+Always using the
+.I \-t
+option if not sure the output names are expected. For example
+
+    renamex -m/S01/english -ts/mkv/ass/1 *.mkv - *.ass
+
 
 .SH "SEE ALSO"
 mv(1), chown(1), regex(7), regex(3)

@@ -392,3 +392,10 @@ Season 01 - E02 This is file 2.ass
 Season 01 - E03 This is file 3.ass
 ```
 
+Pattern matching mode could be tricky. 
+Always using the `-t` option if not sure the output names are expected. 
+For example
+```
+renamex -m/S01/english -ts/mkv/ass/1 *.mkv - *.ass
+```
+
