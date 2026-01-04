@@ -399,3 +399,63 @@ For example
 renamex -m/S01/english -ts/mkv/ass/1 *.mkv - *.ass
 ```
 
+## 呪術廻戦
+`呪術廻戦` 的视频文件和字幕文件看上去是这样的：
+```
+'[Judas] Jujutsu Kaisen - S01E04.mkv'  '呪術廻戦 第04話 「呪胎戴天」 (BD 1920x1080 x265 ALAC).sc.ass'
+'[Judas] Jujutsu Kaisen - S01E05.mkv'  '呪術廻戦 第05話 「呪胎戴天－弐－」 (BD 1920x1080 x265 ALAC).sc.ass'
+'[Judas] Jujutsu Kaisen - S01E06.mkv'  '呪術廻戦 第06話 「雨後」 (BD 1920x1080 x265 ALAC).sc.ass'
+'[Judas] Jujutsu Kaisen - S01E07.mkv'  '呪術廻戦 第07話 「急襲」 (BD 1920x1080 x265 ALAC).sc.ass'
+'[Judas] Jujutsu Kaisen - S01E08.mkv'  '呪術廻戦 第08話 「退屈」 (BD 1920x1080 x265 ALAC).sc.ass'
+```
+看上去字幕文件的命名规则更有意义，所以这次希望对照字幕文件改名，具体需求应该是这样的：
+- 从 `[Judas] Jujutsu Kaisen - S01E04.mkv` 中抽取 `04`
+- 根据 `04` ，从字幕文件组中找到
+  `呪術廻戦 第04話 「呪胎戴天」 (BD 1920x1080 x265 ALAC).sc.ass`
+- 把 `[Judas] Jujutsu Kaisen - S01E04.mkv` 改成 
+  `呪術廻戦 第04話 「呪胎戴天」 (BD 1920x1080 x265 ALAC).mkv`
+- 字幕文件名中的 `.sc` 很多余，把它去掉。
+
+因此操作如下： 安全起见，我们先用测试命令：
+```
+$ renamex -m/S01E/.mkv -ts/sc.ass/mkv/1 *.ass - *.mkv
+renaming: [Judas] Jujutsu Kaisen - S01E04.mkv
+     -->  呪術廻戦 第04話 「呪胎戴天」 (BD 1920x1080 x265 ALAC).mkv : tested
+renaming: [Judas] Jujutsu Kaisen - S01E05.mkv
+     -->  呪術廻戦 第05話 「呪胎戴天－弐－」 (BD 1920x1080 x265 ALAC).mkv : tested
+renaming: [Judas] Jujutsu Kaisen - S01E06.mkv
+     -->  呪術廻戦 第06話 「雨後」 (BD 1920x1080 x265 ALAC).mkv : tested
+renaming: [Judas] Jujutsu Kaisen - S01E07.mkv
+     -->  呪術廻戦 第07話 「急襲」 (BD 1920x1080 x265 ALAC).mkv : tested
+```
+命令行分析如下
+- `-m`:	 设置萃取范围
+- `/S01E/.mkv`: 萃取范围从 `S01E` 开始，到 `.mkv` 结束
+- `-t`: 测试效果，不改名
+- `-s`: 指定搜索改名功能
+- `/sc.ass/mkv`: 把文件名中的 `sc.ass` 改成 `mkv`
+- `/1`: 只改一次
+- `*.ass`: 参考文件名列表
+- `-`: 参考文件名和备改文件名列表之间的隔离符
+- `*.mkv` 备改文件名列表，这次需要改名的是 `.mkv` 文件
+
+结果看上去是我们要的，因此去掉 `t` 参数
+```
+$ renamex -m/S01E/.mkv -s/sc.ass/mkv/1 *.ass - *.mkv
+```
+再删除字幕文件中的 `.sc`
+```
+$ renamex -s/.sc//1 *.ass
+```
+查看结果:
+```
+'呪術廻戦 第04話 「呪胎戴天」 (BD 1920x1080 x265 ALAC).ass'
+'呪術廻戦 第04話 「呪胎戴天」 (BD 1920x1080 x265 ALAC).mkv'
+'呪術廻戦 第05話 「呪胎戴天－弐－」 (BD 1920x1080 x265 ALAC).ass'
+'呪術廻戦 第05話 「呪胎戴天－弐－」 (BD 1920x1080 x265 ALAC).mkv'
+'呪術廻戦 第06話 「雨後」 (BD 1920x1080 x265 ALAC).ass'
+'呪術廻戦 第06話 「雨後」 (BD 1920x1080 x265 ALAC).mkv'
+'呪術廻戦 第07話 「急襲」 (BD 1920x1080 x265 ALAC).ass'
+'呪術廻戦 第07話 「急襲」 (BD 1920x1080 x265 ALAC).mkv'
+```
+完全符合要求。
